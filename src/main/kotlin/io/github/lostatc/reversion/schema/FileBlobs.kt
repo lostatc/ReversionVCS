@@ -20,29 +20,25 @@
 package io.github.lostatc.reversion.schema
 
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.dao.IntEntityClass
-import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.Table
 
 /**
- * A table for storing directories in the timeline.
+ * A table for storing the relationships between files and binary objects.
  */
-object Directories : IntIdTable() {
+object FileBlobs : Table() {
     /**
-     * The metadata associated with this directory.
+     * A file in the timeline.
      */
-    val file: Column<EntityID<Int>> = reference("file", Files).uniqueIndex()
-}
+    val file: Column<EntityID<Int>> = reference("file", Files).primaryKey(0)
 
-/**
- * A directory in the timeline.
- */
-class Directory(id: EntityID<Int>) : IntEntity(id) {
     /**
-     * The metadata associated with this directory.
+     * A binary object that makes up the file.
      */
-    var file: File by File referencedOn Directories.file
+    val blob: Column<EntityID<Int>> = reference("blob", Blobs).primaryKey(1)
 
-    companion object : IntEntityClass<Directory>(Directories)
+    /**
+     * The index of the binary object among all the binary objects that make up the file.
+     */
+    val index: Column<Int> = integer("index").primaryKey(2)
 }
