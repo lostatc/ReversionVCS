@@ -24,13 +24,13 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table
 
 /**
- * A table for storing the relationships between regular files and binary objects.
+ * A table for storing the relationships between files and binary objects.
  */
-object RegularFileBlobs : Table() {
+object FileBlobs : Table() {
     /**
-     * A regular file in the timeline.
+     * A file in the timeline.
      */
-    val regularFile: Column<EntityID<Int>> = reference("regularFile", RegularFiles).primaryKey(0)
+    val file: Column<EntityID<Int>> = reference("file", Files).primaryKey(0)
 
     /**
      * A binary object that makes up the file.

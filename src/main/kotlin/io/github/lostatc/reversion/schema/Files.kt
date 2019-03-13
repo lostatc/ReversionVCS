@@ -81,6 +81,11 @@ class File(id: EntityID<Int>) : IntEntity(id) {
     var size: Long by Files.size
 
     /**
+     * The binary objects that make up this file.
+     */
+    var blobs: SizedIterable<Blob> by Blob via FileBlobs
+
+    /**
      * The snapshots that this file is a part of.
      */
     var snapshots: SizedIterable<Snapshot> by Snapshot via FileSnapshots

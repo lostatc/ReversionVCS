@@ -58,7 +58,7 @@ class Blob(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The regular files that this blob is a part of.
      */
-    var regularFiles: SizedIterable<RegularFile> by RegularFile via RegularFileBlobs
+    var files: SizedIterable<File> by File via FileBlobs
 
     companion object : IntEntityClass<Blob>(Blobs)
 }
