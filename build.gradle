@@ -6,11 +6,12 @@ group 'io.github.lostatc'
 version '0.1.0'
 
 repositories {
-    mavenCentral()
+    jcenter()
 }
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "org.jetbrains.exposed:exposed:0.13.2"
 }
 
 compileKotlin {
