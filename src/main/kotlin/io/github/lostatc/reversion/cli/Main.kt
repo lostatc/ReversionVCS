@@ -14,5 +14,11 @@
  * limitations under the License.
  */
 
-package io.github.lostatc.reversion
+package io.github.lostatc.reversion.cli
 
+/**
+ * Start the CLI.
+ */
+fun main(args: Array<String>) {
+    println("Hello, world!")
+}
