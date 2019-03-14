@@ -32,7 +32,7 @@ import org.joda.time.DateTime
  */
 object Files : IntIdTable() {
     /**
-     * The path URI of the file.
+     * The relative path of the file with '/' used as the path separator.
      */
     val path: Column<String> = varchar("path", 4096).uniqueIndex()
 
@@ -59,7 +59,7 @@ object Files : IntIdTable() {
  */
 class File(id: EntityID<Int>) : IntEntity(id) {
     /**
-     * The path URI of the file.
+     * The relative path of the file with '/' used as the path separator.
      */
     var path: String by Files.path
 
@@ -82,6 +82,8 @@ class File(id: EntityID<Int>) : IntEntity(id) {
 
     /**
      * The binary objects that make up this file.
+     *
+     * A directory should have no binary objects.
      */
     var blobs: SizedIterable<Blob> by Blob via FileBlobs
 
@@ -89,6 +91,20 @@ class File(id: EntityID<Int>) : IntEntity(id) {
      * The snapshots that this file is a part of.
      */
     var snapshots: SizedIterable<Snapshot> by Snapshot via FileSnapshots
+
+    /**
+     * The parents of this file.
+     *
+     * A file should never have more than one parent.
+     */
+    var parents: SizedIterable<File> by File.via(FileToFiles.child, FileToFiles.parent)
+
+    /**
+     * The children of this file.
+     *
+     * A file with [blobs] should not also have [children].
+     */
+    var children: SizedIterable<File> by File.via(FileToFiles.parent, FileToFiles.child)
 
     companion object : IntEntityClass<File>(Files)
 }
