@@ -26,18 +26,9 @@ import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 
-/**
- * A table for storing metadata associated with binary objects in the timeline.
- */
 object Blobs : IntIdTable() {
-    /**
-     * The hexadecimal SHA-256 checksum of the binary object.
-     */
     val checksum: Column<String> = varchar("checksum", 64).uniqueIndex()
 
-    /**
-     * The size of the binary object in bytes.
-     */
     val size: Column<Long> = long("size")
 }
 
@@ -56,7 +47,7 @@ class Blob(id: EntityID<Int>) : IntEntity(id) {
     var size: Long by Blobs.size
 
     /**
-     * The regular files that this blob is a part of.
+     * The files that this blob is a part of.
      */
     var files: SizedIterable<File> by File via FileBlobs
 

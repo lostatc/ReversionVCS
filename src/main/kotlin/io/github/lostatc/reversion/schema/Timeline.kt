@@ -27,18 +27,9 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 import org.joda.time.DateTime
 
-/**
- * A table for storing metadata associated with timelines.
- */
 object Timelines : IntIdTable() {
-    /**
-     * The unique name of the timeline.
-     */
     val name: Column<String> = varchar("name", 255).uniqueIndex()
 
-    /**
-     * The time the timeline was created.
-     */
     val timeCreated = datetime("timeCreated")
 }
 
