@@ -27,37 +27,15 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 import org.joda.time.DateTime
 
-/**
- * A table for storing metadata associated with files in the timeline.
- */
 object Files : IntIdTable() {
-    /**
-     * The relative path of the file with '/' used as the path separator.
-     *
-     * This is unique with respect to other files in the same timeline.
-     */
     val path: Column<String> = varchar("path", 4096)
 
-    /**
-     * The timeline the file is a part of.
-     */
     val timeline: Column<EntityID<Int>> = reference("timeline", Timelines)
 
-    /**
-     * The time the file was last modified.
-     */
     val lastModifiedTime: Column<DateTime> = datetime("lastModifiedTime")
 
-    /**
-     * The permissions of the file.
-     *
-     * This stores the file permissions in octal notation. If POSIX permissions are not applicable, this is `null`.
-     */
     val permissions: Column<String?> = varchar("permissions", 3).nullable()
 
-    /**
-     * The size of the file in bytes.
-     */
     val size: Column<Long> = long("size")
 
     init {

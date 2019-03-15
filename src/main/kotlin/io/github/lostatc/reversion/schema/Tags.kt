@@ -25,35 +25,15 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 
-/**
- * A table for storing tags in the timeline.
- */
 object Tags : IntIdTable() {
-    /**
-     * The name of the tag.
-     *
-     * This is unique with respect to other tags in the same timeline.
-     */
-    val name: Column<String> = varchar("name", 255).uniqueIndex()
+    val name: Column<String> = varchar("name", 255)
 
-    /**
-     * The description of the tag.
-     */
     val description: Column<String> = text("description")
 
-    /**
-     * Whether the snapshot associated with this tag should be kept forever.
-     */
     val pinned: Column<Boolean> = bool("pinned")
 
-    /**
-     * The snapshot associated with this tag.
-     */
     val snapshot: Column<EntityID<Int>> = reference("snapshot", Snapshots)
 
-    /**
-     * The timeline [snapshot] is a part of.
-     */
     val timeline: Column<EntityID<Int>> = reference("timeline", Snapshots.timeline)
 
     init {

@@ -27,25 +27,11 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 import org.joda.time.DateTime
 
-/**
- * A table for storing snapshots in the timeline.
- */
 object Snapshots : IntIdTable() {
-    /**
-     * The revision number of the timeline.
-     *
-     * This is unique with respect to other snapshots in the same timeline.
-     */
     val revision: Column<Int> = integer("revision")
 
-    /**
-     * The timeline the snapshot is a part of.
-     */
     val timeline: Column<EntityID<Int>> = reference("timeline", Timelines)
 
-    /**
-     * The time the snapshot was created.
-     */
     val timeCreated: Column<DateTime> = datetime("timeCreated")
 
     init {
