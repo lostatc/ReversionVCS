@@ -32,15 +32,43 @@ import org.joda.time.DateTime
  */
 object Snapshots : IntIdTable() {
     /**
+     * The revision number of the timeline.
+     *
+     * This is unique with respect to other snapshots in the same timeline.
+     */
+    val revision: Column<Int> = integer("revision")
+
+    /**
+     * The timeline the snapshot is a part of.
+     */
+    val timeline: Column<EntityID<Int>> = reference("timeline", Timelines)
+
+    /**
      * The time the snapshot was created.
      */
     val timeCreated: Column<DateTime> = datetime("timeCreated")
+
+    init {
+        uniqueIndex(revision, timeline)
+    }
 }
 
 /**
  * A snapshot in the timeline.
  */
 class Snapshot(id: EntityID<Int>) : IntEntity(id) {
+    /**
+     * The revision number of the timeline.
+     *
+     * This is unique with respect to other snapshots in the same timeline.
+     */
+    var revision: Int by Snapshots.revision
+
+    /**
+     * The timeline the snapshot is a part of.
+     */
+    var timeline: Timeline by Timeline referencedOn Snapshots.timeline
+
     /**
      * The time the snapshot was created.
      */
@@ -49,7 +77,7 @@ class Snapshot(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The files that are a part of this snapshot.
      */
-    var files: SizedIterable<File> by File via FileSnapshots
+    var files: SizedIterable<File> by File via Versions
 
     /**
      * The tags which are associated with this snapshot.
