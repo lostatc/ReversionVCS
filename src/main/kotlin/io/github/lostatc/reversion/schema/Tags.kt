@@ -32,7 +32,7 @@ object Tags : IntIdTable() {
     /**
      * The name of the tag.
      */
-    val name: Column<String> = varchar("name", 255)
+    val name: Column<String> = varchar("name", 255).uniqueIndex()
 
     /**
      * The description of the tag.
