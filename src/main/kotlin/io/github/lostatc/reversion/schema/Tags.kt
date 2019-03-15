@@ -31,6 +31,8 @@ import org.jetbrains.exposed.sql.Column
 object Tags : IntIdTable() {
     /**
      * The name of the tag.
+     *
+     * This is unique with respect to other tags in the same timeline.
      */
     val name: Column<String> = varchar("name", 255).uniqueIndex()
 
@@ -48,6 +50,15 @@ object Tags : IntIdTable() {
      * The snapshot associated with this tag.
      */
     val snapshot: Column<EntityID<Int>> = reference("snapshot", Snapshots)
+
+    /**
+     * The timeline [snapshot] is a part of.
+     */
+    val timeline: Column<EntityID<Int>> = reference("timeline", Snapshots.timeline)
+
+    init {
+        uniqueIndex(name, timeline)
+    }
 }
 
 /**
@@ -56,6 +67,8 @@ object Tags : IntIdTable() {
 class Tag(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The name of the tag.
+     *
+     * This is unique with respect to other tags in the same timeline.
      */
     var name: String by Tags.name
 
@@ -73,6 +86,11 @@ class Tag(id: EntityID<Int>) : IntEntity(id) {
      * The snapshot associated with this tag.
      */
     var snapshot: Snapshot by Snapshot referencedOn Tags.snapshot
+
+    /**
+     * The timeline [snapshot] is a part of.
+     */
+    var timeline: Timeline by Timeline referencedOn Tags.timeline
 
     companion object : IntEntityClass<Tag>(Tags)
 }

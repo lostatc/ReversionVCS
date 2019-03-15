@@ -19,14 +19,18 @@
 
 package io.github.lostatc.reversion.schema
 
+import io.github.lostatc.reversion.schema.Versions.file
+import io.github.lostatc.reversion.schema.Versions.snapshot
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table
 
 /**
  * A table for storing the relationships between files and snapshots.
+ *
+ * The [file] and [snapshot] must be part of the same timeline.
  */
-object FileSnapshots : Table() {
+object Versions : Table() {
     /**
      * The file in the timeline.
      */
@@ -36,4 +40,18 @@ object FileSnapshots : Table() {
      * The snapshot in the timeline.
      */
     val snapshot: Column<EntityID<Int>> = reference("snapshot", Snapshots).primaryKey(1)
+
+    /**
+     * The timeline [file] is a part of.
+     */
+    private val fileTimeline: Column<EntityID<Int>> = reference("fileTimeline", Files.timeline)
+
+    /**
+     * The timeline [snapshot] is a part of.
+     */
+    private val snapshotTimeline: Column<EntityID<Int>> = reference("snapshotTimeline", Snapshots.timeline)
+
+    init {
+        check { fileTimeline eq snapshotTimeline }
+    }
 }

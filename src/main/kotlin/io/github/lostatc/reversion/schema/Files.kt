@@ -33,8 +33,15 @@ import org.joda.time.DateTime
 object Files : IntIdTable() {
     /**
      * The relative path of the file with '/' used as the path separator.
+     *
+     * This is unique with respect to other files in the same timeline.
      */
-    val path: Column<String> = varchar("path", 4096).uniqueIndex()
+    val path: Column<String> = varchar("path", 4096)
+
+    /**
+     * The timeline the file is a part of.
+     */
+    val timeline: Column<EntityID<Int>> = reference("timeline", Timelines)
 
     /**
      * The time the file was last modified.
@@ -52,6 +59,10 @@ object Files : IntIdTable() {
      * The size of the file in bytes.
      */
     val size: Column<Long> = long("size")
+
+    init {
+        uniqueIndex(path, timeline)
+    }
 }
 
 /**
@@ -60,8 +71,15 @@ object Files : IntIdTable() {
 class File(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The relative path of the file with '/' used as the path separator.
+     *
+     * This is unique with respect to other files in the same timeline.
      */
     var path: String by Files.path
+
+    /**
+     * The timeline the file is a part of.
+     */
+    var timeline: Timeline by Timeline referencedOn Files.timeline
 
     /**
      * The time the file was last modified.
@@ -90,7 +108,7 @@ class File(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The snapshots that this file is a part of.
      */
-    var snapshots: SizedIterable<Snapshot> by Snapshot via FileSnapshots
+    var snapshots: SizedIterable<Snapshot> by Snapshot via Versions
 
     /**
      * The parents of this file.
