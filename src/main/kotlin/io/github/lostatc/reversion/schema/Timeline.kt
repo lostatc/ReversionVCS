@@ -26,9 +26,12 @@ import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 import org.joda.time.DateTime
+import java.util.*
 
 object Timelines : IntIdTable() {
     val name: Column<String> = varchar("name", 255).uniqueIndex()
+
+    val uuid: Column<UUID> = uuid("uuid").uniqueIndex()
 
     val timeCreated = datetime("timeCreated")
 }
@@ -41,6 +44,14 @@ class Timeline(id: EntityID<Int>) : IntEntity(id) {
      * The unique name of the timeline.
      */
     var name: String by Timelines.name
+
+    /**
+     * A UUID used for associating working directories with this timeline.
+     *
+     * While the [name] of the timeline is unique, this is necessary so that the name can be changed without having to
+     * update the references in each working directory.
+     */
+    var uuid: UUID by Timelines.uuid
 
     /**
      * The time the timeline was created.
