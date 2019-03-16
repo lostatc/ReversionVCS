@@ -13,6 +13,8 @@ repositories {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.jetbrains.exposed:exposed:0.13.2"
+    implementation "com.github.ajalt:clikt:1.6.0"
+    implementation "net.harawata:appdirs:1.0.3"
 }
 
 application {
