@@ -28,7 +28,7 @@ import org.jetbrains.exposed.sql.SizedIterable
 import org.joda.time.DateTime
 
 object Files : IntIdTable() {
-    val path: Column<String> = varchar("path", 4096)
+    val path: Column<EntityID<Int>> = reference("path", Paths)
 
     val timeline: Column<EntityID<Int>> = reference("timeline", Timelines)
 
@@ -37,22 +37,18 @@ object Files : IntIdTable() {
     val permissions: Column<String?> = varchar("permissions", 3).nullable()
 
     val size: Column<Long> = long("size")
-
-    init {
-        uniqueIndex(path, timeline)
-    }
 }
 
 /**
- * Metadata associated with a file in the timeline.
+ * A file in a timeline.
+ *
+ * This represents the data and metadata of a file that exists at some point in a timeline's history.
  */
 class File(id: EntityID<Int>) : IntEntity(id) {
     /**
-     * The relative path of the file with '/' used as the path separator.
-     *
-     * This is unique with respect to other files in the same timeline.
+     * The path of the file.
      */
-    var path: String by Files.path
+    var path: Path by Path referencedOn Files.path
 
     /**
      * The timeline the file is a part of.
