@@ -37,6 +37,8 @@ object Files : IntIdTable() {
     val permissions: Column<String?> = varchar("permissions", 3).nullable()
 
     val size: Column<Long> = long("size")
+
+    val checksum: Column<String> = varchar("checksum", 64)
 }
 
 /**
@@ -71,6 +73,11 @@ class File(id: EntityID<Int>) : IntEntity(id) {
      * The size of the file in bytes.
      */
     var size: Long by Files.size
+
+    /**
+     * The SHA-256 hash of the file contents.
+     */
+    var checksum: String by Files.checksum
 
     /**
      * The binary objects that make up this file.
