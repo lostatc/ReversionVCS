@@ -44,7 +44,7 @@ object Snapshots : IntIdTable() {
  */
 class Snapshot(id: EntityID<Int>) : IntEntity(id) {
     /**
-     * The revision number of the timeline.
+     * The revision number of the snapshot.
      *
      * This is unique with respect to other snapshots in the same timeline.
      */

@@ -24,6 +24,7 @@ import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.SizedCollection
 import org.jetbrains.exposed.sql.SizedIterable
 
 object Paths : IntIdTable() {
@@ -45,6 +46,36 @@ class Path(id: EntityID<Int>) : IntEntity(id) {
      * The files that have this path.
      */
     val files: SizedIterable<File> by File referrersOn Files.path
+
+    /**
+     * The parents of this path.
+     */
+    private var parents: SizedIterable<Path> by Path.via(PathToPaths.child, PathToPaths.parent)
+
+    /**
+     * The parent of this path.
+     */
+    var parent: Path
+        get() = parents.single()
+        set(value) {
+            parents = SizedCollection(value)
+        }
+
+    /**
+     * The immediate children of this path.
+     */
+    var children: SizedIterable<Path> by Path.via(PathToPaths.parent, PathToPaths.child)
+
+    /**
+     * The descendants of this path.
+     */
+    val descendants: Sequence<Path>
+        get() = sequence {
+            for (child in children) {
+                yield(child)
+                yieldAll(child.descendants)
+            }
+        }
 
     companion object : IntEntityClass<Path>(Paths)
 }

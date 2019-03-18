@@ -44,7 +44,7 @@ object Files : IntIdTable() {
 /**
  * A file in a timeline.
  *
- * This represents the data and metadata of a file that exists at some point in a timeline's history.
+ * This represents the data and metadata of a regular file that exists at some point in a timeline's history.
  */
 class File(id: EntityID<Int>) : IntEntity(id) {
     /**
@@ -81,8 +81,6 @@ class File(id: EntityID<Int>) : IntEntity(id) {
 
     /**
      * The binary objects that make up this file.
-     *
-     * A directory should have no binary objects.
      */
     var blobs: SizedIterable<Blob> by Blob via FileBlobs
 
@@ -90,20 +88,6 @@ class File(id: EntityID<Int>) : IntEntity(id) {
      * The snapshots that this file is a part of.
      */
     var snapshots: SizedIterable<Snapshot> by Snapshot via Versions
-
-    /**
-     * The parents of this file.
-     *
-     * A file should never have more than one parent.
-     */
-    var parents: SizedIterable<File> by File.via(FileToFiles.child, FileToFiles.parent)
-
-    /**
-     * The children of this file.
-     *
-     * A file with [blobs] should not also have [children].
-     */
-    var children: SizedIterable<File> by File.via(FileToFiles.parent, FileToFiles.child)
 
     companion object : IntEntityClass<File>(Files)
 }
