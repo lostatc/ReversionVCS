@@ -27,10 +27,10 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 import org.joda.time.DateTime
 
-object Snapshots : IntIdTable() {
+object SnapshotTable : IntIdTable() {
     val revision: Column<Int> = integer("revision")
 
-    val timeline: Column<EntityID<Int>> = reference("timeline", Timelines)
+    val timeline: Column<EntityID<Int>> = reference("timeline", TimelineTable)
 
     val timeCreated: Column<DateTime> = datetime("timeCreated")
 
@@ -42,33 +42,33 @@ object Snapshots : IntIdTable() {
 /**
  * A snapshot in the timeline.
  */
-class Snapshot(id: EntityID<Int>) : IntEntity(id) {
+class SnapshotEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The revision number of the snapshot.
      *
      * This is unique with respect to other snapshots in the same timeline.
      */
-    var revision: Int by Snapshots.revision
+    var revision: Int by SnapshotTable.revision
 
     /**
      * The timeline the snapshot is a part of.
      */
-    var timeline: Timeline by Timeline referencedOn Snapshots.timeline
+    var timeline: TimelineEntity by TimelineEntity referencedOn SnapshotTable.timeline
 
     /**
      * The time the snapshot was created.
      */
-    var timeCreated: DateTime by Snapshots.timeCreated
+    var timeCreated: DateTime by SnapshotTable.timeCreated
 
     /**
      * The files that are a part of this snapshot.
      */
-    var files: SizedIterable<File> by File via Versions
+    var files: SizedIterable<FileEntity> by FileEntity via VersionTable
 
     /**
      * The tags which are associated with this snapshot.
      */
-    val tags: SizedIterable<Tag> by Tag referrersOn Tags.snapshot
+    val tags: SizedIterable<TagEntity> by TagEntity referrersOn TagTable.snapshot
 
-    companion object : IntEntityClass<Snapshot>(Snapshots)
+    companion object : IntEntityClass<SnapshotEntity>(SnapshotTable)
 }

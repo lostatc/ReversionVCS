@@ -26,7 +26,7 @@ import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 
-object RetentionPolicies : IntIdTable() {
+object RetentionPolicyTable : IntIdTable() {
     val minIntervalSeconds: Column<Long> = long("minIntervalSeconds")
 
     val timeFrameSeconds: Column<Long> = long("timeFrameSeconds")
@@ -40,26 +40,26 @@ object RetentionPolicies : IntIdTable() {
  * For the first [timeFrameSeconds] after a snapshot is taken, this policy will only keep [maxVersions] of each file for
  * every [minIntervalSeconds] interval.
  */
-class RetentionPolicy(id: EntityID<Int>) : IntEntity(id) {
+class RetentionPolicyEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The minimum interval of time between each group of versions to keep.
      */
-    var minIntervalSeconds by RetentionPolicies.minIntervalSeconds
+    var minIntervalSeconds by RetentionPolicyTable.minIntervalSeconds
 
     /**
      * The number of seconds into the past during which this policy takes effect.
      */
-    var timeFrameSeconds by RetentionPolicies.timeFrameSeconds
+    var timeFrameSeconds by RetentionPolicyTable.timeFrameSeconds
 
     /**
      * The maximum number of versions of each file to keep within each [minIntervalSeconds] interval.
      */
-    var maxVersions by RetentionPolicies.maxVersions
+    var maxVersions by RetentionPolicyTable.maxVersions
 
     /**
      * The timelines that are associated with this retention policy.
      */
-    var timelines: SizedIterable<Timeline> by Timeline via TimelineRetentionPolicies
+    var timelines: SizedIterable<TimelineEntity> by TimelineEntity via TimelineRetentionPolicyTable
 
-    companion object : IntEntityClass<RetentionPolicy>(RetentionPolicies)
+    companion object : IntEntityClass<RetentionPolicyEntity>(RetentionPolicyTable)
 }

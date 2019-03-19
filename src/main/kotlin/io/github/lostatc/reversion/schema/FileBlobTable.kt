@@ -20,36 +20,25 @@
 package io.github.lostatc.reversion.schema
 
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.dao.IntEntityClass
-import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.SizedIterable
-
-object Blobs : IntIdTable() {
-    val checksum: Column<String> = varchar("checksum", 64).uniqueIndex()
-
-    val size: Column<Long> = long("size")
-}
+import org.jetbrains.exposed.sql.Table
 
 /**
- * The metadata associated with a binary object in the timeline.
+ * A table for storing the relationships between files and binary objects.
  */
-class Blob(id: EntityID<Int>) : IntEntity(id) {
+object FileBlobTable : Table() {
     /**
-     * The hexadecimal SHA-256 checksum of the binary object.
+     * A file in the timeline.
      */
-    var checksum: String by Blobs.checksum
+    val file: Column<EntityID<Int>> = reference("file", FileTable).primaryKey(0)
 
     /**
-     * The size of the binary object in bytes.
+     * A binary object that makes up the file.
      */
-    var size: Long by Blobs.size
+    val blob: Column<EntityID<Int>> = reference("blob", BlobTable).primaryKey(1)
 
     /**
-     * The files that this blob is a part of.
+     * The index of the binary object among all the binary objects that make up the file.
      */
-    var files: SizedIterable<File> by File via FileBlobs
-
-    companion object : IntEntityClass<Blob>(Blobs)
+    val index: Column<Int> = integer("index").primaryKey(2)
 }

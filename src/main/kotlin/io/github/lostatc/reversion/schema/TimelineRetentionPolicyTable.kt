@@ -26,8 +26,8 @@ import org.jetbrains.exposed.sql.Table
 /**
  * A table for storing the relationships between timelines and retention policies.
  */
-object TimelineRetentionPolicies : Table() {
-    val timeline = reference("timeline", Timelines).primaryKey(0)
+object TimelineRetentionPolicyTable : Table() {
+    val timeline = reference("timeline", TimelineTable).primaryKey(0)
 
-    val retentionPolicy: Column<EntityID<Int>> = reference("retentionPolicy", RetentionPolicies).primaryKey(1)
+    val retentionPolicy: Column<EntityID<Int>> = reference("retentionPolicy", RetentionPolicyTable).primaryKey(1)
 }

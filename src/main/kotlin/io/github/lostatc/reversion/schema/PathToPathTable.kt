@@ -23,8 +23,8 @@ import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table
 
-object PathToPaths : Table() {
-    val parent: Column<EntityID<Int>> = reference("parent", Paths)
+object PathToPathTable : Table() {
+    val parent: Column<EntityID<Int>> = reference("parent", PathTable)
 
-    val child: Column<EntityID<Int>> = reference("child", Paths)
+    val child: Column<EntityID<Int>> = reference("child", PathTable)
 }

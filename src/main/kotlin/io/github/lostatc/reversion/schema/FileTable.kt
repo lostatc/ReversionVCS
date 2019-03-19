@@ -27,10 +27,10 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 import org.joda.time.DateTime
 
-object Files : IntIdTable() {
-    val path: Column<EntityID<Int>> = reference("path", Paths)
+object FileTable : IntIdTable() {
+    val path: Column<EntityID<Int>> = reference("path", PathTable)
 
-    val timeline: Column<EntityID<Int>> = reference("timeline", Timelines)
+    val timeline: Column<EntityID<Int>> = reference("timeline", TimelineTable)
 
     val lastModifiedTime: Column<DateTime> = datetime("lastModifiedTime")
 
@@ -46,48 +46,48 @@ object Files : IntIdTable() {
  *
  * This represents the data and metadata of a regular file that exists at some point in a timeline's history.
  */
-class File(id: EntityID<Int>) : IntEntity(id) {
+class FileEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The path of the file.
      */
-    var path: Path by Path referencedOn Files.path
+    var path: PathEntity by PathEntity referencedOn FileTable.path
 
     /**
      * The timeline the file is a part of.
      */
-    var timeline: Timeline by Timeline referencedOn Files.timeline
+    var timeline: TimelineEntity by TimelineEntity referencedOn FileTable.timeline
 
     /**
      * The time the file was last modified.
      */
-    var lastModifiedTime: DateTime by Files.lastModifiedTime
+    var lastModifiedTime: DateTime by FileTable.lastModifiedTime
 
     /**
      * The permissions of the file.
      *
      * This stores the file permissions in octal notation. If POSIX permissions are not applicable, this is `null`.
      */
-    var permissions: String? by Files.permissions
+    var permissions: String? by FileTable.permissions
 
     /**
      * The size of the file in bytes.
      */
-    var size: Long by Files.size
+    var size: Long by FileTable.size
 
     /**
      * The SHA-256 hash of the file contents.
      */
-    var checksum: String by Files.checksum
+    var checksum: String by FileTable.checksum
 
     /**
      * The binary objects that make up this file.
      */
-    var blobs: SizedIterable<Blob> by Blob via FileBlobs
+    var blobs: SizedIterable<BlobEntity> by BlobEntity via FileBlobTable
 
     /**
      * The snapshots that this file is a part of.
      */
-    var snapshots: SizedIterable<Snapshot> by Snapshot via Versions
+    var snapshots: SizedIterable<SnapshotEntity> by SnapshotEntity via VersionTable
 
-    companion object : IntEntityClass<File>(Files)
+    companion object : IntEntityClass<FileEntity>(FileTable)
 }
