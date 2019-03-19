@@ -19,26 +19,28 @@
 
 package io.github.lostatc.reversion.schema
 
+import io.github.lostatc.reversion.storage.Checksum
+import io.github.lostatc.reversion.storage.PermissionSet
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
-import org.joda.time.DateTime
+import java.nio.file.attribute.FileTime
 
 object FileTable : IntIdTable() {
     val path: Column<EntityID<Int>> = reference("path", PathTable)
 
     val timeline: Column<EntityID<Int>> = reference("timeline", TimelineTable)
 
-    val lastModifiedTime: Column<DateTime> = datetime("lastModifiedTime")
+    val lastModifiedTime: Column<FileTime> = fileTime("lastModifiedTime")
 
-    val permissions: Column<String?> = varchar("permissions", 3).nullable()
+    val permissions: Column<PermissionSet?> = filePermissions("permissions").nullable()
 
     val size: Column<Long> = long("size")
 
-    val checksum: Column<String> = varchar("checksum", 64)
+    val checksum: Column<Checksum> = checksum("checksum")
 }
 
 /**
@@ -60,14 +62,14 @@ class FileEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The time the file was last modified.
      */
-    var lastModifiedTime: DateTime by FileTable.lastModifiedTime
+    var lastModifiedTime: FileTime by FileTable.lastModifiedTime
 
     /**
      * The permissions of the file.
      *
-     * This stores the file permissions in octal notation. If POSIX permissions are not applicable, this is `null`.
+     * This stores the file permissions in 'rwxrwxrwx' format. If POSIX permissions are not applicable, this is `null`.
      */
-    var permissions: String? by FileTable.permissions
+    var permissions: PermissionSet? by FileTable.permissions
 
     /**
      * The size of the file in bytes.
@@ -77,7 +79,7 @@ class FileEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The SHA-256 hash of the file contents.
      */
-    var checksum: String by FileTable.checksum
+    var checksum: Checksum by FileTable.checksum
 
     /**
      * The binary objects that make up this file.

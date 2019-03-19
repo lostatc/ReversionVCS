@@ -25,14 +25,14 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
-import org.joda.time.DateTime
+import java.time.Instant
 
 object SnapshotTable : IntIdTable() {
     val revision: Column<Int> = integer("revision")
 
     val timeline: Column<EntityID<Int>> = reference("timeline", TimelineTable)
 
-    val timeCreated: Column<DateTime> = datetime("timeCreated")
+    val timeCreated: Column<Instant> = instant("timeCreated")
 
     init {
         uniqueIndex(revision, timeline)
@@ -58,7 +58,7 @@ class SnapshotEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The time the snapshot was created.
      */
-    var timeCreated: DateTime by SnapshotTable.timeCreated
+    var timeCreated: Instant by SnapshotTable.timeCreated
 
     /**
      * The files that are a part of this snapshot.

@@ -25,7 +25,7 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
-import org.joda.time.DateTime
+import java.time.Instant
 import java.util.*
 
 object TimelineTable : IntIdTable() {
@@ -33,7 +33,7 @@ object TimelineTable : IntIdTable() {
 
     val uuid: Column<UUID> = uuid("uuid").uniqueIndex()
 
-    val timeCreated = datetime("timeCreated")
+    val timeCreated: Column<Instant> = instant("timeCreated")
 }
 
 /**
@@ -56,7 +56,7 @@ class TimelineEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The time the timeline was created.
      */
-    var timeCreated: DateTime by TimelineTable.timeCreated
+    var timeCreated: Instant by TimelineTable.timeCreated
 
     /**
      * The retention policies that are associated with this timeline.
