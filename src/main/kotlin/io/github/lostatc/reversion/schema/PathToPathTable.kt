@@ -23,11 +23,8 @@ import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table
 
-/**
- * A table for storing the relationships between timelines and retention policies.
- */
-object TimelineRetentionPolicies : Table() {
-    val timeline = reference("timeline", Timelines).primaryKey(0)
+object PathToPathTable : Table() {
+    val parent: Column<EntityID<Int>> = reference("parent", PathTable)
 
-    val retentionPolicy: Column<EntityID<Int>> = reference("retentionPolicy", RetentionPolicies).primaryKey(1)
+    val child: Column<EntityID<Int>> = reference("child", PathTable)
 }

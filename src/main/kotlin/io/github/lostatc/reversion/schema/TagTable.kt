@@ -25,16 +25,16 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 
-object Tags : IntIdTable() {
+object TagTable : IntIdTable() {
     val name: Column<String> = varchar("name", 255)
 
     val description: Column<String> = text("description")
 
     val pinned: Column<Boolean> = bool("pinned")
 
-    val snapshot: Column<EntityID<Int>> = reference("snapshot", Snapshots)
+    val snapshot: Column<EntityID<Int>> = reference("snapshot", SnapshotTable)
 
-    val timeline: Column<EntityID<Int>> = reference("timeline", Snapshots.timeline)
+    val timeline: Column<EntityID<Int>> = reference("timeline", SnapshotTable.timeline)
 
     init {
         uniqueIndex(name, timeline)
@@ -44,33 +44,33 @@ object Tags : IntIdTable() {
 /**
  * A tag in the timeline.
  */
-class Tag(id: EntityID<Int>) : IntEntity(id) {
+class TagEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The name of the tag.
      *
      * This is unique with respect to other tags in the same timeline.
      */
-    var name: String by Tags.name
+    var name: String by TagTable.name
 
     /**
      * The description of the tag.
      */
-    var description: String by Tags.description
+    var description: String by TagTable.description
 
     /**
      * Whether the snapshot associated with this tag should be kept forever.
      */
-    var pinned: Boolean by Tags.pinned
+    var pinned: Boolean by TagTable.pinned
 
     /**
      * The snapshot associated with this tag.
      */
-    var snapshot: Snapshot by Snapshot referencedOn Tags.snapshot
+    var snapshot: SnapshotEntity by SnapshotEntity referencedOn TagTable.snapshot
 
     /**
      * The timeline [snapshot] is a part of.
      */
-    var timeline: Timeline by Timeline referencedOn Tags.timeline
+    var timeline: TimelineEntity by TimelineEntity referencedOn TagTable.timeline
 
-    companion object : IntEntityClass<Tag>(Tags)
+    companion object : IntEntityClass<TagEntity>(TagTable)
 }

@@ -19,8 +19,8 @@
 
 package io.github.lostatc.reversion.schema
 
-import io.github.lostatc.reversion.schema.Versions.file
-import io.github.lostatc.reversion.schema.Versions.snapshot
+import io.github.lostatc.reversion.schema.VersionTable.file
+import io.github.lostatc.reversion.schema.VersionTable.snapshot
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table
@@ -30,26 +30,26 @@ import org.jetbrains.exposed.sql.Table
  *
  * The [file] and [snapshot] must be part of the same timeline.
  */
-object Versions : Table() {
+object VersionTable : Table() {
     /**
      * The file in the timeline.
      */
-    val file: Column<EntityID<Int>> = reference("file", Files).primaryKey(0)
+    val file: Column<EntityID<Int>> = reference("file", FileTable).primaryKey(0)
 
     /**
      * The snapshot in the timeline.
      */
-    val snapshot: Column<EntityID<Int>> = reference("snapshot", Snapshots).primaryKey(1)
+    val snapshot: Column<EntityID<Int>> = reference("snapshot", SnapshotTable).primaryKey(1)
 
     /**
      * The timeline [file] is a part of.
      */
-    private val fileTimeline: Column<EntityID<Int>> = reference("fileTimeline", Files.timeline)
+    private val fileTimeline: Column<EntityID<Int>> = reference("fileTimeline", FileTable.timeline)
 
     /**
      * The timeline [snapshot] is a part of.
      */
-    private val snapshotTimeline: Column<EntityID<Int>> = reference("snapshotTimeline", Snapshots.timeline)
+    private val snapshotTimeline: Column<EntityID<Int>> = reference("snapshotTimeline", SnapshotTable.timeline)
 
     init {
         check { fileTimeline eq snapshotTimeline }

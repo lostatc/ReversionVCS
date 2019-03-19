@@ -20,25 +20,36 @@
 package io.github.lostatc.reversion.schema
 
 import org.jetbrains.exposed.dao.EntityID
+import org.jetbrains.exposed.dao.IntEntity
+import org.jetbrains.exposed.dao.IntEntityClass
+import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.SizedIterable
+
+object BlobTable : IntIdTable() {
+    val checksum: Column<String> = varchar("checksum", 64).uniqueIndex()
+
+    val size: Column<Long> = long("size")
+}
 
 /**
- * A table for storing the relationships between files and binary objects.
+ * The metadata associated with a binary object in the timeline.
  */
-object FileBlobs : Table() {
+class BlobEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
-     * A file in the timeline.
+     * The hexadecimal SHA-256 checksum of the binary object.
      */
-    val file: Column<EntityID<Int>> = reference("file", Files).primaryKey(0)
+    var checksum: String by BlobTable.checksum
 
     /**
-     * A binary object that makes up the file.
+     * The size of the binary object in bytes.
      */
-    val blob: Column<EntityID<Int>> = reference("blob", Blobs).primaryKey(1)
+    var size: Long by BlobTable.size
 
     /**
-     * The index of the binary object among all the binary objects that make up the file.
+     * The files that this blob is a part of.
      */
-    val index: Column<Int> = integer("index").primaryKey(2)
+    var files: SizedIterable<FileEntity> by FileEntity via FileBlobTable
+
+    companion object : IntEntityClass<BlobEntity>(BlobTable)
 }

@@ -27,35 +27,35 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedCollection
 import org.jetbrains.exposed.sql.SizedIterable
 
-object Paths : IntIdTable() {
+object PathTable : IntIdTable() {
     val path: Column<String> = varchar("path", 4096).uniqueIndex()
 }
 
 /**
  * A file system path.
  */
-class Path(id: EntityID<Int>) : IntEntity(id) {
+class PathEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The relative path with '/' used as the path separator and no trailing '/'.
      *
      * Each [path] is unique.
      */
-    var path: String by Paths.path
+    var path: String by PathTable.path
 
     /**
      * The files that have this path.
      */
-    val files: SizedIterable<File> by File referrersOn Files.path
+    val files: SizedIterable<FileEntity> by FileEntity referrersOn FileTable.path
 
     /**
      * The parents of this path.
      */
-    private var parents: SizedIterable<Path> by Path.via(PathToPaths.child, PathToPaths.parent)
+    private var parents: SizedIterable<PathEntity> by PathEntity.via(PathToPathTable.child, PathToPathTable.parent)
 
     /**
      * The parent of this path.
      */
-    var parent: Path
+    var parent: PathEntity
         get() = parents.single()
         set(value) {
             parents = SizedCollection(value)
@@ -64,12 +64,12 @@ class Path(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The immediate children of this path.
      */
-    var children: SizedIterable<Path> by Path.via(PathToPaths.parent, PathToPaths.child)
+    var children: SizedIterable<PathEntity> by PathEntity.via(PathToPathTable.parent, PathToPathTable.child)
 
     /**
      * The descendants of this path.
      */
-    val descendants: Sequence<Path>
+    val descendants: Sequence<PathEntity>
         get() = sequence {
             for (child in children) {
                 yield(child)
@@ -77,5 +77,5 @@ class Path(id: EntityID<Int>) : IntEntity(id) {
             }
         }
 
-    companion object : IntEntityClass<Path>(Paths)
+    companion object : IntEntityClass<PathEntity>(PathTable)
 }

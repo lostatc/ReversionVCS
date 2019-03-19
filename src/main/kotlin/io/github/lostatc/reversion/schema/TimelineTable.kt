@@ -28,7 +28,7 @@ import org.jetbrains.exposed.sql.SizedIterable
 import org.joda.time.DateTime
 import java.util.*
 
-object Timelines : IntIdTable() {
+object TimelineTable : IntIdTable() {
     val name: Column<String> = varchar("name", 255).uniqueIndex()
 
     val uuid: Column<UUID> = uuid("uuid").uniqueIndex()
@@ -39,11 +39,11 @@ object Timelines : IntIdTable() {
 /**
  * Metadata associated with a timeline.
  */
-class Timeline(id: EntityID<Int>) : IntEntity(id) {
+class TimelineEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The unique name of the timeline.
      */
-    var name: String by Timelines.name
+    var name: String by TimelineTable.name
 
     /**
      * A UUID used for associating working directories with this timeline.
@@ -51,32 +51,32 @@ class Timeline(id: EntityID<Int>) : IntEntity(id) {
      * While the [name] of the timeline is unique, this is necessary so that the name can be changed without having to
      * update the references in each working directory.
      */
-    var uuid: UUID by Timelines.uuid
+    var uuid: UUID by TimelineTable.uuid
 
     /**
      * The time the timeline was created.
      */
-    var timeCreated: DateTime by Timelines.timeCreated
+    var timeCreated: DateTime by TimelineTable.timeCreated
 
     /**
      * The retention policies that are associated with this timeline.
      */
-    var retentionPolicies: SizedIterable<RetentionPolicy> by RetentionPolicy via TimelineRetentionPolicies
+    var retentionPolicies: SizedIterable<RetentionPolicyEntity> by RetentionPolicyEntity via TimelineRetentionPolicyTable
 
     /**
      * The files that are a part of this timeline.
      */
-    val files: SizedIterable<File> by File referrersOn Files.timeline
+    val files: SizedIterable<FileEntity> by FileEntity referrersOn FileTable.timeline
 
     /**
      * The snapshots that are a part of this timeline.
      */
-    val snapshots: SizedIterable<Snapshot> by Snapshot referrersOn Snapshots.timeline
+    val snapshots: SizedIterable<SnapshotEntity> by SnapshotEntity referrersOn SnapshotTable.timeline
 
     /**
      * The tags that are a part of this timeline.
      */
-    val tags: SizedIterable<Tag> by Tag referrersOn Tags.timeline
+    val tags: SizedIterable<TagEntity> by TagEntity referrersOn TagTable.timeline
 
-    companion object : IntEntityClass<Timeline>(Timelines)
+    companion object : IntEntityClass<TimelineEntity>(TimelineTable)
 }
