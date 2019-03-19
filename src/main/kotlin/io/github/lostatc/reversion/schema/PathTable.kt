@@ -26,9 +26,10 @@ import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedCollection
 import org.jetbrains.exposed.sql.SizedIterable
+import java.nio.file.Path
 
 object PathTable : IntIdTable() {
-    val path: Column<String> = varchar("path", 4096).uniqueIndex()
+    val path: Column<Path> = path("path").uniqueIndex()
 }
 
 /**
@@ -40,7 +41,7 @@ class PathEntity(id: EntityID<Int>) : IntEntity(id) {
      *
      * Each [path] is unique.
      */
-    var path: String by PathTable.path
+    var path: Path by PathTable.path
 
     /**
      * The files that have this path.

@@ -25,11 +25,12 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
+import java.time.Duration
 
 object RetentionPolicyTable : IntIdTable() {
-    val minIntervalSeconds: Column<Long> = long("minIntervalSeconds")
+    val minInterval: Column<Duration> = duration("minIntervalSeconds")
 
-    val timeFrameSeconds: Column<Long> = long("timeFrameSeconds")
+    val timeFrame: Column<Duration> = duration("timeFrameSeconds")
 
     val maxVersions: Column<Int> = integer("maxVersions")
 }
@@ -37,24 +38,24 @@ object RetentionPolicyTable : IntIdTable() {
 /**
  * A rule specifying how old snapshots are cleaned up.
  *
- * For the first [timeFrameSeconds] after a snapshot is taken, this policy will only keep [maxVersions] of each file for
- * every [minIntervalSeconds] interval.
+ * For the first [timeFrame] after a snapshot is taken, this policy will only keep [maxVersions] versions of each file
+ * for every [minInterval] interval.
  */
 class RetentionPolicyEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The minimum interval of time between each group of versions to keep.
      */
-    var minIntervalSeconds by RetentionPolicyTable.minIntervalSeconds
+    var minInterval: Duration by RetentionPolicyTable.minInterval
 
     /**
      * The number of seconds into the past during which this policy takes effect.
      */
-    var timeFrameSeconds by RetentionPolicyTable.timeFrameSeconds
+    var timeFrame: Duration by RetentionPolicyTable.timeFrame
 
     /**
-     * The maximum number of versions of each file to keep within each [minIntervalSeconds] interval.
+     * The maximum number of versions of each file to keep within each [minInterval] interval.
      */
-    var maxVersions by RetentionPolicyTable.maxVersions
+    var maxVersions: Int by RetentionPolicyTable.maxVersions
 
     /**
      * The timelines that are associated with this retention policy.
