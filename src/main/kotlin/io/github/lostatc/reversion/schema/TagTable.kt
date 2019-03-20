@@ -28,9 +28,9 @@ import org.jetbrains.exposed.sql.Column
 object TagTable : IntIdTable() {
     val name: Column<String> = varchar("name", 255)
 
-    val description: Column<String> = text("description")
+    val description: Column<String> = text("description").default("")
 
-    val pinned: Column<Boolean> = bool("pinned")
+    val pinned: Column<Boolean> = bool("pinned").default(true)
 
     val snapshot: Column<EntityID<Int>> = reference("snapshot", SnapshotTable)
 

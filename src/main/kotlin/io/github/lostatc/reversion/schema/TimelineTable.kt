@@ -31,9 +31,9 @@ import java.util.*
 object TimelineTable : IntIdTable() {
     val name: Column<String> = varchar("name", 255).uniqueIndex()
 
-    val uuid: Column<UUID> = uuid("uuid").uniqueIndex()
+    val uuid: Column<UUID> = uuid("uuid").uniqueIndex().clientDefault { UUID.randomUUID() }
 
-    val timeCreated: Column<Instant> = instant("timeCreated")
+    val timeCreated: Column<Instant> = instant("timeCreated").clientDefault { Instant.now() }
 }
 
 /**
