@@ -69,6 +69,11 @@ class TimelineEntity(id: EntityID<Int>) : IntEntity(id) {
     val files: SizedIterable<FileEntity> by FileEntity referrersOn FileTable.timeline
 
     /**
+     * The paths that are a part of this timeline.
+     */
+    val paths: SizedIterable<PathEntity> by PathEntity via FileTable
+
+    /**
      * The snapshots that are a part of this timeline.
      */
     val snapshots: SizedIterable<SnapshotEntity> by SnapshotEntity referrersOn SnapshotTable.timeline
