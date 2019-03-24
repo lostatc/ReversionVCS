@@ -25,7 +25,7 @@ import java.security.MessageDigest
 import java.util.*
 
 /**
- * The SHA256 checksum of a file.
+ * A checksum of a file.
  */
 class Checksum(val bytes: ByteArray) {
     /**
@@ -55,9 +55,14 @@ class Checksum(val bytes: ByteArray) {
 
         /**
          * Calculates a [Checksum] of the data from the given [inputStream].
+         *
+         * This accepts any [algorithm] accepted by [MessageDigest].
+         *
+         * @param [inputStream] The source of the data to calculate the checksum ofl
+         * @param [algorithm] The name of the hash algorithm to use.
          */
-        fun fromInputStream(inputStream: InputStream): Checksum {
-            val messageDigest = MessageDigest.getInstance("SHA-256")
+        fun fromInputStream(inputStream: InputStream, algorithm: String = "SHA-256"): Checksum {
+            val messageDigest = MessageDigest.getInstance(algorithm)
             DigestInputStream(inputStream, messageDigest).use { it.readAllBytes() }
             return Checksum(messageDigest.digest())
         }
