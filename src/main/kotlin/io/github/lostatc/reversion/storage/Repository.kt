@@ -19,9 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.schema.FileEntity
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -29,14 +27,14 @@ import java.util.*
 /**
  * Information about the integrity of a repository.
  *
- * @param [corruptFiles] The set of files in the repository which are corrupt.
+ * @param [corruptVersions] The set of files in the repository which are corrupt.
  */
-data class IntegrityReport(val corruptFiles: Set<File>) {
+data class IntegrityReport(val corruptVersions: Set<Version>) {
     /**
      * Whether the repository is valid (not corrupt).
      */
     val isValid: Boolean
-        get() = corruptFiles.isEmpty()
+        get() = corruptVersions.isEmpty()
 }
 
 /**
@@ -146,15 +144,10 @@ data class DatabaseRepository(override val path: Path) : Repository {
         TODO("not implemented")
     }
 
-    override fun verify(): IntegrityReport = IntegrityReport(
-        transaction {
-            FileEntity
-                .all()
-                .map { DatabaseFile(it) }
-                .filter { !it.isValid() }
-                .toSet()
-        }
-    )
+    override fun verify(): IntegrityReport {
+        // Implement efficiently by checking each blob only once.
+        TODO("not implemented")
+    }
 
     companion object {
         /**
