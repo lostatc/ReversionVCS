@@ -32,7 +32,7 @@ object SnapshotTable : IntIdTable() {
 
     val timeline: Column<EntityID<Int>> = reference("timeline", TimelineTable)
 
-    val timeCreated: Column<Instant> = instant("timeCreated").clientDefault { Instant.now() }
+    val timeCreated: Column<Instant> = instant("timeCreated")
 
     init {
         uniqueIndex(revision, timeline)
