@@ -42,9 +42,7 @@ class Timeline : CliktCommand(help = COMMAND_HELP) {
             Remove(this),
             Modify(this),
             List(this),
-            Info(this),
-            Clean(this),
-            Checkout(this)
+            Info(this)
         )
     }
 

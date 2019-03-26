@@ -25,7 +25,6 @@ import io.github.lostatc.reversion.cli.repo.Repo
 import io.github.lostatc.reversion.cli.snapshot.Snapshot
 import io.github.lostatc.reversion.cli.tag.Tag
 import io.github.lostatc.reversion.cli.timeline.Timeline
-import io.github.lostatc.reversion.cli.workdir.WorkDir
 
 /**
  * The main command of the CLI.
@@ -37,7 +36,13 @@ class Reversion : CliktCommand() {
             Timeline(),
             Snapshot(),
             Tag(),
-            WorkDir()
+            Init(),
+            Status(),
+            Commit(),
+            Checkout(),
+            Update(),
+            Clean(),
+            Verify()
         )
     }
 

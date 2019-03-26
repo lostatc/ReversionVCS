@@ -17,15 +17,26 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.cli.workdir
+package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.path
+import java.nio.file.Path
+import java.nio.file.Paths
 
 private val COMMAND_HELP: String = """
     Show changes that have occurred since the most recent snapshot.
 """.trimIndent()
 
-class Status(val parent: WorkDir) : CliktCommand(help = COMMAND_HELP) {
+class Status : CliktCommand(help = COMMAND_HELP) {
+    val workDir: Path by option(
+        "-w", "--work-dir", help = "Use this directory instead of the current working directory."
+    )
+        .path()
+        .default(Paths.get("").toAbsolutePath())
+
     override fun run() {
         // TODO: Not implemented.
     }

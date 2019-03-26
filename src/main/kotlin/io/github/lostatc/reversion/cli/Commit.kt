@@ -17,35 +17,33 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.cli.workdir
+package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
-import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import java.nio.file.Path
+import java.nio.file.Paths
 
 private val COMMAND_HELP: String = """
-    Update the working directory with data from the timeline.
+    Commit changes to the directory, creating a new snapshot.
 
-    This can be used to update files to a past or future revision. By default, the latest revision is chosen.
-    Uncommitted changes will not be overwritten. If no paths are specified, the entire working directory is updated.
-    This does not commit anything.
+    If no paths are specified, the entire working directory is committed.
 """.trimIndent()
 
-class Update(val parent: WorkDir) : CliktCommand(help = COMMAND_HELP) {
+class Commit : CliktCommand(help = COMMAND_HELP) {
     val paths: List<Path> by argument(help = "The paths of files to commit.")
         .path(exists = true)
         .multiple()
 
-    val revision: Int? by option("-r", "--revision", help = "The revision number of the snapshot to update files to.")
-        .int()
-
-    val overwrite: Boolean by option(help = "Overwrite uncommitted changes.")
-        .flag()
+    val workDir: Path by option(
+        "-w", "--work-dir", help = "Use this directory instead of the current working directory."
+    )
+        .path()
+        .default(Paths.get("").toAbsolutePath())
 
     override fun run() {
         // TODO: Not implemented.
