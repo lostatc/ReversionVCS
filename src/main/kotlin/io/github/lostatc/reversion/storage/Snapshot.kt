@@ -21,12 +21,13 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.schema.*
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Path
 import java.time.Instant
 
 /**
- * A snapshot in the timeline.
+ * A snapshot in a timeline.
  */
 interface Snapshot {
     /**
@@ -101,6 +102,9 @@ interface Snapshot {
     fun listTags(): Sequence<Tag>
 }
 
+/**
+ * An implementation of [Snapshot] which is backed by a relational database.
+ */
 data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
     override val revision: Int
         get() = transaction { entity.revision }
@@ -120,27 +124,20 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
     }
 
     override fun getVersion(path: Path): Version? = transaction {
-        VersionEntity
-            .find { (VersionTable.snapshot eq entity.id) and (PathTable.path eq path) }
-            .map { DatabaseVersion(it) }
+        val query = VersionTable.innerJoin(PathTable)
+            .slice(VersionTable.columns)
+            .select { (VersionTable.snapshot eq entity.id) and (PathTable.path eq path) }
+
+        VersionEntity.wrapRows(query)
             .singleOrNull()
+            ?.let { DatabaseVersion(it) }
     }
 
     override fun listVersions(parent: Path?): Sequence<Version> = transaction {
-        val allFiles = entity.versions.asSequence().map { DatabaseVersion(it) }
-
-        if (parent == null) {
-            allFiles
-        } else {
-            val descendants = PathEntity
-                .find { PathTable.path eq parent }
-                .single()
-                .descendants
-                .map { it.path }
-                .toSet()
-
-            allFiles.filter { it.path in descendants }
-        }
+        entity.versions
+            .asSequence()
+            .map { DatabaseVersion(it) }
+            .filter { parent == null || it.path.startsWith(parent) }
     }
 
     override fun addTag(name: String, description: String, pinned: Boolean): Tag = transaction {
@@ -159,19 +156,15 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
             .find { (TagTable.timeline eq entity.timeline.id) and (TagTable.name eq name) }
             .singleOrNull()
 
-        if (tagEntity == null) {
-            false
-        } else {
-            tagEntity.delete()
-            true
-        }
+        tagEntity?.delete()
+        tagEntity != null
     }
 
     override fun getTag(name: String): Tag? = transaction {
         TagEntity
             .find { (TagTable.timeline eq entity.timeline.id) and (TagTable.name eq name) }
-            .map { DatabaseTag(it) }
             .singleOrNull()
+            ?.let { DatabaseTag(it) }
     }
 
     override fun listTags(): Sequence<Tag> = transaction {

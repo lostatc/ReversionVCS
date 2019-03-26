@@ -19,10 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.schema.RetentionPolicyEntity
-import io.github.lostatc.reversion.schema.SnapshotEntity
-import io.github.lostatc.reversion.schema.SnapshotTable
-import io.github.lostatc.reversion.schema.TimelineEntity
+import io.github.lostatc.reversion.schema.*
 import org.jetbrains.exposed.sql.SizedCollection
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
@@ -67,6 +64,9 @@ data class RetentionPolicy(val minInterval: Duration, val timeFrame: Duration, v
     }
 }
 
+/**
+ * A timeline in a repository.
+ */
 interface Timeline {
     /**
      * The unique name of the timeline.
@@ -112,9 +112,23 @@ interface Timeline {
     /**
      * Returns a sequence of the snapshots in this timeline.
      *
+     * Snapshots are ordered from most recent to least recent.
+     *
      * @return A sequence of snapshots sorted from newest to oldest.
      */
     fun listSnapshots(): Sequence<Snapshot>
+
+    /**
+     * Returns the tag in this timeline with the given [name].
+     *
+     * @return The tag or `null` if it doesn't exist.
+     */
+    fun getTag(name: String): Tag? = listTags().find { it.name == name }
+
+    /**
+     * Returns a sequence of the tags that are associated with this timeline.
+     */
+    fun listTags(): Sequence<Tag> = listSnapshots().flatMap { it.listTags() }
 
     /**
      * Removes old versions of files.
@@ -123,7 +137,7 @@ interface Timeline {
      *
      * @return The number of file versions that were removed.
      */
-    fun clean(): Int = transaction {
+    fun clean(): Int {
         var totalDeleted = 0
 
         for (policy in retentionPolicies) {
@@ -135,10 +149,13 @@ interface Timeline {
             }
         }
 
-        totalDeleted
+        return totalDeleted
     }
 }
 
+/**
+ * An implementation of [Timeline] which is backed by a relational database.
+ */
 data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
     override var name: String
         get() = transaction { entity.name }
@@ -176,23 +193,26 @@ data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
             }
         }
 
-    override fun createSnapshot(paths: Collection<Path>): Snapshot = transaction {
-        val snapshot = DatabaseSnapshot(
-            SnapshotEntity.new {
-                revision = SnapshotEntity
-                    .find { SnapshotTable.timeline eq entity.id }
-                    .orderBy(SnapshotTable.revision to SortOrder.DESC)
-                    .first()
-                    .revision
-                timeCreated = Instant.now()
-                timeline = entity
-            }
-        )
+    override fun createSnapshot(paths: Collection<Path>): Snapshot {
+        val snapshot = transaction {
+            DatabaseSnapshot(
+                SnapshotEntity.new {
+                    revision = SnapshotEntity
+                        .find { SnapshotTable.timeline eq entity.id }
+                        .orderBy(SnapshotTable.revision to SortOrder.DESC)
+                        .firstOrNull()
+                        ?.revision ?: 1
+                    timeCreated = Instant.now()
+                    timeline = entity
+                }
+            )
+        }
+
         for (path in paths) {
             snapshot.addVersion(path)
         }
 
-        snapshot
+        return snapshot
     }
 
     override fun removeSnapshot(revision: Int): Boolean = transaction {
@@ -200,19 +220,15 @@ data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
             .find { (SnapshotTable.timeline eq entity.id) and (SnapshotTable.revision eq revision) }
             .singleOrNull()
 
-        if (snapshotEntity == null) {
-            false
-        } else {
-            snapshotEntity.delete()
-            true
-        }
+        snapshotEntity?.delete()
+        snapshotEntity != null
     }
 
     override fun getSnapshot(revision: Int): Snapshot? = transaction {
         SnapshotEntity
             .find { (SnapshotTable.timeline eq entity.id) and (SnapshotTable.revision eq revision) }
-            .map { DatabaseSnapshot(it) }
             .singleOrNull()
+            ?.let { DatabaseSnapshot(it) }
     }
 
     override fun listSnapshots(): Sequence<Snapshot> = transaction {
@@ -220,5 +236,16 @@ data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
             .orderBy(SnapshotTable.timeCreated to SortOrder.DESC)
             .asSequence()
             .map { DatabaseSnapshot(it) }
+    }
+
+    override fun getTag(name: String): Tag? = transaction {
+        TagEntity
+            .find { TagTable.name eq name }
+            .singleOrNull()
+            ?.let { DatabaseTag(it) }
+    }
+
+    override fun listTags(): Sequence<Tag> = transaction {
+        TagEntity.all().asSequence().map { DatabaseTag(it) }
     }
 }
