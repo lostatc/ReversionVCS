@@ -122,24 +122,24 @@ interface Version {
  */
 data class DatabaseVersion(val entity: VersionEntity) : Version {
     override val path: Path
-        get() = transaction { entity.file.path.path }
+        get() = transaction { entity.path.path }
 
     override val lastModifiedTime: FileTime
-        get() = transaction { entity.file.lastModifiedTime }
+        get() = transaction { entity.lastModifiedTime }
 
     override val permissions: Set<PosixFilePermission>?
-        get() = transaction { entity.file.permissions }
+        get() = transaction { entity.permissions }
 
     override val size: Long
-        get() = transaction { entity.file.size }
+        get() = transaction { entity.size }
 
     override val checksum: Checksum
-        get() = transaction { entity.file.checksum }
+        get() = transaction { entity.checksum }
 
     override val checksumAlgorithm: String = "SHA-256"
 
     override val timeline: Timeline
-        get() = transaction { DatabaseTimeline(entity.file.timeline) }
+        get() = transaction { DatabaseTimeline(entity.snapshot.timeline) }
 
     override val snapshot: Snapshot
         get() = transaction { DatabaseSnapshot(entity.snapshot) }

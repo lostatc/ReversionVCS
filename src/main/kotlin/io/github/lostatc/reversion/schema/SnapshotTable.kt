@@ -61,11 +61,6 @@ class SnapshotEntity(id: EntityID<Int>) : IntEntity(id) {
     var timeCreated: Instant by SnapshotTable.timeCreated
 
     /**
-     * The files that are a part of this snapshot.
-     */
-    var files: SizedIterable<FileEntity> by FileEntity via VersionTable
-
-    /**
      * The versions of files that are a part of this snapshot.
      */
     val versions: SizedIterable<VersionEntity> by VersionEntity referrersOn VersionTable.snapshot

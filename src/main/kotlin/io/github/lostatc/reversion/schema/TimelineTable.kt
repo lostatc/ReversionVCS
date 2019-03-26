@@ -64,16 +64,6 @@ class TimelineEntity(id: EntityID<Int>) : IntEntity(id) {
     var retentionPolicies: SizedIterable<RetentionPolicyEntity> by RetentionPolicyEntity via TimelineRetentionPolicyTable
 
     /**
-     * The files that are a part of this timeline.
-     */
-    val files: SizedIterable<FileEntity> by FileEntity referrersOn FileTable.timeline
-
-    /**
-     * The paths that are a part of this timeline.
-     */
-    val paths: SizedIterable<PathEntity> by PathEntity via FileTable
-
-    /**
      * The snapshots that are a part of this timeline.
      */
     val snapshots: SizedIterable<SnapshotEntity> by SnapshotEntity referrersOn SnapshotTable.timeline

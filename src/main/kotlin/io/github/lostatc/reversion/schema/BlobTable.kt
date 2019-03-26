@@ -47,9 +47,9 @@ class BlobEntity(id: EntityID<Int>) : IntEntity(id) {
     var size: Long by BlobTable.size
 
     /**
-     * The files that this blob is a part of.
+     * The versions that this blob is a part of.
      */
-    var files: SizedIterable<FileEntity> by FileEntity via FileBlobTable
+    var versions: SizedIterable<VersionEntity> by VersionEntity via VersionBlobTable
 
     companion object : IntEntityClass<BlobEntity>(BlobTable)
 }

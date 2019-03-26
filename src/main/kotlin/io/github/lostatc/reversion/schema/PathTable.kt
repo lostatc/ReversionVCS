@@ -44,9 +44,9 @@ class PathEntity(id: EntityID<Int>) : IntEntity(id) {
     var path: Path by PathTable.path
 
     /**
-     * The files that have this path.
+     * The versions that have this path.
      */
-    val files: SizedIterable<FileEntity> by FileEntity referrersOn FileTable.path
+    val versions: SizedIterable<VersionEntity> by VersionEntity referrersOn VersionTable.path
 
     /**
      * The parents of this path.
