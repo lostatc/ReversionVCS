@@ -17,33 +17,23 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.cli.timeline
+package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
+import io.github.lostatc.reversion.DEFAULT_REPO
 import java.nio.file.Path
 
 private val COMMAND_HELP: String = """
-    Get versions of files from a timeline.
-
-    This gets a version of a file from a snapshot in a timeline and copies it to a local path. By default, the latest
-    revision is chosen.
+    Verify the integrity of a repository.
 """.trimIndent()
 
-class Checkout(val parent: Timeline) : CliktCommand(help = COMMAND_HELP) {
-    val name: String by argument(help = "The name of the timeline.")
-
-    val source: Path by argument(help = "The relative path of the file to retrieve from the timeline.")
+class Verify : CliktCommand(help = COMMAND_HELP) {
+    val repo: Path by option(help = "Use this repository instead of the default repository.")
         .path()
-
-    val dest: Path by argument(help = "The path to copy the file to.")
-        .path()
-
-    val revision: Int? by option(help = "The revision number of the snapshot to get the file from.")
-        .int()
+        .default(DEFAULT_REPO)
 
     override fun run() {
         // TODO: Not implemented.

@@ -17,29 +17,43 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.cli.workdir
+package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
-import io.github.lostatc.reversion.DEFAULT_REPO
 import java.nio.file.Path
+import java.nio.file.Paths
 
 private val COMMAND_HELP: String = """
-    Begin tracking changes in an existing directory.
+    Update the working directory with data from the timeline.
 
-    This associates the directory with a timeline, making it a working directory. The contents of the directory and the
-    timeline are not modified.
+    This can be used to update files to a past or future revision. By default, the latest revision is chosen.
+    Uncommitted changes will not be overwritten. If no paths are specified, the entire working directory is updated.
+    This does not commit anything.
 """.trimIndent()
 
-class Init(val parent: WorkDir) : CliktCommand(help = COMMAND_HELP) {
-    val timeline: String by argument(help = "The timeline to associate the directory with.")
+class Update : CliktCommand(help = COMMAND_HELP) {
+    val paths: List<Path> by argument(help = "The paths of files to commit.")
+        .path(exists = true)
+        .multiple()
 
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
+    val workDir: Path by option(
+        "-w", "--work-dir", help = "Use this directory instead of the current working directory."
+    )
         .path()
-        .default(DEFAULT_REPO)
+        .default(Paths.get("").toAbsolutePath())
+
+    val revision: Int? by option("-r", "--revision", help = "The revision number of the snapshot to update files to.")
+        .int()
+
+    val overwrite: Boolean by option(help = "Overwrite uncommitted changes.")
+        .flag()
 
     override fun run() {
         // TODO: Not implemented.
