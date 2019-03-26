@@ -19,39 +19,42 @@
 
 package io.github.lostatc.reversion.schema
 
-import io.github.lostatc.reversion.schema.VersionTable.file
-import io.github.lostatc.reversion.schema.VersionTable.snapshot
 import org.jetbrains.exposed.dao.EntityID
+import org.jetbrains.exposed.dao.IntEntity
+import org.jetbrains.exposed.dao.IntEntityClass
+import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.Table
 
-/**
- * A table for storing the relationships between files and snapshots.
- *
- * The [file] and [snapshot] must be part of the same timeline.
- */
-object VersionTable : Table() {
-    /**
-     * The file in the timeline.
-     */
-    val file: Column<EntityID<Int>> = reference("file", FileTable).primaryKey(0)
+object VersionTable : IntIdTable() {
+    val file: Column<EntityID<Int>> = reference("file", FileTable)
 
-    /**
-     * The snapshot in the timeline.
-     */
-    val snapshot: Column<EntityID<Int>> = reference("snapshot", SnapshotTable).primaryKey(1)
+    val snapshot: Column<EntityID<Int>> = reference("snapshot", SnapshotTable)
 
-    /**
-     * The timeline [file] is a part of.
-     */
     private val fileTimeline: Column<EntityID<Int>> = reference("fileTimeline", FileTable.timeline)
 
-    /**
-     * The timeline [snapshot] is a part of.
-     */
     private val snapshotTimeline: Column<EntityID<Int>> = reference("snapshotTimeline", SnapshotTable.timeline)
 
     init {
+        uniqueIndex(file, snapshot)
         check { fileTimeline eq snapshotTimeline }
     }
+}
+
+/**
+ * A version of a file.
+ *
+ * The [file] and [snapshot] must be part of the same timeline.
+ */
+class VersionEntity(id: EntityID<Int>) : IntEntity(id) {
+    /**
+     * The file that this object represents a version of.
+     */
+    var file: FileEntity by FileEntity referencedOn VersionTable.file
+
+    /**
+     * The snapshot containing this version of the file.
+     */
+    var snapshot: SnapshotEntity by SnapshotEntity referencedOn VersionTable.snapshot
+
+    companion object : IntEntityClass<VersionEntity>(VersionTable)
 }

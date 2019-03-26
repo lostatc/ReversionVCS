@@ -47,30 +47,30 @@ interface Snapshot {
     val timeline: Timeline
 
     /**
-     * Adds the file with the given [path] to this snapshot and returns it.
+     * Adds the file with the given [path] to this snapshot and returns a version.
      */
-    fun addFile(path: Path): File
+    fun addVersion(path: Path): Version
 
     /**
-     * Removes the file with the given [path] from this snapshot.
+     * Removes the version with the given [path] from this snapshot.
      *
-     * @return `true` if the file was removed, `false` if it didn't exist.
+     * @return `true` if the version was removed, `false` if it didn't exist.
      */
-    fun removeFile(path: Path): Boolean
+    fun removeVersion(path: Path): Boolean
 
     /**
-     * Returns the file in this snapshot with the given [path].
+     * Returns the version in this snapshot with the given [path].
      *
-     * @return The file or `null` if it doesn't exist.
+     * @return The version or `null` if it doesn't exist.
      */
-    fun getFile(path: Path): File?
+    fun getVersion(path: Path): Version?
 
     /**
-     * Returns a sequence of the files in this snapshot.
+     * Returns a sequence of the versions in this snapshot.
      *
-     * @param [parent] If not `null`, only the files which are descendants of this relative path will be returned.
+     * @param [parent] If not `null`, only the version which are descendants of this relative path will be returned.
      */
-    fun listFiles(parent: Path? = null): Sequence<File>
+    fun listVersions(parent: Path? = null): Sequence<Version>
 
     /**
      * Adds a tag to this snapshot and returns it.
@@ -111,23 +111,23 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
     override val timeline: Timeline
         get() = transaction { DatabaseTimeline(entity.timeline) }
 
-    override fun addFile(path: Path): File {
+    override fun addVersion(path: Path): Version {
         TODO("not implemented")
     }
 
-    override fun removeFile(path: Path): Boolean {
+    override fun removeVersion(path: Path): Boolean {
         TODO("not implemented")
     }
 
-    override fun getFile(path: Path): File? = transaction {
-        FileEntity
-            .find { (SnapshotTable.id eq entity.id) and (PathTable.path eq path) }
-            .map { DatabaseFile(it) }
+    override fun getVersion(path: Path): Version? = transaction {
+        VersionEntity
+            .find { (VersionTable.snapshot eq entity.id) and (PathTable.path eq path) }
+            .map { DatabaseVersion(it) }
             .singleOrNull()
     }
 
-    override fun listFiles(parent: Path?): Sequence<File> = transaction {
-        val allFiles = entity.files.asSequence().map { DatabaseFile(it) }
+    override fun listVersions(parent: Path?): Sequence<Version> = transaction {
+        val allFiles = entity.versions.asSequence().map { DatabaseVersion(it) }
 
         if (parent == null) {
             allFiles

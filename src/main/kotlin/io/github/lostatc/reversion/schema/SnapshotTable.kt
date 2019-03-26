@@ -66,6 +66,11 @@ class SnapshotEntity(id: EntityID<Int>) : IntEntity(id) {
     var files: SizedIterable<FileEntity> by FileEntity via VersionTable
 
     /**
+     * The versions of files that are a part of this snapshot.
+     */
+    val versions: SizedIterable<VersionEntity> by VersionEntity referrersOn VersionTable.snapshot
+
+    /**
      * The tags which are associated with this snapshot.
      */
     val tags: SizedIterable<TagEntity> by TagEntity referrersOn TagTable.snapshot

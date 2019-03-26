@@ -27,7 +27,6 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
-import org.jetbrains.exposed.sql.SortOrder
 import java.nio.file.attribute.FileTime
 
 object FileTable : IntIdTable() {
@@ -93,10 +92,9 @@ class FileEntity(id: EntityID<Int>) : IntEntity(id) {
     var snapshots: SizedIterable<SnapshotEntity> by SnapshotEntity via VersionTable
 
     /**
-     * The oldest snapshot which this file is a part of.
+     * The versions of this file.
      */
-    val oldestSnapshot: SnapshotEntity
-        get() = snapshots.orderBy(SnapshotTable.timeCreated to SortOrder.ASC).first()
+    val versions: SizedIterable<VersionEntity> by VersionEntity referrersOn VersionTable.file
 
     companion object : IntEntityClass<FileEntity>(FileTable)
 }

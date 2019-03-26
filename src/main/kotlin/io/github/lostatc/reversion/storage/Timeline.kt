@@ -19,7 +19,10 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.schema.*
+import io.github.lostatc.reversion.schema.RetentionPolicyEntity
+import io.github.lostatc.reversion.schema.SnapshotEntity
+import io.github.lostatc.reversion.schema.SnapshotTable
+import io.github.lostatc.reversion.schema.TimelineEntity
 import org.jetbrains.exposed.sql.SizedCollection
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
@@ -37,24 +40,21 @@ import java.util.*
  */
 data class RetentionPolicy(val minInterval: Duration, val timeFrame: Duration, val maxVersions: Int) {
     /**
-     * Returns only the items which can be deleted.
-     *
-     * @param [files] The sequence of items to be filtered.
-     * @param [keyFunc] A function which accepts an item and returns the time the item was created/added/committed.
+     * Returns only the [versions] which can be deleted according to this policy.
      */
-    fun <T> filter(files: Sequence<T>, keyFunc: (T) -> Instant): Sequence<T> = sequence {
+    fun filter(versions: Sequence<Version>): Sequence<Version> = sequence {
         val now = Instant.now()
         val timeFrameStart = now.minus(timeFrame)
         var intervalStart = now.minus(minInterval)
         var intervalEnd = now
 
-        // Sort files from newest to oldest.
-        val sortedItems = files.sortedByDescending { keyFunc(it) }
+        // Sort versions from newest to oldest.
+        val sortedItems = versions.sortedByDescending { it.snapshot.timeCreated }
 
         // Iterate over each interval from now to the start of the time frame.
         while (intervalStart.isAfter(timeFrameStart)) {
             val filesInThisInterval = sortedItems.filter {
-                val instant = keyFunc(it)
+                val instant = it.snapshot.timeCreated
                 instant.isAfter(intervalStart) && instant.isBefore(intervalEnd)
             }
 
@@ -117,18 +117,26 @@ interface Timeline {
     fun listSnapshots(): Sequence<Snapshot>
 
     /**
-     * Returns a sequence of the files in this timeline with the given [path].
-     */
-    fun listVersions(path: Path): Sequence<File>
-
-    /**
      * Removes old versions of files.
      *
      * The timeline's [retentionPolicies] govern which snapshots are removed.
      *
      * @return The number of file versions that were removed.
      */
-    fun clean(): Int
+    fun clean(): Int = transaction {
+        var totalDeleted = 0
+
+        for (policy in retentionPolicies) {
+            for (snapshot in listSnapshots()) {
+                for (version in policy.filter(snapshot.listVersions())) {
+                    snapshot.removeVersion(version.path)
+                    totalDeleted++
+                }
+            }
+        }
+
+        totalDeleted
+    }
 }
 
 data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
@@ -181,7 +189,7 @@ data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
             }
         )
         for (path in paths) {
-            snapshot.addFile(path)
+            snapshot.addVersion(path)
         }
 
         snapshot
@@ -212,28 +220,5 @@ data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
             .orderBy(SnapshotTable.timeCreated to SortOrder.DESC)
             .asSequence()
             .map { DatabaseSnapshot(it) }
-    }
-
-    override fun listVersions(path: Path): Sequence<File> = transaction {
-        FileEntity
-            .find { (FileTable.timeline eq entity.id) and (PathTable.path eq path) }
-            .asSequence()
-            .map { DatabaseFile(it) }
-    }
-
-    override fun clean(): Int = transaction {
-        val filesToDelete = mutableSetOf<FileEntity>()
-        for (policy in retentionPolicies) {
-            for (pathEntity in entity.paths) {
-                val versions = pathEntity.files.asSequence()
-                filesToDelete.addAll(policy.filter(versions) { it.oldestSnapshot.timeCreated })
-            }
-        }
-
-        for (fileEntity in filesToDelete) {
-            fileEntity.delete()
-        }
-
-        filesToDelete.size
     }
 }

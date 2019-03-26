@@ -19,7 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.schema.FileEntity
+import io.github.lostatc.reversion.schema.VersionEntity
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.IOException
 import java.io.InputStream
@@ -32,7 +32,7 @@ import java.nio.file.attribute.PosixFilePermission
 /**
  * A version of a file stored in the repository.
  */
-interface File {
+interface Version {
     /**
      * The relative path of the file relative to its working directory.
      */
@@ -69,9 +69,9 @@ interface File {
     val timeline: Timeline
 
     /**
-     * Returns a sequence of the snapshots that this file is a part of.
+     * The snapshot that this file is a part of.
      */
-    fun listSnapshots(): Sequence<Snapshot>
+    val snapshot: Snapshot
 
     /**
      * Returns an input stream used for reading the file contents from the repository.
@@ -118,32 +118,31 @@ interface File {
 }
 
 /**
- * An implementation of [File] which is backed by a relational database.
+ * An implementation of [Version] which is backed by a relational database.
  */
-data class DatabaseFile(val entity: FileEntity) : File {
+data class DatabaseVersion(val entity: VersionEntity) : Version {
     override val path: Path
-        get() = transaction { entity.path.path }
+        get() = transaction { entity.file.path.path }
 
     override val lastModifiedTime: FileTime
-        get() = transaction { entity.lastModifiedTime }
+        get() = transaction { entity.file.lastModifiedTime }
 
     override val permissions: Set<PosixFilePermission>?
-        get() = transaction { entity.permissions }
+        get() = transaction { entity.file.permissions }
 
     override val size: Long
-        get() = transaction { entity.size }
+        get() = transaction { entity.file.size }
 
     override val checksum: Checksum
-        get() = transaction { entity.checksum }
+        get() = transaction { entity.file.checksum }
 
     override val checksumAlgorithm: String = "SHA-256"
 
     override val timeline: Timeline
-        get() = transaction { DatabaseTimeline(entity.timeline) }
+        get() = transaction { DatabaseTimeline(entity.file.timeline) }
 
-    override fun listSnapshots(): Sequence<Snapshot> = transaction {
-        entity.snapshots.asSequence().map { DatabaseSnapshot(it) }
-    }
+    override val snapshot: Snapshot
+        get() = transaction { DatabaseSnapshot(entity.snapshot) }
 
     override fun newInputStream(): InputStream {
         TODO("not implemented")
