@@ -24,13 +24,13 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table
 
 /**
- * A table for storing the relationships between files and binary objects.
+ * A table for storing the relationships between versions of files and binary objects.
  */
-object FileBlobTable : Table() {
+object VersionBlobTable : Table() {
     /**
-     * A file in the timeline.
+     * A version in the timeline.
      */
-    val file: Column<EntityID<Int>> = reference("file", FileTable).primaryKey(0)
+    val version: Column<EntityID<Int>> = reference("version", VersionTable).primaryKey(0)
 
     /**
      * A binary object that makes up the file.

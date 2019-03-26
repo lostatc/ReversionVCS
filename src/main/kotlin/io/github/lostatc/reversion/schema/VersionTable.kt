@@ -19,42 +19,74 @@
 
 package io.github.lostatc.reversion.schema
 
+import io.github.lostatc.reversion.storage.Checksum
+import io.github.lostatc.reversion.storage.PermissionSet
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.SizedIterable
+import java.nio.file.attribute.FileTime
 
 object VersionTable : IntIdTable() {
-    val file: Column<EntityID<Int>> = reference("file", FileTable)
+    val path: Column<EntityID<Int>> = reference("path", PathTable)
 
     val snapshot: Column<EntityID<Int>> = reference("snapshot", SnapshotTable)
 
-    private val fileTimeline: Column<EntityID<Int>> = reference("fileTimeline", FileTable.timeline)
+    val lastModifiedTime: Column<FileTime> = fileTime("lastModifiedTime")
 
-    private val snapshotTimeline: Column<EntityID<Int>> = reference("snapshotTimeline", SnapshotTable.timeline)
+    val permissions: Column<PermissionSet?> = filePermissions("permissions").nullable()
+
+    val size: Column<Long> = long("size")
+
+    val checksum: Column<Checksum> = checksum("checksum")
 
     init {
-        uniqueIndex(file, snapshot)
-        check { fileTimeline eq snapshotTimeline }
+        uniqueIndex(path, snapshot)
     }
 }
 
 /**
- * A version of a file.
- *
- * The [file] and [snapshot] must be part of the same timeline.
+ * A version of a file in a timeline.
  */
 class VersionEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
-     * The file that this object represents a version of.
+     * The path of the file.
      */
-    var file: FileEntity by FileEntity referencedOn VersionTable.file
+    var path: PathEntity by PathEntity referencedOn VersionTable.path
 
     /**
-     * The snapshot containing this version of the file.
+     * The snapshot the file is a part of.
      */
     var snapshot: SnapshotEntity by SnapshotEntity referencedOn VersionTable.snapshot
+
+    /**
+     * The time the file was last modified.
+     */
+    var lastModifiedTime: FileTime by VersionTable.lastModifiedTime
+
+    /**
+     * The permissions of the file.
+     *
+     * This stores the file permissions in 'rwxrwxrwx' format. If POSIX permissions are not applicable, this is `null`.
+     */
+    var permissions: PermissionSet? by VersionTable.permissions
+
+    /**
+     * The size of the file in bytes.
+     */
+    var size: Long by VersionTable.size
+
+    /**
+     * The SHA-256 hash of the file contents.
+     */
+    var checksum: Checksum by VersionTable.checksum
+
+    /**
+     * The binary objects that make up this file.
+     */
+    var blobs: SizedIterable<BlobEntity> by BlobEntity via VersionBlobTable
 
     companion object : IntEntityClass<VersionEntity>(VersionTable)
 }
