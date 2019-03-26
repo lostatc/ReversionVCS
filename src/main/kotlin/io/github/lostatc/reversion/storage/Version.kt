@@ -30,7 +30,7 @@ import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 
 /**
- * A version of a file stored in the repository.
+ * A version of a file stored in a repository.
  */
 interface Version {
     /**

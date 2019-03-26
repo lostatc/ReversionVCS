@@ -19,9 +19,14 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.schema.TimelineEntity
+import io.github.lostatc.reversion.schema.TimelineTable
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.transactions.transaction
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Instant
 import java.util.*
 
 /**
@@ -50,11 +55,12 @@ interface Repository {
      * Creates a new timeline in this repository and returns it.
      *
      * @param [name] The name of the new timeline.
+     * @param [policies] The rules which govern how old snapshots in this timeline are cleaned up.
      */
-    fun createTimeline(name: String): Timeline
+    fun createTimeline(name: String, policies: Set<RetentionPolicy> = setOf()): Timeline
 
     /**
-     * Removes a timeline from the repository.
+     * Removes the timeline with the given [name] from the repository.
      *
      * This deletes the timeline and all its snapshots, files and tags.
      *
@@ -63,14 +69,27 @@ interface Repository {
     fun removeTimeline(name: String): Boolean
 
     /**
-     * Returns the timeline with the given [name].
+     * Removes the timeline with the given [id] from the repository.
+     *
+     * This deletes the timeline and all its snapshots, files and tags.
+     *
+     * @return `true` if the timeline was deleted, `false` if it didn't exist.
      */
-    fun getTimeline(name: String): Timeline
+    fun removeTimeline(id: UUID): Boolean
+
+    /**
+     * Returns the timeline with the given [name].
+     *
+     * @return The timeline or `null` if it doesn't exist.
+     */
+    fun getTimeline(name: String): Timeline?
 
     /**
      * Returns the timeline with the given [id].
+     *
+     * @return The timeline or `null` if it doesn't exist.
      */
-    fun getTimeline(id: UUID): Timeline
+    fun getTimeline(id: UUID): Timeline?
 
     /**
      * Returns a sequence of timelines stored in the repository.
@@ -87,11 +106,17 @@ interface Repository {
 /**
  * An exception which is thrown when the format of a repository isn't supported by the storage provider.
  *
- * @param [version] The version of the repository.
  * @param [message] A message describing the exception
  */
-class UnsupportedFormatException(val version: UUID, message: String? = null) : IllegalArgumentException(message)
+class UnsupportedFormatException(message: String? = null) : IllegalArgumentException(message)
 
+/**
+ * An implementation of [Repository] which is backed by a relational database.
+ *
+ * @param [path] The path of the repository.
+ *
+ * @throws [UnsupportedFormatException] The format of the repository at [path] isn't supported.
+ */
 data class DatabaseRepository(override val path: Path) : Repository {
     /**
      * The path of the repository's database.
@@ -99,18 +124,26 @@ data class DatabaseRepository(override val path: Path) : Repository {
     private val databasePath = path.resolve("manifest.db")
 
     /**
-     * The path of the repository's format version.
+     * The path of the file containing the repository's format version.
      */
     private val versionPath = path.resolve("version")
 
     /**
      * The version of this repository.
      */
-    private val version: UUID = UUID.fromString(Files.readString(path))
+    private val version: UUID
 
     init {
+        try {
+            version = UUID.fromString(Files.readString(versionPath))
+        } catch (e: IOException) {
+            throw UnsupportedFormatException("The format version could not be determined.")
+        } catch (e: IllegalArgumentException) {
+            throw UnsupportedFormatException("The format version could not be determined.")
+        }
+
         if (version !in supportedVersions) {
-            throw UnsupportedFormatException(version)
+            throw UnsupportedFormatException("The format of the repository isn't supported.")
         }
     }
 
@@ -124,24 +157,48 @@ data class DatabaseRepository(override val path: Path) : Repository {
         )
     }
 
-    override fun createTimeline(name: String): Timeline {
-        TODO("not implemented")
+    override fun createTimeline(name: String, policies: Set<RetentionPolicy>): Timeline = transaction {
+        val timeline = DatabaseTimeline(
+            TimelineEntity.new {
+                this.name = name
+                this.uuid = UUID.randomUUID()
+                this.timeCreated = Instant.now()
+            }
+        )
+        timeline.retentionPolicies = policies
+        timeline
     }
 
-    override fun removeTimeline(name: String): Boolean {
-        TODO("not implemented")
+    override fun removeTimeline(name: String): Boolean = transaction {
+        val timelineEntity = TimelineEntity.find { TimelineTable.name eq name }.singleOrNull()
+
+        timelineEntity?.delete()
+        timelineEntity != null
     }
 
-    override fun getTimeline(name: String): Timeline {
-        TODO("not implemented")
+    override fun removeTimeline(id: UUID): Boolean = transaction {
+        val timelineEntity = TimelineEntity.find { TimelineTable.uuid eq id }.singleOrNull()
+
+        timelineEntity?.delete()
+        timelineEntity != null
     }
 
-    override fun getTimeline(id: UUID): Timeline {
-        TODO("not implemented")
+    override fun getTimeline(name: String): Timeline? = transaction {
+        TimelineEntity
+            .find { TimelineTable.name eq name }
+            .singleOrNull()
+            ?.let { DatabaseTimeline(it) }
     }
 
-    override fun listTimelines(): Sequence<Timeline> {
-        TODO("not implemented")
+    override fun getTimeline(id: UUID): Timeline? = transaction {
+        TimelineEntity
+            .find { TimelineTable.uuid eq id }
+            .singleOrNull()
+            ?.let { DatabaseTimeline(it) }
+    }
+
+    override fun listTimelines(): Sequence<Timeline> = transaction {
+        TimelineEntity.all().asSequence().map { DatabaseTimeline(it) }
     }
 
     override fun verify(): IntegrityReport {

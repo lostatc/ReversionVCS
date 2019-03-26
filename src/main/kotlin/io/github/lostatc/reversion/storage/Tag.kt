@@ -22,6 +22,9 @@ package io.github.lostatc.reversion.storage
 import io.github.lostatc.reversion.schema.TagEntity
 import org.jetbrains.exposed.sql.transactions.transaction
 
+/**
+ * A tag on a snapshot.
+ */
 interface Tag {
     /**
      * The name of the tag.

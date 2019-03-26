@@ -19,7 +19,6 @@
 
 package io.github.lostatc.reversion.storage
 
-import java.io.IOException
 import java.nio.file.Path
 import java.util.*
 
@@ -40,9 +39,12 @@ interface StorageProvider {
     /**
      * Returns whether there is a repository compatible with this storage provider at the given [path].
      */
-    fun isRepository(path: Path): Boolean
+    fun isValidRepository(path: Path): Boolean
 
     companion object {
+        /**
+         * Returns a sequence of all available storage providers.
+         */
         fun listProviders(): Sequence<StorageProvider> =
             ServiceLoader.load(StorageProvider::class.java).asSequence()
 
@@ -51,10 +53,13 @@ interface StorageProvider {
          *
          * @return The first compatible storage provider or `null` if none was found.
          */
-        fun findProvider(path: Path): StorageProvider? = listProviders().find { it.isRepository(path) }
+        fun findProvider(path: Path): StorageProvider? = listProviders().find { it.isValidRepository(path) }
     }
 }
 
+/**
+ * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
+ */
 object DatabaseStorageProvider : StorageProvider {
     override fun getRepository(path: Path): Repository = DatabaseRepository(path)
 
@@ -62,11 +67,9 @@ object DatabaseStorageProvider : StorageProvider {
         TODO("not implemented")
     }
 
-    override fun isRepository(path: Path): Boolean = try {
-        getRepository(path)
+    override fun isValidRepository(path: Path): Boolean = try {
+        DatabaseRepository(path)
         true
-    } catch (e: IOException) {
-        false
     } catch (e: UnsupportedFormatException) {
         false
     }
