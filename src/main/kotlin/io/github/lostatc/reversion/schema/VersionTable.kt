@@ -27,10 +27,11 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
+import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 
 object VersionTable : IntIdTable() {
-    val path: Column<EntityID<Int>> = reference("path", PathTable)
+    val path: Column<Path> = path("path")
 
     val snapshot: Column<EntityID<Int>> = reference("snapshot", SnapshotTable)
 
@@ -54,7 +55,7 @@ class VersionEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The path of the file.
      */
-    var path: PathEntity by PathEntity referencedOn VersionTable.path
+    var path: Path by VersionTable.path
 
     /**
      * The snapshot the file is a part of.
