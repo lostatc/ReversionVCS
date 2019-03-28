@@ -78,9 +78,9 @@ data class DatabaseTag(val entity: TagEntity) : Tag {
             transaction { entity.pinned = value }
         }
 
-    override val snapshot: Snapshot
+    override val snapshot: DatabaseSnapshot
         get() = transaction { DatabaseSnapshot(entity.snapshot) }
 
-    override val timeline: Timeline
+    override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.timeline) }
 }

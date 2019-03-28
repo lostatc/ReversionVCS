@@ -193,7 +193,7 @@ data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
             }
         }
 
-    override fun createSnapshot(paths: Collection<Path>): Snapshot {
+    override fun createSnapshot(paths: Collection<Path>): DatabaseSnapshot {
         val snapshot = transaction {
             DatabaseSnapshot(
                 SnapshotEntity.new {
@@ -224,28 +224,28 @@ data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
         snapshotEntity != null
     }
 
-    override fun getSnapshot(revision: Int): Snapshot? = transaction {
+    override fun getSnapshot(revision: Int): DatabaseSnapshot? = transaction {
         SnapshotEntity
             .find { (SnapshotTable.timeline eq entity.id) and (SnapshotTable.revision eq revision) }
             .singleOrNull()
             ?.let { DatabaseSnapshot(it) }
     }
 
-    override fun listSnapshots(): Sequence<Snapshot> = transaction {
+    override fun listSnapshots(): Sequence<DatabaseSnapshot> = transaction {
         entity.snapshots
             .orderBy(SnapshotTable.timeCreated to SortOrder.DESC)
             .asSequence()
             .map { DatabaseSnapshot(it) }
     }
 
-    override fun getTag(name: String): Tag? = transaction {
+    override fun getTag(name: String): DatabaseTag? = transaction {
         TagEntity
             .find { TagTable.name eq name }
             .singleOrNull()
             ?.let { DatabaseTag(it) }
     }
 
-    override fun listTags(): Sequence<Tag> = transaction {
+    override fun listTags(): Sequence<DatabaseTag> = transaction {
         TagEntity.all().asSequence().map { DatabaseTag(it) }
     }
 }

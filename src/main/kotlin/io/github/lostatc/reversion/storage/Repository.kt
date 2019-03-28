@@ -157,7 +157,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
         )
     }
 
-    override fun createTimeline(name: String, policies: Set<RetentionPolicy>): Timeline = transaction {
+    override fun createTimeline(name: String, policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {
         val timeline = DatabaseTimeline(
             TimelineEntity.new {
                 this.name = name
@@ -183,21 +183,21 @@ data class DatabaseRepository(override val path: Path) : Repository {
         timelineEntity != null
     }
 
-    override fun getTimeline(name: String): Timeline? = transaction {
+    override fun getTimeline(name: String): DatabaseTimeline? = transaction {
         TimelineEntity
             .find { TimelineTable.name eq name }
             .singleOrNull()
             ?.let { DatabaseTimeline(it) }
     }
 
-    override fun getTimeline(id: UUID): Timeline? = transaction {
+    override fun getTimeline(id: UUID): DatabaseTimeline? = transaction {
         TimelineEntity
             .find { TimelineTable.uuid eq id }
             .singleOrNull()
             ?.let { DatabaseTimeline(it) }
     }
 
-    override fun listTimelines(): Sequence<Timeline> = transaction {
+    override fun listTimelines(): Sequence<DatabaseTimeline> = transaction {
         TimelineEntity.all().asSequence().map { DatabaseTimeline(it) }
     }
 

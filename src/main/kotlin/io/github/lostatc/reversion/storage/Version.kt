@@ -138,10 +138,10 @@ data class DatabaseVersion(val entity: VersionEntity) : Version {
 
     override val checksumAlgorithm: String = "SHA-256"
 
-    override val timeline: Timeline
+    override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.snapshot.timeline) }
 
-    override val snapshot: Snapshot
+    override val snapshot: DatabaseSnapshot
         get() = transaction { DatabaseSnapshot(entity.snapshot) }
 
     override fun newInputStream(): InputStream {

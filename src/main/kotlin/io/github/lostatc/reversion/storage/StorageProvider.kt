@@ -61,9 +61,9 @@ interface StorageProvider {
  * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
  */
 object DatabaseStorageProvider : StorageProvider {
-    override fun getRepository(path: Path): Repository = DatabaseRepository(path)
+    override fun getRepository(path: Path): DatabaseRepository = DatabaseRepository(path)
 
-    override fun createRepository(path: Path): Repository {
+    override fun createRepository(path: Path): DatabaseRepository {
         TODO("not implemented")
     }
 
