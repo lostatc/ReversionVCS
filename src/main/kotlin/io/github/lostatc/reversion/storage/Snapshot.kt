@@ -21,7 +21,6 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.schema.*
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Path
 import java.time.Instant
@@ -124,11 +123,8 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
     }
 
     override fun getVersion(path: Path): Version? = transaction {
-        val query = VersionTable.innerJoin(PathTable)
-            .slice(VersionTable.columns)
-            .select { (VersionTable.snapshot eq entity.id) and (PathTable.path eq path) }
-
-        VersionEntity.wrapRows(query)
+        VersionEntity
+            .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq path) }
             .singleOrNull()
             ?.let { DatabaseVersion(it) }
     }

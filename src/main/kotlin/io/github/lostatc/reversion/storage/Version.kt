@@ -122,7 +122,7 @@ interface Version {
  */
 data class DatabaseVersion(val entity: VersionEntity) : Version {
     override val path: Path
-        get() = transaction { entity.path.path }
+        get() = transaction { entity.path }
 
     override val lastModifiedTime: FileTime
         get() = transaction { entity.lastModifiedTime }
