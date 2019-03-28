@@ -111,10 +111,10 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
     override val timeCreated: Instant
         get() = transaction { entity.timeCreated }
 
-    override val timeline: Timeline
+    override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.timeline) }
 
-    override fun addVersion(path: Path): Version {
+    override fun addVersion(path: Path): DatabaseVersion {
         TODO("not implemented")
     }
 
@@ -122,21 +122,21 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
         TODO("not implemented")
     }
 
-    override fun getVersion(path: Path): Version? = transaction {
+    override fun getVersion(path: Path): DatabaseVersion? = transaction {
         VersionEntity
             .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq path) }
             .singleOrNull()
             ?.let { DatabaseVersion(it) }
     }
 
-    override fun listVersions(parent: Path?): Sequence<Version> = transaction {
+    override fun listVersions(parent: Path?): Sequence<DatabaseVersion> = transaction {
         entity.versions
             .asSequence()
             .map { DatabaseVersion(it) }
             .filter { parent == null || it.path.startsWith(parent) }
     }
 
-    override fun addTag(name: String, description: String, pinned: Boolean): Tag = transaction {
+    override fun addTag(name: String, description: String, pinned: Boolean): DatabaseTag = transaction {
         val tag = TagEntity.new {
             this.name = name
             this.description = description
@@ -156,14 +156,14 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
         tagEntity != null
     }
 
-    override fun getTag(name: String): Tag? = transaction {
+    override fun getTag(name: String): DatabaseTag? = transaction {
         TagEntity
             .find { (TagTable.timeline eq entity.timeline.id) and (TagTable.name eq name) }
             .singleOrNull()
             ?.let { DatabaseTag(it) }
     }
 
-    override fun listTags(): Sequence<Tag> = transaction {
+    override fun listTags(): Sequence<DatabaseTag> = transaction {
         entity.tags.asSequence().map { DatabaseTag(it) }
     }
 }
