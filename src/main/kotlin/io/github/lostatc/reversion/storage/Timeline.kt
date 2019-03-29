@@ -89,6 +89,11 @@ interface Timeline {
     var retentionPolicies: Set<RetentionPolicy>
 
     /**
+     * The repository that this timeline is a part of.
+     */
+    val repository: Repository
+
+    /**
      * Creates a new snapshot in this timeline and returns it.
      *
      * @param [paths] The paths of files to include in the snapshot.
@@ -156,7 +161,7 @@ interface Timeline {
 /**
  * An implementation of [Timeline] which is backed by a relational database.
  */
-data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
+data class DatabaseTimeline(val entity: TimelineEntity, override val repository: DatabaseRepository) : Timeline {
     override var name: String
         get() = transaction { entity.name }
         set(value) {
@@ -204,12 +209,13 @@ data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
                         ?.revision ?: 1
                     timeCreated = Instant.now()
                     timeline = entity
-                }
+                },
+                repository
             )
         }
 
         for (path in paths) {
-            snapshot.addVersion(path)
+            snapshot.createVersion(path)
         }
 
         return snapshot
@@ -228,24 +234,24 @@ data class DatabaseTimeline(val entity: TimelineEntity) : Timeline {
         SnapshotEntity
             .find { (SnapshotTable.timeline eq entity.id) and (SnapshotTable.revision eq revision) }
             .singleOrNull()
-            ?.let { DatabaseSnapshot(it) }
+            ?.let { DatabaseSnapshot(it, repository) }
     }
 
     override fun listSnapshots(): Sequence<DatabaseSnapshot> = transaction {
         entity.snapshots
             .orderBy(SnapshotTable.timeCreated to SortOrder.DESC)
             .asSequence()
-            .map { DatabaseSnapshot(it) }
+            .map { DatabaseSnapshot(it, repository) }
     }
 
     override fun getTag(name: String): DatabaseTag? = transaction {
         TagEntity
             .find { TagTable.name eq name }
             .singleOrNull()
-            ?.let { DatabaseTag(it) }
+            ?.let { DatabaseTag(it, repository) }
     }
 
     override fun listTags(): Sequence<DatabaseTag> = transaction {
-        TagEntity.all().asSequence().map { DatabaseTag(it) }
+        TagEntity.all().asSequence().map { DatabaseTag(it, repository) }
     }
 }

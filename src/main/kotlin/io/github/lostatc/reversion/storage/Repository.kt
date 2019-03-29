@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import org.jetbrains.exposed.sql.Database
@@ -28,6 +29,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.util.*
+import kotlin.streams.asSequence
 
 /**
  * Information about the integrity of a repository.
@@ -129,6 +131,11 @@ data class DatabaseRepository(override val path: Path) : Repository {
     private val versionPath = path.resolve("version")
 
     /**
+     * The path of the directory where blobs are stored.
+     */
+    private val blobsPath = path.resolve("blobs")
+
+    /**
      * The version of this repository.
      */
     private val version: UUID
@@ -163,7 +170,8 @@ data class DatabaseRepository(override val path: Path) : Repository {
                 this.name = name
                 this.uuid = UUID.randomUUID()
                 this.timeCreated = Instant.now()
-            }
+            },
+            this@DatabaseRepository
         )
         timeline.retentionPolicies = policies
         timeline
@@ -187,24 +195,78 @@ data class DatabaseRepository(override val path: Path) : Repository {
         TimelineEntity
             .find { TimelineTable.name eq name }
             .singleOrNull()
-            ?.let { DatabaseTimeline(it) }
+            ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
     }
 
     override fun getTimeline(id: UUID): DatabaseTimeline? = transaction {
         TimelineEntity
             .find { TimelineTable.uuid eq id }
             .singleOrNull()
-            ?.let { DatabaseTimeline(it) }
+            ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
     }
 
     override fun listTimelines(): Sequence<DatabaseTimeline> = transaction {
-        TimelineEntity.all().asSequence().map { DatabaseTimeline(it) }
+        TimelineEntity.all().asSequence().map { DatabaseTimeline(it, this@DatabaseRepository) }
     }
 
     override fun verify(): IntegrityReport {
-        // Implement efficiently by checking each blob only once.
-        TODO("not implemented")
+        val affectedVersions = mutableSetOf<Version>()
+
+        for (blobEntity in BlobEntity.all()) {
+            val blob = getBlob(blobEntity.checksum)
+
+            // Skip the blob if it is valid.
+            if (blob != null && blob.isValid(checksumAlgorithm)) continue
+
+            // The blob is either missing or corrupt. Find all versions that contain the blob.
+            affectedVersions.addAll(blobEntity.blocks.map { DatabaseVersion(it.version, this) })
+        }
+
+        return IntegrityReport(affectedVersions)
     }
+
+    /**
+     * Returns the storage location of the blob with the given [checksum].
+     */
+    private fun getBlobPath(checksum: Checksum): Path =
+        blobsPath.resolve(checksum.toHex().slice(0..1)).resolve(checksum.toHex())
+
+    /**
+     * Adds the given [blob] to this repository.
+     */
+    fun addBlob(blob: Blob) {
+        val blobPath = getBlobPath(blob.checksum)
+        Files.createDirectories(blobPath.parent)
+        Files.copy(blob.inputStream, blobPath)
+    }
+
+    /**
+     * Removes the blob with the given [checksum] from this repository.
+     *
+     * @return `true` if the blob was removed, `false` if it didn't exist.
+     */
+    fun removeBlob(checksum: Checksum): Boolean = Files.deleteIfExists(getBlobPath(checksum))
+
+    /**
+     * Returns the blob in this repository with the given [checksum].
+     *
+     * @return The blob or `null` if it doesn't exist.
+     */
+    fun getBlob(checksum: Checksum): Blob? {
+        val blobPath = getBlobPath(checksum)
+        if (Files.notExists(blobPath)) return null
+        return SimpleBlob(Files.newInputStream(blobPath), checksum)
+    }
+
+    /**
+     * Returns a sequence of the blobs in this repository.
+     */
+    fun listBlobs(): Sequence<Blob> = Files.walk(blobsPath)
+        .asSequence()
+        .filter { Files.isRegularFile(it) }
+        .map {
+            SimpleBlob(Files.newInputStream(it), Checksum.fromHex(it.fileName.toString()))
+        }
 
     companion object {
         /**
@@ -225,6 +287,11 @@ data class DatabaseRepository(override val path: Path) : Repository {
         private val supportedVersions: Set<UUID> = setOf(
             UUID.fromString("c0747b1e-4bd2-11e9-a623-bff5824aa175")
         )
+
+        /**
+         * The name of the algorithm used to calculate checksums.
+         */
+        const val checksumAlgorithm: String = "SHA-256"
     }
 }
 
