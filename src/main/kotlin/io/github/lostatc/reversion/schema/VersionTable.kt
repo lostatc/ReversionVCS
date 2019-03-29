@@ -70,7 +70,7 @@ class VersionEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The permissions of the file.
      *
-     * This stores the file permissions in 'rwxrwxrwx' format. If POSIX permissions are not applicable, this is `null`.
+     * If POSIX permissions are not applicable, this is `null`.
      */
     var permissions: PermissionSet? by VersionTable.permissions
 
@@ -80,14 +80,14 @@ class VersionEntity(id: EntityID<Int>) : IntEntity(id) {
     var size: Long by VersionTable.size
 
     /**
-     * The SHA-256 hash of the file contents.
+     * The hash of the file contents.
      */
     var checksum: Checksum by VersionTable.checksum
 
     /**
-     * The binary objects that make up this file.
+     * The blocks of data which make up this file.
      */
-    var blobs: SizedIterable<BlobEntity> by BlobEntity via VersionBlobTable
+    val blocks: SizedIterable<BlockEntity> by BlockEntity referrersOn BlockTable.version
 
     companion object : IntEntityClass<VersionEntity>(VersionTable)
 }

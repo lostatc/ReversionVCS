@@ -47,9 +47,14 @@ interface Snapshot {
     val timeline: Timeline
 
     /**
+     * The repository that this snapshot is a part of.
+     */
+    val repository: Repository
+
+    /**
      * Adds the file with the given [path] to this snapshot and returns a version.
      */
-    fun addVersion(path: Path): Version
+    fun createVersion(path: Path): Version
 
     /**
      * Removes the version with the given [path] from this snapshot.
@@ -104,7 +109,7 @@ interface Snapshot {
 /**
  * An implementation of [Snapshot] which is backed by a relational database.
  */
-data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
+data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository: DatabaseRepository) : Snapshot {
     override val revision: Int
         get() = transaction { entity.revision }
 
@@ -112,9 +117,9 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
         get() = transaction { entity.timeCreated }
 
     override val timeline: DatabaseTimeline
-        get() = transaction { DatabaseTimeline(entity.timeline) }
+        get() = transaction { DatabaseTimeline(entity.timeline, repository) }
 
-    override fun addVersion(path: Path): DatabaseVersion {
+    override fun createVersion(path: Path): DatabaseVersion {
         TODO("not implemented")
     }
 
@@ -126,13 +131,13 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
         VersionEntity
             .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq path) }
             .singleOrNull()
-            ?.let { DatabaseVersion(it) }
+            ?.let { DatabaseVersion(it, repository) }
     }
 
     override fun listVersions(parent: Path?): Sequence<DatabaseVersion> = transaction {
         entity.versions
             .asSequence()
-            .map { DatabaseVersion(it) }
+            .map { DatabaseVersion(it, repository) }
             .filter { parent == null || it.path.startsWith(parent) }
     }
 
@@ -144,7 +149,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
             this.snapshot = entity
         }
 
-        DatabaseTag(tag)
+        DatabaseTag(tag, repository)
     }
 
     override fun removeTag(name: String): Boolean = transaction {
@@ -160,10 +165,10 @@ data class DatabaseSnapshot(val entity: SnapshotEntity) : Snapshot {
         TagEntity
             .find { (TagTable.timeline eq entity.timeline.id) and (TagTable.name eq name) }
             .singleOrNull()
-            ?.let { DatabaseTag(it) }
+            ?.let { DatabaseTag(it, repository) }
     }
 
     override fun listTags(): Sequence<DatabaseTag> = transaction {
-        entity.tags.asSequence().map { DatabaseTag(it) }
+        entity.tags.asSequence().map { DatabaseTag(it, repository) }
     }
 }

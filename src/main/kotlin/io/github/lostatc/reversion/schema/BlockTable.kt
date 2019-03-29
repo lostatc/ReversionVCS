@@ -19,38 +19,38 @@
 
 package io.github.lostatc.reversion.schema
 
-import io.github.lostatc.reversion.storage.Checksum
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.SizedIterable
 
-object BlobTable : IntIdTable() {
-    val checksum: Column<Checksum> = checksum("checksum").uniqueIndex()
+object BlockTable : IntIdTable() {
+    val version: Column<EntityID<Int>> = reference("version", VersionTable).primaryKey(0)
 
-    val size: Column<Long> = long("size")
+    val blob: Column<EntityID<Int>> = reference("blob", BlobTable).primaryKey(1)
+
+    val index: Column<Int> = integer("index").primaryKey(2)
 }
 
 /**
- * A piece of binary data stored in the repository.
+ * A block of data which comprises a version of a file.
  */
-class BlobEntity(id: EntityID<Int>) : IntEntity(id) {
+class BlockEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
-     * The hexadecimal checksum of the binary object.
+     * The version that this block belongs to.
      */
-    var checksum: Checksum by BlobTable.checksum
+    var version: VersionEntity by VersionEntity referencedOn BlockTable.version
 
     /**
-     * The size of the binary object in bytes.
+     * The binary object that makes up the data in this block.
      */
-    var size: Long by BlobTable.size
+    var blob: BlobEntity by BlobEntity referencedOn BlockTable.blob
 
     /**
-     * The blocks of data which this blob is a part of.
+     * The index of this block among all the blocks that make up the [version].
      */
-    val blocks: SizedIterable<BlockEntity> by BlockEntity referrersOn BlockTable.blob
+    var index: Int by BlockTable.index
 
-    companion object : IntEntityClass<BlobEntity>(BlobTable)
+    companion object : IntEntityClass<BlockEntity>(BlockTable)
 }

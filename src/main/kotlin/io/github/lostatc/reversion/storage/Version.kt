@@ -19,10 +19,12 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.schema.BlockTable
 import io.github.lostatc.reversion.schema.VersionEntity
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.IOException
-import java.io.InputStream
+import java.io.SequenceInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -59,9 +61,9 @@ interface Version {
     val checksum: Checksum
 
     /**
-     * The algorithm used for calculating the [checksum].
+     * The snapshot that this file is a part of.
      */
-    val checksumAlgorithm: String
+    val snapshot: Snapshot
 
     /**
      * The timeline that this file is a part of.
@@ -69,21 +71,21 @@ interface Version {
     val timeline: Timeline
 
     /**
-     * The snapshot that this file is a part of.
+     * The repository that this file is a part of.
      */
-    val snapshot: Snapshot
+    val repository: Repository
 
     /**
-     * Returns an input stream used for reading the file contents from the repository.
+     * Returns the contents of this file.
      */
-    fun newInputStream(): InputStream
+    fun getData(): Blob
 
     /**
      * Checks the integrity of the data in the repository for this file.
      *
      * @return `true` if the data is valid, `false` if it is corrupt.
      */
-    fun isValid(): Boolean = checksum == Checksum.fromInputStream(newInputStream(), algorithm = checksumAlgorithm)
+    fun isValid(): Boolean = checksum == getData().checksum
 
     /**
      * Writes the file represented by this object to the file system.
@@ -105,7 +107,7 @@ interface Version {
 
         // Write the file contents to a temporary file.
         val tempFile = Files.createTempFile("reversion-", "")
-        Files.copy(newInputStream(), tempFile)
+        Files.copy(getData().inputStream, tempFile)
 
         // Move the temporary file to the target to safely handle the case of an existing file.
         val copyOptions = if (overwrite) arrayOf(StandardCopyOption.REPLACE_EXISTING) else emptyArray()
@@ -120,7 +122,7 @@ interface Version {
 /**
  * An implementation of [Version] which is backed by a relational database.
  */
-data class DatabaseVersion(val entity: VersionEntity) : Version {
+data class DatabaseVersion(val entity: VersionEntity, override val repository: DatabaseRepository) : Version {
     override val path: Path
         get() = transaction { entity.path }
 
@@ -136,15 +138,15 @@ data class DatabaseVersion(val entity: VersionEntity) : Version {
     override val checksum: Checksum
         get() = transaction { entity.checksum }
 
-    override val checksumAlgorithm: String = "SHA-256"
+    override val snapshot: DatabaseSnapshot
+        get() = transaction { DatabaseSnapshot(entity.snapshot, repository) }
 
     override val timeline: DatabaseTimeline
-        get() = transaction { DatabaseTimeline(entity.snapshot.timeline) }
+        get() = transaction { DatabaseTimeline(entity.snapshot.timeline, repository) }
 
-    override val snapshot: DatabaseSnapshot
-        get() = transaction { DatabaseSnapshot(entity.snapshot) }
-
-    override fun newInputStream(): InputStream {
-        TODO("not implemented")
-    }
+    override fun getData(): Blob = entity.blocks
+        .orderBy(BlockTable.index to SortOrder.ASC)
+        .mapNotNull { repository.getBlob(it.blob.checksum)?.inputStream }
+        .reduce { accumulator, stream -> SequenceInputStream(accumulator, stream) }
+        .let { SimpleBlob(it, checksum) }
 }

@@ -54,12 +54,17 @@ interface Tag {
      * The timeline this tag is a part of.
      */
     val timeline: Timeline
+
+    /**
+     * The repository that this tag is a part og.
+     */
+    val repository: Repository
 }
 
 /**
  * An implementation of [Tag] which is backed by a relational database.
  */
-data class DatabaseTag(val entity: TagEntity) : Tag {
+data class DatabaseTag(val entity: TagEntity, override val repository: DatabaseRepository) : Tag {
     override var name: String
         get() = transaction { entity.name }
         set(value) {
@@ -79,8 +84,8 @@ data class DatabaseTag(val entity: TagEntity) : Tag {
         }
 
     override val snapshot: DatabaseSnapshot
-        get() = transaction { DatabaseSnapshot(entity.snapshot) }
+        get() = transaction { DatabaseSnapshot(entity.snapshot, repository) }
 
     override val timeline: DatabaseTimeline
-        get() = transaction { DatabaseTimeline(entity.timeline) }
+        get() = transaction { DatabaseTimeline(entity.timeline, repository) }
 }
