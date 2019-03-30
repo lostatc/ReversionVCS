@@ -128,7 +128,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
             lastModifiedTime = Files.getLastModifiedTime(path)
             permissions = PermissionSet.fromPath(path)
             size = Files.size(path)
-            checksum = Checksum.fromPath(path, DatabaseRepository.checksumAlgorithm)
+            checksum = Checksum.fromFile(path, DatabaseRepository.checksumAlgorithm)
         }
 
         // Create a list of blobs from the file.
