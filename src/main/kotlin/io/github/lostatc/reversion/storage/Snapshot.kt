@@ -22,6 +22,7 @@ package io.github.lostatc.reversion.storage
 import io.github.lostatc.reversion.schema.*
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 
@@ -119,12 +120,48 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.timeline, repository) }
 
-    override fun createVersion(path: Path): DatabaseVersion {
-        TODO("not implemented")
+    override fun createVersion(path: Path): DatabaseVersion = transaction {
+        // Record file metadata in the database.
+        val versionEntity = VersionEntity.new {
+            this.path = path
+            snapshot = entity
+            lastModifiedTime = Files.getLastModifiedTime(path)
+            permissions = PermissionSet.fromPath(path)
+            size = Files.size(path)
+            checksum = Checksum.fromPath(path, DatabaseRepository.checksumAlgorithm)
+        }
+
+        // Create a list of blobs from the file.
+        val blobs = LazyBlob.fromFile(path, repository.blockSize, DatabaseRepository.checksumAlgorithm)
+
+        // Add the blobs to the repository.
+        for ((index, blob) in blobs.withIndex()) {
+            val blobEntity = repository.addBlob(blob)
+
+            BlockEntity.new {
+                version = versionEntity
+                this.blob = blobEntity
+                this.index = index
+            }
+        }
+
+        DatabaseVersion(versionEntity, repository)
     }
 
-    override fun removeVersion(path: Path): Boolean {
-        TODO("not implemented")
+    override fun removeVersion(path: Path): Boolean = transaction {
+        val versionEntity = VersionEntity
+            .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq path) }
+            .singleOrNull()
+
+        if (versionEntity == null) {
+            false
+        } else {
+            for (blockEntity in versionEntity.blocks) {
+                repository.removeBlob(blockEntity.blob.checksum)
+            }
+            versionEntity.delete()
+            true
+        }
     }
 
     override fun getVersion(path: Path): DatabaseVersion? = transaction {

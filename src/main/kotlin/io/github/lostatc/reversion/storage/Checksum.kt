@@ -20,6 +20,8 @@
 package io.github.lostatc.reversion.storage
 
 import java.io.InputStream
+import java.nio.file.Files
+import java.nio.file.Path
 import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.*
@@ -58,7 +60,7 @@ class Checksum(val bytes: ByteArray) {
          *
          * This accepts any [algorithm] accepted by [MessageDigest].
          *
-         * @param [inputStream] The source of the data to calculate the checksum ofl
+         * @param [inputStream] The source of the data to calculate the checksum of.
          * @param [algorithm] The name of the hash algorithm to use.
          */
         fun fromInputStream(inputStream: InputStream, algorithm: String = "SHA-256"): Checksum {
@@ -66,5 +68,16 @@ class Checksum(val bytes: ByteArray) {
             DigestInputStream(inputStream, messageDigest).use { it.readAllBytes() }
             return Checksum(messageDigest.digest())
         }
+
+        /**
+         * Calculates a [Checksum] of the file at the given [path].
+         *
+         * This accepts any [algorithm] accepted by [MessageDigest].
+         *
+         * @param [path] The path of the file to calculate the checksum of.
+         * @param [algorithm] The name of the hash algorithm to use.
+         */
+        fun fromPath(path: Path, algorithm: String = "SHA-256"): Checksum =
+            fromInputStream(Files.newInputStream(path), algorithm)
     }
 }

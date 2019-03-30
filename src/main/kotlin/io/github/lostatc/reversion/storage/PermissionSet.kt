@@ -19,6 +19,8 @@
 
 package io.github.lostatc.reversion.storage
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
 
@@ -41,5 +43,11 @@ class PermissionSet(permissions: Set<PosixFilePermission>) : Set<PosixFilePermis
          */
         fun fromString(permissions: String): PermissionSet =
             PermissionSet(PosixFilePermissions.fromString(permissions))
+
+        /**
+         * Creates a new [PermissionSet] from the given [path].
+         */
+        fun fromPath(path: Path): PermissionSet =
+            PermissionSet(Files.getPosixFilePermissions(path))
     }
 }
