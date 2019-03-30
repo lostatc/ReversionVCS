@@ -20,6 +20,9 @@
 package io.github.lostatc.reversion.storage
 
 import java.io.InputStream
+import java.nio.channels.Channels
+import java.nio.file.Files
+import java.nio.file.Path
 import java.security.MessageDigest
 
 /**
@@ -57,4 +60,36 @@ data class SimpleBlob(override val inputStream: InputStream, override val checks
  */
 data class LazyBlob(override val inputStream: InputStream, val algorithm: String) : Blob {
     override val checksum: Checksum by lazy { Checksum.fromInputStream(inputStream, algorithm) }
+
+    companion object {
+        /**
+         * Creates a list of blobs containing data from the file at the given [path].
+         *
+         * Concatenating the contents of each blob together produces the original file.
+         *
+         * @param [path] The path of the file.
+         * @param [blockSize] The maximum number of bytes in each blob.
+         * @param [algorithm] The name of the algorithm to compute the checksum with.
+         */
+        fun fromFile(path: Path, blockSize: Long = Long.MAX_VALUE, algorithm: String = "SHA-256"): List<LazyBlob> {
+            val blobs = mutableListOf<LazyBlob>()
+
+            Files.newByteChannel(path).use {
+                // Iterate over each [blockSize] byte chunk of the file.
+                while (it.position() < it.size()) {
+                    // Create a blob that starts at the current position and ends [blockSize] bytes after it.
+                    val blob = LazyBlob(
+                        BoundedInputStream(Channels.newInputStream(it), blockSize),
+                        algorithm
+                    )
+                    blobs.add(blob)
+
+                    // Advance the position of the channel by [blockSize] bytes.
+                    it.position(it.position() + blockSize)
+                }
+            }
+
+            return blobs
+        }
+    }
 }

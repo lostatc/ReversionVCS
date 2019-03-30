@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.schema.BlobEntity
+import io.github.lostatc.reversion.schema.BlobTable
 import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import org.jetbrains.exposed.sql.Database
@@ -29,7 +30,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.util.*
-import kotlin.streams.asSequence
 
 /**
  * Information about the integrity of a repository.
@@ -140,6 +140,11 @@ data class DatabaseRepository(override val path: Path) : Repository {
      */
     private val version: UUID
 
+    /**
+     * The maximum size of the blocks that files stored in this repository are split into.
+     */
+    val blockSize: Long = Long.MAX_VALUE
+
     init {
         try {
             version = UUID.fromString(Files.readString(versionPath))
@@ -233,11 +238,18 @@ data class DatabaseRepository(override val path: Path) : Repository {
 
     /**
      * Adds the given [blob] to this repository.
+     *
+     * @return The database entity representing the blob.
      */
-    fun addBlob(blob: Blob) {
+    fun addBlob(blob: Blob): BlobEntity = transaction {
         val blobPath = getBlobPath(blob.checksum)
         Files.createDirectories(blobPath.parent)
         Files.copy(blob.inputStream, blobPath)
+
+        BlobEntity.new {
+            checksum = blob.checksum
+            size = Files.size(blobPath)
+        }
     }
 
     /**
@@ -245,7 +257,14 @@ data class DatabaseRepository(override val path: Path) : Repository {
      *
      * @return `true` if the blob was removed, `false` if it didn't exist.
      */
-    fun removeBlob(checksum: Checksum): Boolean = Files.deleteIfExists(getBlobPath(checksum))
+    fun removeBlob(checksum: Checksum): Boolean = transaction {
+        BlobEntity
+            .find { BlobTable.checksum eq checksum }
+            .singleOrNull()
+            ?.delete()
+
+        Files.deleteIfExists(getBlobPath(checksum))
+    }
 
     /**
      * Returns the blob in this repository with the given [checksum].
@@ -257,16 +276,6 @@ data class DatabaseRepository(override val path: Path) : Repository {
         if (Files.notExists(blobPath)) return null
         return SimpleBlob(Files.newInputStream(blobPath), checksum)
     }
-
-    /**
-     * Returns a sequence of the blobs in this repository.
-     */
-    fun listBlobs(): Sequence<Blob> = Files.walk(blobsPath)
-        .asSequence()
-        .filter { Files.isRegularFile(it) }
-        .map {
-            SimpleBlob(Files.newInputStream(it), Checksum.fromHex(it.fileName.toString()))
-        }
 
     companion object {
         /**
