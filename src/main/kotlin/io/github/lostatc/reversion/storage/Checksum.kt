@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.storage
 
 import java.io.InputStream
+import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.DigestInputStream
@@ -29,17 +30,30 @@ import java.util.*
 /**
  * A checksum of a file.
  */
-class Checksum(val bytes: ByteArray) {
+class Checksum(private val bytes: ByteArray) {
     /**
-     * Returns this checksum as a hexadecimal string.
+     * A byte array containing the bytes of the checksum.
      */
-    fun toHex(): String = bytes.joinToString(separator = "") { String.format("%02x", it) }
+    val array: ByteArray
+        get() = bytes.copyOf()
+
+    /**
+     * A read-only byte buffer containing the bytes of the checksum.
+     */
+    val buffer: ByteBuffer
+        get() = ByteBuffer.wrap(array).asReadOnlyBuffer()
+
+    /**
+     * A hexadecimal string representing this checksum.
+     */
+    val hex: String
+        get() = bytes.joinToString(separator = "") { String.format("%02x", it) }
 
     override fun equals(other: Any?): Boolean = if (other is Checksum) bytes contentEquals other.bytes else false
 
     override fun hashCode(): Int = Objects.hash(bytes)
 
-    override fun toString(): String = toHex()
+    override fun toString(): String = hex
 
     companion object {
         /**
@@ -77,7 +91,7 @@ class Checksum(val bytes: ByteArray) {
          * @param [path] The path of the file to calculate the checksum of.
          * @param [algorithm] The name of the hash algorithm to use.
          */
-        fun fromPath(path: Path, algorithm: String = "SHA-256"): Checksum =
+        fun fromFile(path: Path, algorithm: String = "SHA-256"): Checksum =
             fromInputStream(Files.newInputStream(path), algorithm)
     }
 }
