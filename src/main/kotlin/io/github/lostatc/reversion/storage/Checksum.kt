@@ -19,11 +19,13 @@
 
 package io.github.lostatc.reversion.storage
 
+import org.apache.commons.codec.DecoderException
+import org.apache.commons.codec.binary.Hex
+import org.apache.commons.codec.digest.DigestUtils
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
-import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.*
 
@@ -47,7 +49,7 @@ class Checksum(private val bytes: ByteArray) {
      * A hexadecimal string representing this checksum.
      */
     val hex: String
-        get() = bytes.joinToString(separator = "") { String.format("%02x", it) }
+        get() = Hex.encodeHexString(bytes)
 
     override fun equals(other: Any?): Boolean = if (other is Checksum) bytes contentEquals other.bytes else false
 
@@ -61,13 +63,11 @@ class Checksum(private val bytes: ByteArray) {
          *
          * @throws [IllegalArgumentException] The given string is not a valid hexadecimal string.
          */
-        fun fromHex(hash: String): Checksum = Checksum(
-            hash
-                .chunked(2)
-                .map { it.toInt(radix = 16) }
-                .map { it.toByte() }
-                .toByteArray()
-        )
+        fun fromHex(hash: String): Checksum = try {
+            Checksum(Hex.decodeHex(hash))
+        } catch (e: DecoderException) {
+            throw IllegalArgumentException("The given hexadecimal string is invalid.", e)
+        }
 
         /**
          * Calculates a [Checksum] of the data from the given [inputStream].
@@ -77,11 +77,8 @@ class Checksum(private val bytes: ByteArray) {
          * @param [inputStream] The source of the data to calculate the checksum of.
          * @param [algorithm] The name of the hash algorithm to use.
          */
-        fun fromInputStream(inputStream: InputStream, algorithm: String = "SHA-256"): Checksum {
-            val messageDigest = MessageDigest.getInstance(algorithm)
-            DigestInputStream(inputStream, messageDigest).use { it.readAllBytes() }
-            return Checksum(messageDigest.digest())
-        }
+        fun fromInputStream(inputStream: InputStream, algorithm: String = "SHA-256"): Checksum =
+            Checksum(DigestUtils(algorithm).digest(inputStream))
 
         /**
          * Calculates a [Checksum] of the file at the given [path].

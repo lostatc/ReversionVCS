@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
+import org.apache.commons.io.input.BoundedInputStream
 import java.io.InputStream
 import java.nio.channels.Channels
 import java.nio.file.Files
@@ -77,11 +78,7 @@ interface Blob {
                 // Iterate over each [blockSize] byte chunk of the file.
                 while (it.position() < it.size()) {
                     // Create a blob that starts at the current position and ends [blockSize] bytes after it.
-                    val blob = LazyBlob(
-                        BoundedInputStream(Channels.newInputStream(it), blockSize),
-                        algorithm
-                    )
-
+                    val blob = LazyBlob(BoundedInputStream(Channels.newInputStream(it), blockSize), algorithm)
                     blobs.add(blob)
 
                     // Advance the position of the channel by [blockSize] bytes.
