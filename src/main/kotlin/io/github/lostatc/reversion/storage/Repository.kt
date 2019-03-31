@@ -171,10 +171,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
      * The connection to the repository's database.
      */
     val db: Database = databases.getOrPut(path) {
-        Database.connect(
-            "jdbc:postgresql://localhost:12346${databasePath.toUri().path}",
-            driver = "org.postgresql.Driver"
-        )
+        Database.connect("jdbc:sqlite:${databasePath.toUri().path}", driver = "org.sqlite.JDBC")
     }
 
     override fun createTimeline(name: String, policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {
