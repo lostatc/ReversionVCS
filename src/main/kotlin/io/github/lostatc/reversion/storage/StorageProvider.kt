@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 
@@ -28,13 +29,10 @@ import java.util.*
 interface StorageProvider {
     /**
      * Returns a [Repository] for the repository located at the given [path].
+     *
+     * If there is no repository at [path], an empty repository is created.
      */
     fun getRepository(path: Path): Repository
-
-    /**
-     * Creates a repository at the given [path] and returns it.
-     */
-    fun createRepository(path: Path): Repository
 
     /**
      * Returns whether there is a repository compatible with this storage provider at the given [path].
@@ -63,14 +61,13 @@ interface StorageProvider {
 object DatabaseStorageProvider : StorageProvider {
     override fun getRepository(path: Path): DatabaseRepository = DatabaseRepository(path)
 
-    override fun createRepository(path: Path): DatabaseRepository {
-        TODO("not implemented")
-    }
-
-    override fun isValidRepository(path: Path): Boolean = try {
-        DatabaseRepository(path)
-        true
-    } catch (e: UnsupportedFormatException) {
-        false
+    override fun isValidRepository(path: Path): Boolean {
+        if (Files.notExists(path)) return false
+        return try {
+            DatabaseRepository(path)
+            true
+        } catch (e: UnsupportedFormatException) {
+            false
+        }
     }
 }

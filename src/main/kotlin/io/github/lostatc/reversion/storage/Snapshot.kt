@@ -128,11 +128,11 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
             lastModifiedTime = Files.getLastModifiedTime(path)
             permissions = PermissionSet.fromPath(path)
             size = Files.size(path)
-            checksum = Checksum.fromFile(path, DatabaseRepository.checksumAlgorithm)
+            checksum = Checksum.fromFile(path, DatabaseRepository.hashAlgorithm)
         }
 
         // Create a list of blobs from the file.
-        val blobs = LazyBlob.fromFile(path, repository.blockSize, DatabaseRepository.checksumAlgorithm)
+        val blobs = Blob.fromFile(path, repository.blockSize, DatabaseRepository.hashAlgorithm)
 
         // Add the blobs to the repository.
         for ((index, blob) in blobs.withIndex()) {

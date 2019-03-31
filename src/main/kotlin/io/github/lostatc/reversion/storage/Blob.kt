@@ -26,7 +26,7 @@ import java.nio.file.Path
 import java.security.MessageDigest
 
 /**
- * A large piece of binary data.
+ * A piece of binary data.
  */
 interface Blob {
     /**
@@ -45,33 +45,32 @@ interface Blob {
      * @param [algorithm] The name of the hash algorithm to use. This accepts any algorithm accepted by [MessageDigest].
      */
     fun isValid(algorithm: String): Boolean = checksum == Checksum.fromInputStream(inputStream, algorithm)
-}
-
-/**
- * An simple data class implementation of [Blob].
- */
-data class SimpleBlob(override val inputStream: InputStream, override val checksum: Checksum) : Blob
-
-/**
- * An implementation of [Blob] that lazily computes the [checksum] from the [inputStream].
- *
- * @param [algorithm] The name of the algorithm to compute the checksum with. This accepts any algorithm accepted by
- * [MessageDigest].
- */
-data class LazyBlob(override val inputStream: InputStream, val algorithm: String) : Blob {
-    override val checksum: Checksum by lazy { Checksum.fromInputStream(inputStream, algorithm) }
 
     companion object {
         /**
+         * Creates a [Blob] containing data from the given [inputStream] with the given [checksum].
+         */
+        fun of(inputStream: InputStream, checksum: Checksum): Blob = SimpleBlob(inputStream, checksum)
+
+        /**
+         * Creates a [Blob] containing data from the given [inputStream] with a computed checksum.
+         *
+         * The checksum is computed from the data in the [inputStream] using the given [algorithm]. The [algorithm] can
+         * be the name of any algorithm accepted by [MessageDigest].
+         */
+        fun of(inputStream: InputStream, algorithm: String = "SHA-256"): Blob = LazyBlob(inputStream, algorithm)
+
+        /**
          * Creates a list of blobs containing data from the file at the given [path].
          *
-         * Concatenating the contents of each blob together produces the original file.
+         * Concatenating the contents of each blob together produces the original file. This accepts any [algorithm]
+         * accepted by [MessageDigest].
          *
          * @param [path] The path of the file.
          * @param [blockSize] The maximum number of bytes in each blob.
          * @param [algorithm] The name of the algorithm to compute the checksum with.
          */
-        fun fromFile(path: Path, blockSize: Long = Long.MAX_VALUE, algorithm: String = "SHA-256"): List<LazyBlob> {
+        fun fromFile(path: Path, blockSize: Long = Long.MAX_VALUE, algorithm: String = "SHA-256"): List<Blob> {
             val blobs = mutableListOf<LazyBlob>()
 
             Files.newByteChannel(path).use {
@@ -82,6 +81,7 @@ data class LazyBlob(override val inputStream: InputStream, val algorithm: String
                         BoundedInputStream(Channels.newInputStream(it), blockSize),
                         algorithm
                     )
+
                     blobs.add(blob)
 
                     // Advance the position of the channel by [blockSize] bytes.
@@ -92,4 +92,16 @@ data class LazyBlob(override val inputStream: InputStream, val algorithm: String
             return blobs
         }
     }
+}
+
+/**
+ * An simple data class implementation of [Blob].
+ */
+private data class SimpleBlob(override val inputStream: InputStream, override val checksum: Checksum) : Blob
+
+/**
+ * An implementation of [Blob] that lazily computes the [checksum] from the [inputStream].
+ */
+private data class LazyBlob(override val inputStream: InputStream, val algorithm: String) : Blob {
+    override val checksum: Checksum by lazy { Checksum.fromInputStream(inputStream, algorithm) }
 }
