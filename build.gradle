@@ -18,6 +18,7 @@ dependencies {
     implementation 'net.harawata:appdirs:1.0.3'
     implementation 'commons-io:commons-io:2.6'
     implementation 'commons-codec:commons-codec:1.12'
+    implementation 'org.zeroturnaround:zt-zip:1.13'
 }
 
 application {

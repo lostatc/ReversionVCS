@@ -25,6 +25,7 @@ import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.zeroturnaround.zip.ZipUtil
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -103,6 +104,14 @@ interface Repository {
      */
     fun verify(): IntegrityReport
 
+    /**
+     * Exports the repository to the file at [target].
+     *
+     * The file created is guaranteed to be importable by [StorageProvider.importRepository].
+     *
+     * @throws [IOException] An I/O error occurred.
+     */
+    fun export(target: Path)
 }
 
 /**
@@ -280,6 +289,10 @@ data class DatabaseRepository(override val path: Path) : Repository {
         val blobPath = getBlobPath(checksum)
         if (Files.notExists(blobPath)) return null
         return Blob.of(Files.newInputStream(blobPath), checksum)
+    }
+
+    override fun export(target: Path) {
+        ZipUtil.pack(path.toFile(), target.toFile())
     }
 
     companion object {
