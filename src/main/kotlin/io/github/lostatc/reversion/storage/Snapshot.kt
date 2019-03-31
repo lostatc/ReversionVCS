@@ -134,9 +134,13 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         // Create a list of blobs from the file.
         val blobs = Blob.fromFile(path, repository.blockSize, DatabaseRepository.hashAlgorithm)
 
-        // Add the blobs to the repository.
+        // Add the blobs to the file system. Because this is wrapped in a transaction, records in the database won't be
+        // updated until all the blobs have been added. This is to prevent corruption in case the operation is
+        // interrupted.
         for ((index, blob) in blobs.withIndex()) {
-            val blobEntity = repository.addBlob(blob)
+            repository.addBlob(blob)
+
+            val blobEntity = BlobEntity.find { BlobTable.checksum eq blob.checksum }.single()
 
             BlockEntity.new {
                 version = versionEntity
@@ -148,20 +152,25 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         DatabaseVersion(versionEntity, repository)
     }
 
-    override fun removeVersion(path: Path): Boolean = transaction {
-        val versionEntity = VersionEntity
-            .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq path) }
-            .singleOrNull()
+    override fun removeVersion(path: Path): Boolean {
+        // Delete the version from the database before deleting the blobs from the file system to avoid corruption in
+        // case the operation is interrupted.
+        val checksums = transaction {
+            val versionEntity = VersionEntity
+                .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq path) }
+                .singleOrNull()
 
-        if (versionEntity == null) {
-            false
-        } else {
-            for (blockEntity in versionEntity.blocks) {
-                repository.removeBlob(blockEntity.blob.checksum)
-            }
-            versionEntity.delete()
-            true
+            val checksums = versionEntity?.blocks?.map { it.blob.checksum }
+            versionEntity?.delete()
+
+            checksums
+        } ?: return false
+
+        for (checksum in checksums) {
+            repository.removeBlob(checksum)
         }
+
+        return true
     }
 
     override fun getVersion(path: Path): DatabaseVersion? = transaction {

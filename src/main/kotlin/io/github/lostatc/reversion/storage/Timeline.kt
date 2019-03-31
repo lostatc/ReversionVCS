@@ -200,18 +200,17 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
 
     override fun createSnapshot(paths: Collection<Path>): DatabaseSnapshot {
         val snapshot = transaction {
-            DatabaseSnapshot(
-                SnapshotEntity.new {
-                    revision = SnapshotEntity
-                        .find { SnapshotTable.timeline eq entity.id }
-                        .orderBy(SnapshotTable.revision to SortOrder.DESC)
-                        .firstOrNull()
-                        ?.revision ?: 1
-                    timeCreated = Instant.now()
-                    timeline = entity
-                },
-                repository
-            )
+            val snapshotEntity = SnapshotEntity.new {
+                revision = SnapshotEntity
+                    .find { SnapshotTable.timeline eq entity.id }
+                    .orderBy(SnapshotTable.revision to SortOrder.DESC)
+                    .firstOrNull()
+                    ?.revision ?: 1
+                timeCreated = Instant.now()
+                timeline = entity
+            }
+
+            DatabaseSnapshot(snapshotEntity, repository)
         }
 
         for (path in paths) {
