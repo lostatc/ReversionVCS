@@ -148,5 +148,5 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
         .orderBy(BlockTable.index to SortOrder.ASC)
         .mapNotNull { repository.getBlob(it.blob.checksum)?.inputStream }
         .reduce { accumulator, stream -> SequenceInputStream(accumulator, stream) }
-        .let { SimpleBlob(it, checksum) }
+        .let { Blob.of(it, checksum) }
 }

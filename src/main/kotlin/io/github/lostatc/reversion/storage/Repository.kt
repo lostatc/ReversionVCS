@@ -146,6 +146,14 @@ data class DatabaseRepository(override val path: Path) : Repository {
     val blockSize: Long = Long.MAX_VALUE
 
     init {
+        // Create the repository if it doesn't exist.
+        if (Files.notExists(path)) {
+            Files.createDirectories(path)
+            Files.createDirectory(blobsPath)
+            Files.writeString(versionPath, currentVersion.toString())
+        }
+
+        // Check if the repository is compatible.
         try {
             version = UUID.fromString(Files.readString(versionPath))
         } catch (e: IOException) {
@@ -221,7 +229,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
             val blob = getBlob(blobEntity.checksum)
 
             // Skip the blob if it is valid.
-            if (blob != null && blob.isValid(checksumAlgorithm)) continue
+            if (blob != null && blob.isValid(hashAlgorithm)) continue
 
             // The blob is either missing or corrupt. Find all versions that contain the blob.
             affectedVersions.addAll(blobEntity.blocks.map { DatabaseVersion(it.version, this) })
@@ -274,7 +282,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
     fun getBlob(checksum: Checksum): Blob? {
         val blobPath = getBlobPath(checksum)
         if (Files.notExists(blobPath)) return null
-        return SimpleBlob(Files.newInputStream(blobPath), checksum)
+        return Blob.of(Files.newInputStream(blobPath), checksum)
     }
 
     companion object {
@@ -300,7 +308,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
         /**
          * The name of the algorithm used to calculate checksums.
          */
-        const val checksumAlgorithm: String = "SHA-256"
+        const val hashAlgorithm: String = "SHA-256"
     }
 }
 
