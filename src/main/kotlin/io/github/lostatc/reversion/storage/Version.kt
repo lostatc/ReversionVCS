@@ -144,9 +144,11 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
     override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.snapshot.timeline, repository) }
 
-    override fun getData(): Blob = entity.blocks
-        .orderBy(BlockTable.index to SortOrder.ASC)
-        .mapNotNull { repository.getBlob(it.blob.checksum)?.inputStream }
-        .reduce { accumulator, stream -> SequenceInputStream(accumulator, stream) }
-        .let { Blob.of(it, checksum) }
+    override fun getData(): Blob = transaction {
+        entity.blocks
+            .orderBy(BlockTable.index to SortOrder.ASC)
+            .mapNotNull { repository.getBlob(it.blob.checksum)?.inputStream }
+            .reduce { accumulator, stream -> SequenceInputStream(accumulator, stream) }
+            .let { Blob.of(it, checksum) }
+    }
 }

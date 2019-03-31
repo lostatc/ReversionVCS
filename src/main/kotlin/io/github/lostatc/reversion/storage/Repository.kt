@@ -252,17 +252,19 @@ data class DatabaseRepository(override val path: Path) : Repository {
 
     /**
      * Adds the given [blob] to this repository.
-     *
-     * @return The database entity representing the blob.
      */
-    fun addBlob(blob: Blob): BlobEntity = transaction {
+    fun addBlob(blob: Blob) {
+        // Add the blob to the file system before adding the record to the database to avoid corruption in case this
+        // operation is interrupted.
         val blobPath = getBlobPath(blob.checksum)
         Files.createDirectories(blobPath.parent)
         Files.copy(blob.inputStream, blobPath)
 
-        BlobEntity.new {
-            checksum = blob.checksum
-            size = Files.size(blobPath)
+        transaction {
+            BlobEntity.new {
+                checksum = blob.checksum
+                size = Files.size(blobPath)
+            }
         }
     }
 
@@ -271,13 +273,17 @@ data class DatabaseRepository(override val path: Path) : Repository {
      *
      * @return `true` if the blob was removed, `false` if it didn't exist.
      */
-    fun removeBlob(checksum: Checksum): Boolean = transaction {
-        BlobEntity
-            .find { BlobTable.checksum eq checksum }
-            .singleOrNull()
-            ?.delete()
+    fun removeBlob(checksum: Checksum): Boolean {
+        // Remove the record from the database before removing the blob from the file system to avoid corruption in case
+        // this operation is interrupted.
+        transaction {
+            BlobEntity
+                .find { BlobTable.checksum eq checksum }
+                .singleOrNull()
+                ?.delete()
+        }
 
-        Files.deleteIfExists(getBlobPath(checksum))
+        return Files.deleteIfExists(getBlobPath(checksum))
     }
 
     /**
