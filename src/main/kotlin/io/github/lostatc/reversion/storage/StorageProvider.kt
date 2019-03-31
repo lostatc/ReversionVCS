@@ -19,6 +19,8 @@
 
 package io.github.lostatc.reversion.storage
 
+import org.zeroturnaround.zip.ZipUtil
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -28,11 +30,23 @@ import java.util.*
  */
 interface StorageProvider {
     /**
-     * Returns a [Repository] for the repository located at the given [path].
+     * Gets the [Repository] at the given path and returns it.
      *
      * If there is no repository at [path], an empty repository is created.
      */
     fun getRepository(path: Path): Repository
+
+    /**
+     * Imports a [Repository] from a file and returns it.
+     *
+     * This is guaranteed to support importing the file created by [Repository.export].
+     *
+     * @param [source] The file to import the repository from.
+     * @param [target] The path to create the repository at.
+     *
+     * @throws [IOException] An I/O error occurred.
+     */
+    fun importRepository(source: Path, target: Path): Repository
 
     /**
      * Returns whether there is a repository compatible with this storage provider at the given [path].
@@ -59,7 +73,12 @@ interface StorageProvider {
  * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
  */
 object DatabaseStorageProvider : StorageProvider {
-    override fun getRepository(path: Path): DatabaseRepository = DatabaseRepository(path)
+    override fun getRepository(path: Path): Repository = DatabaseRepository(path)
+
+    override fun importRepository(source: Path, target: Path): Repository {
+        ZipUtil.unpack(source.toFile(), target.toFile())
+        return DatabaseRepository(target)
+    }
 
     override fun isValidRepository(path: Path): Boolean {
         if (Files.notExists(path)) return false

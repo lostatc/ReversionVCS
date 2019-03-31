@@ -39,7 +39,9 @@ class Repo : CliktCommand(help = COMMAND_HELP) {
     init {
         subcommands(
             Create(this),
-            Info(this)
+            Info(this),
+            Export(this),
+            Import(this)
         )
     }
 
