@@ -24,7 +24,6 @@ import io.github.lostatc.reversion.schema.VersionEntity
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.IOException
-import java.io.SequenceInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -107,7 +106,7 @@ interface Version {
 
         // Write the file contents to a temporary file.
         val tempFile = Files.createTempFile("reversion-", "")
-        Files.copy(getData().inputStream, tempFile)
+        getData().newInputStream().use { Files.copy(it, tempFile) }
 
         // Move the temporary file to the target to safely handle the case of an existing file.
         val copyOptions = if (overwrite) arrayOf(StandardCopyOption.REPLACE_EXISTING) else emptyArray()
@@ -145,10 +144,10 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
         get() = transaction { DatabaseTimeline(entity.snapshot.timeline, repository) }
 
     override fun getData(): Blob = transaction {
+        // If a blob is missing, skip over it. It is the responsibility of the caller to check for corruption.
         entity.blocks
             .orderBy(BlockTable.index to SortOrder.ASC)
-            .mapNotNull { repository.getBlob(it.blob.checksum)?.inputStream }
-            .reduce { accumulator, stream -> SequenceInputStream(accumulator, stream) }
-            .let { Blob.of(it, DatabaseRepository.hashAlgorithm) }
+            .mapNotNull { repository.getBlob(it.blob.checksum) }
+            .let { Blob.fromBlobs(it, DatabaseRepository.hashAlgorithm) }
     }
 }

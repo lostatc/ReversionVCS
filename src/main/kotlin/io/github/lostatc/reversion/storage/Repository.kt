@@ -258,7 +258,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
         // operation is interrupted.
         val blobPath = getBlobPath(blob.checksum)
         Files.createDirectories(blobPath.parent)
-        Files.copy(blob.inputStream, blobPath)
+        blob.newInputStream().use { Files.copy(it, blobPath) }
 
         transaction {
             BlobEntity.new {
@@ -294,7 +294,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
     fun getBlob(checksum: Checksum): Blob? {
         val blobPath = getBlobPath(checksum)
         if (Files.notExists(blobPath)) return null
-        return Blob.of(Files.newInputStream(blobPath), DatabaseRepository.hashAlgorithm)
+        return Blob.fromFile(blobPath, DatabaseRepository.hashAlgorithm)
     }
 
     override fun export(target: Path) {
