@@ -28,7 +28,7 @@ private val COMMAND_HELP: String = """
 """.trimIndent()
 
 class Import(val parent: Repo) : CliktCommand(help = COMMAND_HELP) {
-    val destination by argument(help = "The file to import the repository from.")
+    val source by argument(help = "The file to import the repository from.")
         .path(exists = true)
 
     override fun run() {
