@@ -235,7 +235,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
             val blob = getBlob(blobEntity.checksum)
 
             // Skip the blob if it is valid.
-            if (blob != null && blob.isValid(hashAlgorithm)) continue
+            if (blob != null && blob.checksum == blobEntity.checksum) continue
 
             // The blob is either missing or corrupt. Find all versions that contain the blob.
             affectedVersions.addAll(blobEntity.blocks.map { DatabaseVersion(it.version, this) })
@@ -294,7 +294,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
     fun getBlob(checksum: Checksum): Blob? {
         val blobPath = getBlobPath(checksum)
         if (Files.notExists(blobPath)) return null
-        return Blob.of(Files.newInputStream(blobPath), checksum)
+        return Blob.of(Files.newInputStream(blobPath), DatabaseRepository.hashAlgorithm)
     }
 
     override fun export(target: Path) {

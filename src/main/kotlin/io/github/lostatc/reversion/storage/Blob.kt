@@ -40,19 +40,7 @@ interface Blob {
      */
     val checksum: Checksum
 
-    /**
-     * Returns whether the hash of [inputStream] is equal to [checksum].
-     *
-     * @param [algorithm] The name of the hash algorithm to use. This accepts any algorithm accepted by [MessageDigest].
-     */
-    fun isValid(algorithm: String): Boolean = checksum == Checksum.fromInputStream(inputStream, algorithm)
-
     companion object {
-        /**
-         * Creates a [Blob] containing data from the given [inputStream] with the given [checksum].
-         */
-        fun of(inputStream: InputStream, checksum: Checksum): Blob = SimpleBlob(inputStream, checksum)
-
         /**
          * Creates a [Blob] containing data from the given [inputStream] with a computed checksum.
          *
@@ -72,13 +60,13 @@ interface Blob {
          * @param [algorithm] The name of the algorithm to compute the checksum with.
          */
         fun fromFile(path: Path, blockSize: Long = Long.MAX_VALUE, algorithm: String = "SHA-256"): List<Blob> {
-            val blobs = mutableListOf<LazyBlob>()
+            val blobs = mutableListOf<Blob>()
 
             Files.newByteChannel(path).use {
                 // Iterate over each [blockSize] byte chunk of the file.
                 while (it.position() < it.size()) {
                     // Create a blob that starts at the current position and ends [blockSize] bytes after it.
-                    val blob = LazyBlob(BoundedInputStream(Channels.newInputStream(it), blockSize), algorithm)
+                    val blob = Blob.of(BoundedInputStream(Channels.newInputStream(it), blockSize), algorithm)
                     blobs.add(blob)
 
                     // Advance the position of the channel by [blockSize] bytes.
@@ -90,11 +78,6 @@ interface Blob {
         }
     }
 }
-
-/**
- * An simple data class implementation of [Blob].
- */
-private data class SimpleBlob(override val inputStream: InputStream, override val checksum: Checksum) : Blob
 
 /**
  * An implementation of [Blob] that lazily computes the [checksum] from the [inputStream].

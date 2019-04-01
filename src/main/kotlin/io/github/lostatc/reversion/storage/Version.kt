@@ -85,7 +85,7 @@ interface Version {
      *
      * @return `true` if the data is valid, `false` if it is corrupt.
      */
-    fun isValid(): Boolean = checksum == getData().checksum
+    fun isValid(): Boolean = getData().checksum == checksum
 
     /**
      * Writes the file represented by this object to the file system.
@@ -149,6 +149,6 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
             .orderBy(BlockTable.index to SortOrder.ASC)
             .mapNotNull { repository.getBlob(it.blob.checksum)?.inputStream }
             .reduce { accumulator, stream -> SequenceInputStream(accumulator, stream) }
-            .let { Blob.of(it, checksum) }
+            .let { Blob.of(it, DatabaseRepository.hashAlgorithm) }
     }
 }
