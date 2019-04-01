@@ -23,6 +23,7 @@ import io.github.lostatc.reversion.schema.*
 import org.jetbrains.exposed.sql.SizedCollection
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Path
 import java.time.Duration
@@ -32,37 +33,10 @@ import java.util.*
 /**
  * A rule specifying how old versions of files are cleaned up.
  *
- * For the first [timeFrame] after a snapshot is taken, this policy will only keep [maxVersions] versions of each file
- * for every [minInterval] interval.
+ * For the first [timeFrame] after a new version of a file is created, this policy will only keep [maxVersions] versions
+ * of that file for every [minInterval] interval.
  */
-data class RetentionPolicy(val minInterval: Duration, val timeFrame: Duration, val maxVersions: Int) {
-    /**
-     * Returns only the [versions] which can be deleted according to this policy.
-     */
-    fun filter(versions: Sequence<Version>): Sequence<Version> = sequence {
-        val now = Instant.now()
-        val timeFrameStart = now.minus(timeFrame)
-        var intervalStart = now.minus(minInterval)
-        var intervalEnd = now
-
-        // Sort versions from newest to oldest.
-        val sortedItems = versions.sortedByDescending { it.snapshot.timeCreated }
-
-        // Iterate over each interval from now to the start of the time frame.
-        while (intervalStart.isAfter(timeFrameStart)) {
-            val filesInThisInterval = sortedItems.filter {
-                val instant = it.snapshot.timeCreated
-                instant.isAfter(intervalStart) && instant.isBefore(intervalEnd)
-            }
-
-            // Drop the newest files to keep them and delete the rest.
-            yieldAll(filesInThisInterval.drop(maxVersions))
-
-            intervalStart = intervalStart.minus(minInterval)
-            intervalEnd = intervalEnd.minus(minInterval)
-        }
-    }
-}
+data class RetentionPolicy(val minInterval: Duration, val timeFrame: Duration, val maxVersions: Int)
 
 /**
  * A timeline in a repository.
@@ -136,20 +110,48 @@ interface Timeline {
     fun listTags(): Sequence<Tag> = listSnapshots().flatMap { it.listTags() }
 
     /**
+     * Returns a sequence of the versions in this timeline of the file with the given [path].
+     */
+    fun listVersions(path: Path): Sequence<Version> = listSnapshots().mapNotNull { it.getVersion(path) }
+
+    /**
      * Removes old versions of files.
      *
-     * The timeline's [retentionPolicies] govern which snapshots are removed.
+     * The timeline's [retentionPolicies] govern which versions are removed.
      *
-     * @return The number of file versions that were removed.
+     * @param [paths] The paths of the files to remove old versions of.
+     *
+     * @return The number of versions that were removed.
      */
-    fun clean(): Int {
+    fun clean(paths: Collection<Path>): Int {
         var totalDeleted = 0
 
         for (policy in retentionPolicies) {
-            for (snapshot in listSnapshots()) {
-                for (version in policy.filter(snapshot.listVersions())) {
-                    snapshot.removeVersion(version.path)
-                    totalDeleted++
+            for (path in paths) {
+                // Sort versions with this path from newest to oldest.
+                val sortedVersions = listVersions(path).sortedByDescending { it.snapshot.timeCreated }.toList()
+
+                val timeFrameEnd = sortedVersions.first().snapshot.timeCreated
+                val timeFrameStart = timeFrameEnd.minus(policy.timeFrame)
+                var intervalEnd = timeFrameEnd
+                var intervalStart = timeFrameEnd.minus(policy.minInterval)
+
+                // Iterate over each interval starting from the time the most recent version was created and going
+                // backwards.
+                while (intervalStart.isAfter(timeFrameStart)) {
+                    val versionsInThisInterval = sortedVersions.filter {
+                        val timeCreated = it.snapshot.timeCreated
+                        timeCreated.isAfter(intervalStart) && timeCreated.isBefore(intervalEnd)
+                    }
+
+                    // Drop the newest files to keep them and delete the rest.
+                    for (versionToDelete in versionsInThisInterval.drop(policy.maxVersions)) {
+                        versionToDelete.snapshot.removeVersion(versionToDelete.path)
+                        totalDeleted++
+                    }
+
+                    intervalStart = intervalStart.minus(policy.minInterval)
+                    intervalEnd = intervalEnd.minus(policy.minInterval)
                 }
             }
         }
@@ -252,5 +254,16 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
 
     override fun listTags(): Sequence<DatabaseTag> = transaction {
         TagEntity.all().asSequence().map { DatabaseTag(it, repository) }
+    }
+
+    override fun listVersions(path: Path): Sequence<DatabaseVersion> = transaction {
+        val query = VersionTable.innerJoin(SnapshotTable)
+            .slice(VersionTable.columns)
+            .select { (SnapshotTable.timeline eq entity.id) and (VersionTable.path eq path) }
+
+        VersionEntity
+            .wrapRows(query)
+            .asSequence()
+            .map { DatabaseVersion(it, repository) }
     }
 }
