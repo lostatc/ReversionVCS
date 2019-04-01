@@ -132,7 +132,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         }
 
         // Create a list of blobs from the file.
-        val blobs = Blob.fromFile(path, repository.blockSize, DatabaseRepository.hashAlgorithm)
+        val blobs = Blob.chunkFile(path, repository.blockSize, DatabaseRepository.hashAlgorithm)
 
         // Add the blobs to the file system. Because this is wrapped in a transaction, records in the database won't be
         // updated until all the blobs have been added. This is to prevent corruption in case the operation is

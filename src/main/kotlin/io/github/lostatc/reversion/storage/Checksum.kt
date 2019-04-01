@@ -24,7 +24,6 @@ import org.apache.commons.codec.binary.Hex
 import org.apache.commons.codec.digest.DigestUtils
 import java.io.InputStream
 import java.nio.ByteBuffer
-import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.*
@@ -89,6 +88,6 @@ class Checksum(private val bytes: ByteArray) {
          * @param [algorithm] The name of the hash algorithm to use.
          */
         fun fromFile(path: Path, algorithm: String = "SHA-256"): Checksum =
-            fromInputStream(Files.newInputStream(path), algorithm)
+            Checksum(DigestUtils(algorithm).digest(path.toFile()))
     }
 }
