@@ -33,7 +33,7 @@ import java.nio.file.attribute.FileTime
 object VersionTable : IntIdTable() {
     val path: Column<Path> = path("path")
 
-    val snapshot: Column<EntityID<Int>> = reference("snapshot", SnapshotTable)
+    val snapshot: Column<EntityID<Int>> = cascadeReference("snapshot", SnapshotTable)
 
     val lastModifiedTime: Column<FileTime> = fileTime("lastModifiedTime")
 

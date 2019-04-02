@@ -27,7 +27,8 @@ import org.jetbrains.exposed.sql.Table
  * A table for storing the relationships between timelines and retention policies.
  */
 object TimelineRetentionPolicyTable : Table() {
-    val timeline = reference("timeline", TimelineTable).primaryKey(0)
+    val timeline = cascadeReference("timeline", TimelineTable).primaryKey(0)
 
-    val retentionPolicy: Column<EntityID<Int>> = reference("retentionPolicy", RetentionPolicyTable).primaryKey(1)
+    val retentionPolicy: Column<EntityID<Int>> =
+        cascadeReference("retentionPolicy", RetentionPolicyTable).primaryKey(1)
 }
