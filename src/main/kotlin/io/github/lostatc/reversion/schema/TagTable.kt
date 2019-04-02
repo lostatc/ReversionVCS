@@ -32,9 +32,9 @@ object TagTable : IntIdTable() {
 
     val pinned: Column<Boolean> = bool("pinned")
 
-    val snapshot: Column<EntityID<Int>> = reference("snapshot", SnapshotTable)
+    val snapshot: Column<EntityID<Int>> = cascadeReference("snapshot", SnapshotTable)
 
-    val timeline: Column<EntityID<Int>> = reference("timeline", SnapshotTable.timeline)
+    val timeline: Column<EntityID<Int>> = cascadeReference("timeline", SnapshotTable.timeline)
 
     init {
         uniqueIndex(name, timeline)

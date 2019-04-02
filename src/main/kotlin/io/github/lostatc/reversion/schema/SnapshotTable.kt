@@ -30,7 +30,7 @@ import java.time.Instant
 object SnapshotTable : IntIdTable() {
     val revision: Column<Int> = integer("revision")
 
-    val timeline: Column<EntityID<Int>> = reference("timeline", TimelineTable)
+    val timeline: Column<EntityID<Int>> = cascadeReference("timeline", TimelineTable)
 
     val timeCreated: Column<Instant> = instant("timeCreated")
 

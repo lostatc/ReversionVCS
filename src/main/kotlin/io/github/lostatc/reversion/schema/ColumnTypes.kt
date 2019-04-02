@@ -21,6 +21,8 @@ package io.github.lostatc.reversion.schema
 
 import io.github.lostatc.reversion.storage.Checksum
 import io.github.lostatc.reversion.storage.PermissionSet
+import org.jetbrains.exposed.dao.EntityID
+import org.jetbrains.exposed.dao.IdTable
 import org.jetbrains.exposed.sql.*
 import org.joda.time.DateTime
 import java.nio.file.Path
@@ -32,6 +34,12 @@ import java.time.Instant
 
 private const val PATH_SEPARATOR: String = "/"
 
+fun <T : Comparable<T>> Table.cascadeReference(name: String, foreign: IdTable<T>): Column<EntityID<T>> =
+    reference(name, foreign, ReferenceOption.CASCADE, ReferenceOption.CASCADE)
+
+fun <T : Comparable<T>> Table.cascadeReference(name: String, refColumn: Column<T>): Column<T> =
+    reference(name, refColumn, ReferenceOption.CASCADE, ReferenceOption.CASCADE)
+
 /**
  * A column type for storing [Path] objects.
  */
@@ -41,8 +49,8 @@ class PathColumnType : ColumnType() {
     override fun notNullValueToDB(value: Any): Any =
         if (value is Path) value.joinToString(separator = PATH_SEPARATOR) else value
 
-    override fun valueFromDB(value: Any): Any {
-        return if (value is String) {
+    override fun valueFromDB(value: Any): Any =
+        if (value is String) {
             val segments = value.split(PATH_SEPARATOR)
             val firstSegment = segments.first()
             val remainingSegments = segments.drop(1).toTypedArray()
@@ -50,7 +58,6 @@ class PathColumnType : ColumnType() {
         } else {
             value
         }
-    }
 }
 
 /**
