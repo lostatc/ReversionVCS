@@ -31,6 +31,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.util.*
+import kotlin.streams.asSequence
 
 /**
  * Information about the integrity of a repository.
@@ -297,8 +298,34 @@ data class DatabaseRepository(override val path: Path) : Repository {
         return Blob.fromFile(blobPath, DatabaseRepository.hashAlgorithm)
     }
 
+    /**
+     * Returns a sequence of the checksums of blobs stored in this repository.
+     *
+     * The returned checksums are the expected checksums of the blobs, which could be different from their actual
+     * checksums if the blobs are corrupt.
+     */
+    fun listBlobs(): Sequence<Checksum> = Files.walk(blobsPath)
+        .asSequence()
+        .filter { Files.isRegularFile(it) }
+        .map { Checksum.fromHex(it.fileName.toString()) }
+
     override fun export(target: Path) {
         ZipUtil.pack(path.toFile(), target.toFile())
+    }
+
+    /**
+     * Removes any unused blobs from the repository.
+     */
+    fun clean() {
+        val usedChecksums = transaction {
+            BlobEntity.all().map { it.checksum }.toSet()
+        }
+
+        for (checksum in listBlobs()) {
+            if (checksum !in usedChecksums) {
+                removeBlob(checksum)
+            }
+        }
     }
 
     companion object {
