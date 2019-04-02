@@ -46,8 +46,13 @@ class PermissionSet(permissions: Set<PosixFilePermission>) : Set<PosixFilePermis
 
         /**
          * Creates a new [PermissionSet] from the given [path].
+         *
+         * @return The [PermissionSet] object or `null` if the file system doesn't support POSIX file permissions.
          */
-        fun fromPath(path: Path): PermissionSet =
+        fun fromPath(path: Path): PermissionSet? = try {
             PermissionSet(Files.getPosixFilePermissions(path))
+        } catch (e: UnsupportedOperationException) {
+            null
+        }
     }
 }
