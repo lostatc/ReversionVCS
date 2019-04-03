@@ -35,6 +35,16 @@ class UnsupportedFormatException(message: String? = null) : IllegalArgumentExcep
  */
 interface StorageProvider {
     /**
+     * The human-readable name of this storage provider.
+     */
+    val name: String
+
+    /**
+     * The human-readable description of this storage provider.
+     */
+    val description: String
+
+    /**
      * The default repository configuration for this storage provider.
      */
     val config: RepositoryConfig
@@ -98,6 +108,13 @@ interface StorageProvider {
  * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
  */
 object DatabaseStorageProvider : StorageProvider {
+    override val name: String = "De-duplicated repository"
+
+    override val description: String = """
+        A repository format that can de-duplicate data at the file or block level. Data cannot be easily recovered
+        without this program.
+    """.trimIndent()
+
     override val config: RepositoryConfig = RepositoryConfig(DatabaseRepository.attributes)
 
     override fun openRepository(path: Path, config: RepositoryConfig): DatabaseRepository =
