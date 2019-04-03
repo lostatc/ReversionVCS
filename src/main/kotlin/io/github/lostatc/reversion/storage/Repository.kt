@@ -19,11 +19,10 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.schema.BlobEntity
-import io.github.lostatc.reversion.schema.BlobTable
-import io.github.lostatc.reversion.schema.TimelineEntity
-import io.github.lostatc.reversion.schema.TimelineTable
+import io.github.lostatc.reversion.schema.*
+import io.github.lostatc.reversion.schema.VersionTable.path
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.zeroturnaround.zip.ZipUtil
 import java.io.IOException
@@ -125,9 +124,11 @@ class UnsupportedFormatException(message: String? = null) : IllegalArgumentExcep
 /**
  * An implementation of [Repository] which is backed by a relational database.
  *
+ * If there is no repository at [path], an empty repository will be created.
+ *
  * @param [path] The path of the repository.
  *
- * @throws [UnsupportedFormatException] The format of the repository at [path] isn't supported.
+ * @throws [UnsupportedFormatException] The format of the repository at [path] is not supported.
  */
 data class DatabaseRepository(override val path: Path) : Repository {
     /**
@@ -146,42 +147,63 @@ data class DatabaseRepository(override val path: Path) : Repository {
     private val blobsPath = path.resolve("blobs")
 
     /**
-     * The version of this repository.
-     */
-    private val version: UUID
-
-    /**
      * The maximum size of the blocks that files stored in this repository are split into.
      */
     val blockSize: Long = Long.MAX_VALUE
 
     init {
-        // Create the repository if it doesn't exist.
         if (Files.notExists(path)) {
-            Files.createDirectories(path)
-            Files.createDirectory(blobsPath)
-            Files.writeString(versionPath, currentVersion.toString())
-        }
-
-        // Check if the repository is compatible.
-        try {
-            version = UUID.fromString(Files.readString(versionPath))
-        } catch (e: IOException) {
-            throw UnsupportedFormatException("The format version could not be determined.")
-        } catch (e: IllegalArgumentException) {
-            throw UnsupportedFormatException("The format version could not be determined.")
-        }
-
-        if (version !in supportedVersions) {
-            throw UnsupportedFormatException("The format of the repository isn't supported.")
+            createRepository()
+        } else if (!isCompatible()) {
+            throw UnsupportedFormatException("The format of the repository at '$path' is not supported.")
         }
     }
 
     /**
      * The connection to the repository's database.
      */
-    val db: Database = databases.getOrPut(path) {
+    val db: Database = connectDatabase()
+
+    /**
+     * Connect to the database and return a connection.
+     */
+    private fun connectDatabase(): Database = databases.getOrPut(path) {
         Database.connect("jdbc:sqlite:${databasePath.toUri().path}", driver = "org.sqlite.JDBC")
+    }
+
+    /**
+     * Create the files necessary to make this a valid repository.
+     */
+    private fun createRepository() {
+        Files.createDirectories(path)
+        Files.createDirectory(blobsPath)
+
+        connectDatabase()
+        SchemaUtils.create(
+            TimelineTable,
+            SnapshotTable,
+            VersionTable,
+            TagTable,
+            BlobTable,
+            BlockTable,
+            RetentionPolicyTable,
+            TimelineRetentionPolicyTable
+        )
+
+        // Do this last to signify that the repository is valid.
+        Files.writeString(versionPath, currentVersion.toString())
+    }
+
+    /**
+     * Returns whether the format of the repository at [path] is compatible with this [Repository].
+     */
+    private fun isCompatible(): Boolean = try {
+        val version = UUID.fromString(Files.readString(versionPath))
+        version in supportedVersions
+    } catch (e: IOException) {
+        false
+    } catch (e: IllegalArgumentException) {
+        false
     }
 
     override fun createTimeline(name: String, policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {

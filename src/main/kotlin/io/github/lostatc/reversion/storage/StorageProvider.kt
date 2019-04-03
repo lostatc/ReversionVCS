@@ -30,14 +30,17 @@ import java.util.*
  */
 interface StorageProvider {
     /**
-     * Gets the [Repository] at the given path and returns it.
+     * Gets the repository at the given path and returns it.
      *
-     * If there is no repository at [path], an empty repository is created.
+     * If there is not a repository at [path], an empty one will be created.
+     *
+     * @throws [UnsupportedFormatException] The repository at [path] is not compatible with this storage provider.
+     * @throws [IOException] There was an I/O error.
      */
     fun getRepository(path: Path): Repository
 
     /**
-     * Imports a [Repository] from a file and returns it.
+     * Imports a repository from a file and returns it.
      *
      * This is guaranteed to support importing the file created by [Repository.export].
      *
@@ -51,7 +54,7 @@ interface StorageProvider {
     /**
      * Returns whether there is a repository compatible with this storage provider at the given [path].
      */
-    fun isValidRepository(path: Path): Boolean
+    fun isCompatibleRepository(path: Path): Boolean
 
     companion object {
         /**
@@ -65,7 +68,7 @@ interface StorageProvider {
          *
          * @return The first compatible storage provider or `null` if none was found.
          */
-        fun findProvider(path: Path): StorageProvider? = listProviders().find { it.isValidRepository(path) }
+        fun findProvider(path: Path): StorageProvider? = listProviders().find { it.isCompatibleRepository(path) }
     }
 }
 
@@ -80,7 +83,7 @@ object DatabaseStorageProvider : StorageProvider {
         return DatabaseRepository(target)
     }
 
-    override fun isValidRepository(path: Path): Boolean {
+    override fun isCompatibleRepository(path: Path): Boolean {
         if (Files.notExists(path)) return false
         return try {
             DatabaseRepository(path)
