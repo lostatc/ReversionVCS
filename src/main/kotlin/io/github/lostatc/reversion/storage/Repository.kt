@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.schema.*
-import io.github.lostatc.reversion.schema.VersionTable.path
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -28,6 +27,7 @@ import org.zeroturnaround.zip.ZipUtil
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
 import kotlin.streams.asSequence
@@ -120,47 +120,42 @@ interface Repository {
 }
 
 /**
- * An exception which is thrown when the format of a repository isn't supported by the storage provider.
- *
- * @param [message] A message describing the exception
+ * A factory for [Database] instances.
  */
-class UnsupportedFormatException(message: String? = null) : IllegalArgumentException(message)
+private object DatabaseFactory {
+    /**
+     * A map of database paths to their database objects.
+     *
+     * This is used to prevent a database from being connected to more than once.
+     */
+    private val databases: MutableMap<Path, Database> = mutableMapOf()
+
+    /**
+     * Connect to the database at the given [path].
+     */
+    fun connect(path: Path): Database = databases.getOrPut(path) {
+        Database.connect("jdbc:sqlite:${path.toUri().path}", driver = "org.sqlite.JDBC")
+    }
+}
 
 /**
  * An implementation of [Repository] which is backed by a relational database.
- *
- * If there is no repository at [path], an empty repository will be created.
- *
- * @throws [UnsupportedFormatException] The format of the repository at [path] is not supported.
  */
 data class DatabaseRepository(override val path: Path, override val config: RepositoryConfig) : Repository {
     /**
      * The path of the repository's database.
      */
-    private val databasePath = path.resolve("manifest.db")
-
-    /**
-     * The path of the file containing the repository's format version.
-     */
-    private val versionPath = path.resolve("version")
+    private val databasePath = path.resolve(relativeDatabasePath)
 
     /**
      * The path of the directory where blobs are stored.
      */
-    private val blobsPath = path.resolve("blobs")
-
-    init {
-        if (Files.notExists(path)) {
-            createRepository()
-        } else if (!isCompatible()) {
-            throw UnsupportedFormatException("The format of the repository at '$path' is not supported.")
-        }
-    }
+    private val blobsPath = path.resolve(relativeBlobsPath)
 
     /**
      * The connection to the repository's database.
      */
-    val db: Database = connectDatabase()
+    val db: Database = DatabaseFactory.connect(databasePath)
 
     /**
      * The hash algorithm used by this repository.
@@ -171,48 +166,6 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
      * The block size used by this repository.
      */
     val blockSize: Long = config[blockSizeAttribute]
-
-    /**
-     * Connect to the database and return a connection.
-     */
-    private fun connectDatabase(): Database = databases.getOrPut(path) {
-        Database.connect("jdbc:sqlite:${databasePath.toUri().path}", driver = "org.sqlite.JDBC")
-    }
-
-    /**
-     * Create the files necessary to make this a valid repository.
-     */
-    private fun createRepository() {
-        Files.createDirectories(path)
-        Files.createDirectory(blobsPath)
-
-        connectDatabase()
-        SchemaUtils.create(
-            TimelineTable,
-            SnapshotTable,
-            VersionTable,
-            TagTable,
-            BlobTable,
-            BlockTable,
-            RetentionPolicyTable,
-            TimelineRetentionPolicyTable
-        )
-
-        // Do this last to signify that the repository is valid.
-        Files.writeString(versionPath, currentVersion.toString())
-    }
-
-    /**
-     * Returns whether the format of the repository at [path] is compatible with this [Repository].
-     */
-    private fun isCompatible(): Boolean = try {
-        val version = UUID.fromString(Files.readString(versionPath))
-        version in supportedVersions
-    } catch (e: IOException) {
-        false
-    } catch (e: IllegalArgumentException) {
-        false
-    }
 
     override fun createTimeline(name: String, policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {
         val timeline = DatabaseTimeline(
@@ -273,6 +226,10 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
         }
 
         return IntegrityReport(affectedVersions)
+    }
+
+    override fun export(target: Path) {
+        ZipUtil.pack(path.toFile(), target.toFile())
     }
 
     /**
@@ -339,10 +296,6 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
         .filter { Files.isRegularFile(it) }
         .map { Checksum.fromHex(it.fileName.toString()) }
 
-    override fun export(target: Path) {
-        ZipUtil.pack(path.toFile(), target.toFile())
-    }
-
     /**
      * Removes any unused blobs from the repository.
      */
@@ -360,13 +313,6 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
 
     companion object {
         /**
-         * A map of repository paths to their database objects.
-         *
-         * This is used to prevent a database from being connected to more than once.
-         */
-        private val databases: MutableMap<Path, Database> = mutableMapOf()
-
-        /**
          * The current version of the repository format.
          */
         private val currentVersion: UUID = UUID.fromString("c0747b1e-4bd2-11e9-a623-bff5824aa175")
@@ -377,6 +323,21 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
         private val supportedVersions: Set<UUID> = setOf(
             UUID.fromString("c0747b1e-4bd2-11e9-a623-bff5824aa175")
         )
+
+        /**
+         * The relative path of the database.
+         */
+        private val relativeDatabasePath: Path = Paths.get("manifest.db")
+
+        /**
+         * The relative path of the file containing the repository version.
+         */
+        private val relativeVersionPath: Path = Paths.get("version")
+
+        /**
+         * The relative path of the directory containing blobs.
+         */
+        private val relativeBlobsPath: Path = Paths.get("blobs")
 
         /**
          * The attribute which stores the hash algorithm.
@@ -403,6 +364,87 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
             hashAlgorithmAttribute,
             blockSizeAttribute
         )
+
+        /**
+         * Opens the repository at [path] and returns it.
+         *
+         * @param [path] The path of the repository.
+         * @param [config] The configuration for the repository.
+         *
+         * @throws [UnsupportedFormatException] There is no compatible repository at [path].
+         */
+        fun open(path: Path, config: RepositoryConfig): DatabaseRepository {
+            if (!check(path))
+                throw UnsupportedFormatException("The format of the repository at '$path' is not supported.")
+
+            return DatabaseRepository(path, config)
+        }
+
+        /**
+         * Creates a repository at [path] and returns it.
+         *
+         * @param [path] The path of the repository.
+         * @param [config] The configuration for the repository.
+         *
+         * @throws [FileAlreadyExistsException] There is already a file at [path].
+         * @throws [IOException] An I/O error occurred.
+         */
+        fun create(path: Path, config: RepositoryConfig): DatabaseRepository {
+            if (Files.exists(path)) throw FileAlreadyExistsException(path.toFile())
+
+            val databasePath = path.resolve(relativeDatabasePath)
+            val versionPath = path.resolve(relativeVersionPath)
+            val blobsPath = path.resolve(relativeBlobsPath)
+
+            Files.createDirectories(path)
+            Files.createDirectory(blobsPath)
+
+            DatabaseFactory.connect(databasePath)
+            SchemaUtils.create(
+                TimelineTable,
+                SnapshotTable,
+                VersionTable,
+                TagTable,
+                BlobTable,
+                BlockTable,
+                RetentionPolicyTable,
+                TimelineRetentionPolicyTable
+            )
+
+            // Do this last to signify that the repository is valid.
+            Files.writeString(versionPath, currentVersion.toString())
+
+            return open(path, config)
+        }
+
+        /**
+         * Imports a repository from a file and returns it.
+         *
+         * This is guaranteed to support importing the file created by [Repository.export].
+         *
+         * @param [source] The file to import the repository from.
+         * @param [target] The path to create the repository at.
+         * @param [config] The configuration for the repository.
+         *
+         * @throws [IOException] An I/O error occurred.
+         */
+        fun import(source: Path, target: Path, config: RepositoryConfig): DatabaseRepository {
+            ZipUtil.unpack(source.toFile(), target.toFile())
+            return open(target, config)
+        }
+
+        /**
+         * Returns whether there is a compatible repository at [path].
+         */
+        fun check(path: Path): Boolean = try {
+            val versionPath = path.resolve(relativeVersionPath)
+            val version = UUID.fromString(Files.readString(versionPath))
+            version in supportedVersions
+        } catch (e: IOException) {
+            false
+        } catch (e: IllegalArgumentException) {
+            false
+        }
     }
 }
 
