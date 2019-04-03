@@ -55,6 +55,11 @@ interface Repository {
     val path: Path
 
     /**
+     * The configuration for the repository.
+     */
+    val config: RepositoryConfig
+
+    /**
      * Creates a new timeline in this repository and returns it.
      *
      * @param [name] The name of the new timeline.
@@ -126,11 +131,9 @@ class UnsupportedFormatException(message: String? = null) : IllegalArgumentExcep
  *
  * If there is no repository at [path], an empty repository will be created.
  *
- * @param [path] The path of the repository.
- *
  * @throws [UnsupportedFormatException] The format of the repository at [path] is not supported.
  */
-data class DatabaseRepository(override val path: Path) : Repository {
+data class DatabaseRepository(override val path: Path, override val config: RepositoryConfig) : Repository {
     /**
      * The path of the repository's database.
      */
@@ -146,11 +149,6 @@ data class DatabaseRepository(override val path: Path) : Repository {
      */
     private val blobsPath = path.resolve("blobs")
 
-    /**
-     * The maximum size of the blocks that files stored in this repository are split into.
-     */
-    val blockSize: Long = Long.MAX_VALUE
-
     init {
         if (Files.notExists(path)) {
             createRepository()
@@ -163,6 +161,16 @@ data class DatabaseRepository(override val path: Path) : Repository {
      * The connection to the repository's database.
      */
     val db: Database = connectDatabase()
+
+    /**
+     * The hash algorithm used by this repository.
+     */
+    val hashAlgorithm: String = config[hashAlgorithmAttribute]
+
+    /**
+     * The block size used by this repository.
+     */
+    val blockSize: Long = config[blockSizeAttribute]
 
     /**
      * Connect to the database and return a connection.
@@ -317,7 +325,7 @@ data class DatabaseRepository(override val path: Path) : Repository {
     fun getBlob(checksum: Checksum): Blob? {
         val blobPath = getBlobPath(checksum)
         if (Files.notExists(blobPath)) return null
-        return Blob.fromFile(blobPath, DatabaseRepository.hashAlgorithm)
+        return Blob.fromFile(blobPath, hashAlgorithm)
     }
 
     /**
@@ -371,9 +379,30 @@ data class DatabaseRepository(override val path: Path) : Repository {
         )
 
         /**
-         * The name of the algorithm used to calculate checksums.
+         * The attribute which stores the hash algorithm.
          */
-        const val hashAlgorithm: String = "SHA-256"
+        val hashAlgorithmAttribute: RepositoryAttribute<String> = RepositoryAttribute.of(
+            name = "Hash algorithm",
+            default = "SHA-256",
+            description = "The name of the algorithm used to calculate checksums."
+        )
+
+        /**
+         * The attribute which stores the block size.
+         */
+        val blockSizeAttribute: RepositoryAttribute<Long> = RepositoryAttribute.of(
+            name = "Block size",
+            default = Long.MAX_VALUE,
+            description = "The maximum size of the blocks that files stored in the repository are split into."
+        )
+
+        /**
+         * A list of the attributes supported by this repository.
+         */
+        val attributes: List<RepositoryAttribute<*>> = listOf(
+            hashAlgorithmAttribute,
+            blockSizeAttribute
+        )
     }
 }
 

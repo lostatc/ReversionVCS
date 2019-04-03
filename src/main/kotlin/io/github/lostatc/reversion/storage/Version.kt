@@ -148,6 +148,6 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
         entity.blocks
             .orderBy(BlockTable.index to SortOrder.ASC)
             .mapNotNull { repository.getBlob(it.blob.checksum) }
-            .let { Blob.fromBlobs(it, DatabaseRepository.hashAlgorithm) }
+            .let { Blob.fromBlobs(it, repository.hashAlgorithm) }
     }
 }

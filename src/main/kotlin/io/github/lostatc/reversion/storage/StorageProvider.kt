@@ -30,14 +30,17 @@ import java.util.*
  */
 interface StorageProvider {
     /**
-     * Gets the repository at the given path and returns it.
+     * Gets the repository at the given [path] and returns it.
      *
      * If there is not a repository at [path], an empty one will be created.
+     *
+     * @param [path] The path of the repository.
+     * @param [config] The configuration for the repository.
      *
      * @throws [UnsupportedFormatException] The repository at [path] is not compatible with this storage provider.
      * @throws [IOException] There was an I/O error.
      */
-    fun getRepository(path: Path): Repository
+    fun getRepository(path: Path, config: RepositoryConfig = getConfig()): Repository
 
     /**
      * Imports a repository from a file and returns it.
@@ -46,15 +49,21 @@ interface StorageProvider {
      *
      * @param [source] The file to import the repository from.
      * @param [target] The path to create the repository at.
+     * @param [config] The configuration for the repository.
      *
      * @throws [IOException] An I/O error occurred.
      */
-    fun importRepository(source: Path, target: Path): Repository
+    fun importRepository(source: Path, target: Path, config: RepositoryConfig = getConfig()): Repository
 
     /**
      * Returns whether there is a repository compatible with this storage provider at the given [path].
      */
     fun isCompatibleRepository(path: Path): Boolean
+
+    /**
+     * Returns the default repository configuration for this storage provider.
+     */
+    fun getConfig(): RepositoryConfig
 
     companion object {
         /**
@@ -76,20 +85,23 @@ interface StorageProvider {
  * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
  */
 object DatabaseStorageProvider : StorageProvider {
-    override fun getRepository(path: Path): Repository = DatabaseRepository(path)
+    override fun getRepository(path: Path, config: RepositoryConfig): Repository =
+        DatabaseRepository(path, config)
 
-    override fun importRepository(source: Path, target: Path): Repository {
+    override fun importRepository(source: Path, target: Path, config: RepositoryConfig): Repository {
         ZipUtil.unpack(source.toFile(), target.toFile())
-        return DatabaseRepository(target)
+        return DatabaseRepository(target, config)
     }
 
     override fun isCompatibleRepository(path: Path): Boolean {
         if (Files.notExists(path)) return false
         return try {
-            DatabaseRepository(path)
+            DatabaseRepository(path, getConfig())
             true
         } catch (e: UnsupportedFormatException) {
             false
         }
     }
+
+    override fun getConfig(): RepositoryConfig = RepositoryConfig(DatabaseRepository.attributes)
 }
