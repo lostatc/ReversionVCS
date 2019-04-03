@@ -19,28 +19,46 @@
 
 package io.github.lostatc.reversion.storage
 
-import org.zeroturnaround.zip.ZipUtil
 import java.io.IOException
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+
+/**
+ * An exception which is thrown when the format of a repository isn't supported by the storage provider.
+ *
+ * @param [message] A message describing the exception
+ */
+class UnsupportedFormatException(message: String? = null) : IllegalArgumentException(message)
 
 /**
  * An interface for service providers that provide mechanisms for storing file version history.
  */
 interface StorageProvider {
     /**
-     * Gets the repository at the given [path] and returns it.
-     *
-     * If there is not a repository at [path], an empty one will be created.
+     * The default repository configuration for this storage provider.
+     */
+    val config: RepositoryConfig
+
+    /**
+     * Opens the repository at [path] and returns it.
      *
      * @param [path] The path of the repository.
      * @param [config] The configuration for the repository.
      *
-     * @throws [UnsupportedFormatException] The repository at [path] is not compatible with this storage provider.
-     * @throws [IOException] There was an I/O error.
+     * @throws [UnsupportedFormatException] There is no compatible repository at [path].
      */
-    fun getRepository(path: Path, config: RepositoryConfig = getConfig()): Repository
+    fun openRepository(path: Path, config: RepositoryConfig = this.config): Repository
+
+    /**
+     * Creates a repository at [path] and returns it.
+     *
+     * @param [path] The path of the repository.
+     * @param [config] The configuration for the repository.
+     *
+     * @throws [FileAlreadyExistsException] There is already a file at [path].
+     * @throws [IOException] An I/O error occurred.
+     */
+    fun createRepository(path: Path, config: RepositoryConfig = this.config): Repository
 
     /**
      * Imports a repository from a file and returns it.
@@ -53,17 +71,12 @@ interface StorageProvider {
      *
      * @throws [IOException] An I/O error occurred.
      */
-    fun importRepository(source: Path, target: Path, config: RepositoryConfig = getConfig()): Repository
+    fun importRepository(source: Path, target: Path, config: RepositoryConfig = this.config): Repository
 
     /**
-     * Returns whether there is a repository compatible with this storage provider at the given [path].
+     * Returns whether there is a repository compatible with this storage provider at [path].
      */
-    fun isCompatibleRepository(path: Path): Boolean
-
-    /**
-     * Returns the default repository configuration for this storage provider.
-     */
-    fun getConfig(): RepositoryConfig
+    fun checkRepository(path: Path): Boolean
 
     companion object {
         /**
@@ -77,7 +90,7 @@ interface StorageProvider {
          *
          * @return The first compatible storage provider or `null` if none was found.
          */
-        fun findProvider(path: Path): StorageProvider? = listProviders().find { it.isCompatibleRepository(path) }
+        fun findProvider(path: Path): StorageProvider? = listProviders().find { it.checkRepository(path) }
     }
 }
 
@@ -85,23 +98,17 @@ interface StorageProvider {
  * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
  */
 object DatabaseStorageProvider : StorageProvider {
-    override fun getRepository(path: Path, config: RepositoryConfig): Repository =
-        DatabaseRepository(path, config)
+    override val config: RepositoryConfig = RepositoryConfig(DatabaseRepository.attributes)
 
-    override fun importRepository(source: Path, target: Path, config: RepositoryConfig): Repository {
-        ZipUtil.unpack(source.toFile(), target.toFile())
-        return DatabaseRepository(target, config)
-    }
+    override fun openRepository(path: Path, config: RepositoryConfig): DatabaseRepository =
+        DatabaseRepository.open(path, config)
 
-    override fun isCompatibleRepository(path: Path): Boolean {
-        if (Files.notExists(path)) return false
-        return try {
-            DatabaseRepository(path, getConfig())
-            true
-        } catch (e: UnsupportedFormatException) {
-            false
-        }
-    }
+    override fun createRepository(path: Path, config: RepositoryConfig): Repository =
+        DatabaseRepository.create(path, config)
 
-    override fun getConfig(): RepositoryConfig = RepositoryConfig(DatabaseRepository.attributes)
+    override fun importRepository(source: Path, target: Path, config: RepositoryConfig): DatabaseRepository =
+        DatabaseRepository.import(source, target, config)
+
+    override fun checkRepository(path: Path): Boolean =
+        DatabaseRepository.check(path)
 }
