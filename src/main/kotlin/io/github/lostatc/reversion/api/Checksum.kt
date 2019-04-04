@@ -17,7 +17,7 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.storage
+package io.github.lostatc.reversion.api
 
 import org.apache.commons.codec.DecoderException
 import org.apache.commons.codec.binary.Hex

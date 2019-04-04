@@ -17,7 +17,7 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.storage
+package io.github.lostatc.reversion.api
 
 import org.apache.commons.io.input.BoundedInputStream
 import java.io.InputStream
@@ -59,10 +59,16 @@ interface Blob {
          *
          * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
          */
-        fun fromFile(path: Path, algorithm: String = "SHA-256"): Blob = object : Blob {
+        fun fromFile(path: Path, algorithm: String = "SHA-256"): Blob = object :
+            Blob {
             override fun newInputStream() = Files.newInputStream(path)
 
-            override val checksum: Checksum by lazy { Checksum.fromFile(path, algorithm) }
+            override val checksum: Checksum by lazy {
+                Checksum.fromFile(
+                    path,
+                    algorithm
+                )
+            }
         }
 
         /**
@@ -89,7 +95,12 @@ interface Blob {
                     }
 
                     override val checksum: Checksum by lazy {
-                        newInputStream().use { Checksum.fromInputStream(it, algorithm) }
+                        newInputStream().use {
+                            Checksum.fromInputStream(
+                                it,
+                                algorithm
+                            )
+                        }
                     }
                 }
 
@@ -105,7 +116,8 @@ interface Blob {
          *
          * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
          */
-        fun fromBlobs(blobs: Iterable<Blob>, algorithm: String = "SHA-256"): Blob = object : Blob {
+        fun fromBlobs(blobs: Iterable<Blob>, algorithm: String = "SHA-256"): Blob = object :
+            Blob {
             // Lazily evaluate the input streams to avoid having too many open at once.
             override fun newInputStream(): InputStream = blobs
                 .asSequence()
@@ -113,7 +125,12 @@ interface Blob {
                 .let { SequenceInputStream(it.asEnumeration()) }
 
             override val checksum: Checksum by lazy {
-                newInputStream().use { Checksum.fromInputStream(it, algorithm) }
+                newInputStream().use {
+                    Checksum.fromInputStream(
+                        it,
+                        algorithm
+                    )
+                }
             }
         }
     }

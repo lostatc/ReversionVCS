@@ -19,8 +19,8 @@
 
 package io.github.lostatc.reversion.schema
 
-import io.github.lostatc.reversion.storage.Checksum
-import io.github.lostatc.reversion.storage.PermissionSet
+import io.github.lostatc.reversion.api.Checksum
+import io.github.lostatc.reversion.api.PermissionSet
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IdTable
 import org.jetbrains.exposed.sql.*
