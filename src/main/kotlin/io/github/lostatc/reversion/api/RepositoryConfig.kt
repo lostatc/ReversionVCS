@@ -17,7 +17,7 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.storage
+package io.github.lostatc.reversion.api
 
 import java.util.*
 import kotlin.reflect.KClass
@@ -50,7 +50,12 @@ data class RepositoryAttribute<T : Any>(
             default: T,
             description: String = ""
         ): RepositoryAttribute<T> {
-            return RepositoryAttribute(name = name, default = default, type = T::class, description = description)
+            return RepositoryAttribute(
+                name = name,
+                default = default,
+                type = T::class,
+                description = description
+            )
         }
     }
 }

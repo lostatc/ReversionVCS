@@ -17,7 +17,7 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.storage
+package io.github.lostatc.reversion.api
 
 import java.io.IOException
 import java.nio.file.Path
@@ -102,30 +102,4 @@ interface StorageProvider {
          */
         fun findProvider(path: Path): StorageProvider? = listProviders().find { it.checkRepository(path) }
     }
-}
-
-/**
- * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
- */
-object DatabaseStorageProvider : StorageProvider {
-    override val name: String = "De-duplicated repository"
-
-    override val description: String = """
-        A repository format that can de-duplicate data at the file or block level. Data cannot be easily recovered
-        without this program.
-    """.trimIndent()
-
-    override val config: RepositoryConfig = RepositoryConfig(DatabaseRepository.attributes)
-
-    override fun openRepository(path: Path, config: RepositoryConfig): DatabaseRepository =
-        DatabaseRepository.open(path, config)
-
-    override fun createRepository(path: Path, config: RepositoryConfig): Repository =
-        DatabaseRepository.create(path, config)
-
-    override fun importRepository(source: Path, target: Path, config: RepositoryConfig): DatabaseRepository =
-        DatabaseRepository.import(source, target, config)
-
-    override fun checkRepository(path: Path): Boolean =
-        DatabaseRepository.check(path)
 }

@@ -17,10 +17,7 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.storage
-
-import io.github.lostatc.reversion.schema.TagEntity
-import org.jetbrains.exposed.sql.transactions.transaction
+package io.github.lostatc.reversion.api
 
 /**
  * A tag on a snapshot.
@@ -59,33 +56,4 @@ interface Tag {
      * The repository that this tag is a part og.
      */
     val repository: Repository
-}
-
-/**
- * An implementation of [Tag] which is backed by a relational database.
- */
-data class DatabaseTag(val entity: TagEntity, override val repository: DatabaseRepository) : Tag {
-    override var name: String
-        get() = transaction { entity.name }
-        set(value) {
-            transaction { entity.name = value }
-        }
-
-    override var description: String
-        get() = transaction { entity.description }
-        set(value) {
-            transaction { entity.description = value }
-        }
-
-    override var pinned: Boolean
-        get() = transaction { entity.pinned }
-        set(value) {
-            transaction { entity.pinned = value }
-        }
-
-    override val snapshot: DatabaseSnapshot
-        get() = transaction { DatabaseSnapshot(entity.snapshot, repository) }
-
-    override val timeline: DatabaseTimeline
-        get() = transaction { DatabaseTimeline(entity.timeline, repository) }
 }

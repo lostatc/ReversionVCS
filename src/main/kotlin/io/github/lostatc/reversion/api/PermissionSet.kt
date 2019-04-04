@@ -17,7 +17,7 @@
  * along with reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.storage
+package io.github.lostatc.reversion.api
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -27,7 +27,11 @@ import java.nio.file.attribute.PosixFilePermissions
 /**
  * A set of POSIX file permissions.
  */
-class PermissionSet(permissions: Set<PosixFilePermission>) : Set<PosixFilePermission> by permissions {
+class PermissionSet(private val permissions: Set<PosixFilePermission>) : Set<PosixFilePermission> by permissions {
+    override fun equals(other: Any?): Boolean = permissions == other
+
+    override fun hashCode(): Int = permissions.hashCode()
+
     /**
      * Returns the string representation of this set of permissions.
      *
