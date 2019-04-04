@@ -50,12 +50,7 @@ data class RepositoryAttribute<T : Any>(
             default: T,
             description: String = ""
         ): RepositoryAttribute<T> {
-            return RepositoryAttribute(
-                name = name,
-                default = default,
-                type = T::class,
-                description = description
-            )
+            return RepositoryAttribute(name = name, default = default, type = T::class, description = description)
         }
     }
 }
@@ -76,25 +71,9 @@ class RepositoryConfig(attributes: List<RepositoryAttribute<*>>) {
         attributes.associateWith { it.default }.toMutableMap()
 
     /**
-     * The attributes contained in this config.
-     *
-     * Adding an attribute to this set adds it to the config with its [default][RepositoryAttribute.default] value.
-     * Removing an attribute from this set removes it from the config.
+     * The set of attributes contained in this config.
      */
-    val attributes: MutableSet<RepositoryAttribute<*>> = object : MutableSet<RepositoryAttribute<*>> by values.keys {
-        override fun add(element: RepositoryAttribute<*>): Boolean =
-            values.put(element, element.default) == null
-
-        override fun addAll(elements: Collection<RepositoryAttribute<*>>): Boolean =
-        // Using `elements.any { add(it) }` may not add all the elements.
-            elements.map { add(it) }.any()
-
-        override fun equals(other: Any?): Boolean = values.keys == other
-
-        override fun hashCode(): Int = values.keys.hashCode()
-
-        override fun toString(): String = values.keys.toString()
-    }
+    val attributes: Set<RepositoryAttribute<*>> = values.keys
 
     /**
      * Initializes this config with the given [attributes].

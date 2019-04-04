@@ -28,7 +28,11 @@ import java.nio.file.attribute.PosixFilePermissions
  * A set of POSIX file permissions.
  */
 class PermissionSet(private val permissions: Set<PosixFilePermission>) : Set<PosixFilePermission> by permissions {
-    override fun equals(other: Any?): Boolean = permissions == other
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PermissionSet) return false
+        return permissions == other.permissions
+    }
 
     override fun hashCode(): Int = permissions.hashCode()
 
