@@ -39,7 +39,7 @@ data class IntegrityReport(val corruptVersions: Set<Version>) {
 /**
  * A repository where version history is stored.
  */
-interface Repository {
+interface Repository : Configurable {
     /**
      * The absolute path of the repository.
      */
@@ -48,7 +48,7 @@ interface Repository {
     /**
      * The configuration for the repository.
      */
-    val config: RepositoryConfig
+    override val config: Config
 
     /**
      * Creates a new timeline in this repository and returns it.

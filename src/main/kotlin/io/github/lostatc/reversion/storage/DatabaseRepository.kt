@@ -19,6 +19,8 @@
 
 package io.github.lostatc.reversion.storage
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.api.*
 import io.github.lostatc.reversion.schema.*
 import org.jetbrains.exposed.sql.Database
@@ -55,8 +57,7 @@ private object DatabaseFactory {
 /**
  * An implementation of [Repository] which is backed by a relational database.
  */
-data class DatabaseRepository(override val path: Path, override val config: RepositoryConfig) :
-    Repository {
+data class DatabaseRepository(override val path: Path, override val config: Config) : Repository {
     /**
      * The path of the repository's database.
      */
@@ -75,12 +76,12 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
     /**
      * The hash algorithm used by this repository.
      */
-    val hashAlgorithm: String = config[hashAlgorithmAttribute]
+    val hashAlgorithm: String by hashAlgorithmProperty
 
     /**
      * The block size used by this repository.
      */
-    val blockSize: Long = config[blockSizeAttribute]
+    val blockSize: Long by blockSizeProperty
 
     override fun createTimeline(name: String, policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {
         val timeline = DatabaseTimeline(
@@ -255,42 +256,62 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
         private val relativeBlobsPath: Path = Paths.get("blobs")
 
         /**
-         * The attribute which stores the hash algorithm.
+         * The relative path of the JSON config file.
          */
-        val hashAlgorithmAttribute: RepositoryAttribute<String> = RepositoryAttribute.of(
+        private val relativeConfigPath: Path = Paths.get("config.json")
+
+        /**
+         * The property which stores the hash algorithm.
+         */
+        val hashAlgorithmProperty: ConfigProperty<String> = ConfigProperty.of(
+            key = "hashFunc",
             name = "Hash algorithm",
             default = "SHA-256",
             description = "The name of the algorithm used to calculate checksums."
         )
 
         /**
-         * The attribute which stores the block size.
+         * The property which stores the block size.
          */
-        val blockSizeAttribute: RepositoryAttribute<Long> = RepositoryAttribute.of(
+        val blockSizeProperty: ConfigProperty<Long> = ConfigProperty.of(
+            key = "blockSize",
             name = "Block size",
             default = Long.MAX_VALUE,
             description = "The maximum size of the blocks that files stored in the repository are split into."
         )
 
         /**
-         * A list of the attributes supported by this repository.
+         * A list of the properties supported by this repository.
          */
-        val attributes: List<RepositoryAttribute<*>> = listOf(
-            hashAlgorithmAttribute,
-            blockSizeAttribute
+        val properties: List<ConfigProperty<*>> = listOf(
+            hashAlgorithmProperty,
+            blockSizeProperty
         )
+
+        /**
+         * An object used for serializing data as JSON.
+         */
+        private val gson: Gson = GsonBuilder()
+            .setPrettyPrinting()
+            .registerTypeAdapter(Config::class.java, ConfigSerializer)
+            .registerTypeAdapter(Config::class.java, ConfigDeserializer(properties))
+            .create()
 
         /**
          * Opens the repository at [path] and returns it.
          *
          * @param [path] The path of the repository.
-         * @param [config] The configuration for the repository.
          *
          * @throws [UnsupportedFormatException] There is no compatible repository at [path].
          */
-        fun open(path: Path, config: RepositoryConfig): DatabaseRepository {
+        fun open(path: Path): DatabaseRepository {
             if (!check(path))
                 throw UnsupportedFormatException("The format of the repository at '$path' is not supported.")
+
+            val configPath = path.resolve(relativeConfigPath)
+            val config = Files.newBufferedReader(configPath).use {
+                gson.fromJson(it, Config::class.java)
+            }
 
             return DatabaseRepository(path, config)
         }
@@ -304,16 +325,19 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
          * @throws [FileAlreadyExistsException] There is already a file at [path].
          * @throws [IOException] An I/O error occurred.
          */
-        fun create(path: Path, config: RepositoryConfig): DatabaseRepository {
+        fun create(path: Path, config: Config): DatabaseRepository {
             if (Files.exists(path)) throw FileAlreadyExistsException(path.toFile())
 
             val databasePath = path.resolve(relativeDatabasePath)
             val versionPath = path.resolve(relativeVersionPath)
             val blobsPath = path.resolve(relativeBlobsPath)
+            val configPath = path.resolve(relativeConfigPath)
 
+            // Create directories.
             Files.createDirectories(path)
             Files.createDirectory(blobsPath)
 
+            // Create the database.
             DatabaseFactory.connect(databasePath)
             SchemaUtils.create(
                 TimelineTable,
@@ -326,10 +350,15 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
                 TimelineRetentionPolicyTable
             )
 
+            // Serialize the config.
+            Files.newBufferedWriter(configPath).use {
+                gson.toJson(config, it)
+            }
+
             // Do this last to signify that the repository is valid.
             Files.writeString(versionPath, currentVersion.toString())
 
-            return open(path, config)
+            return open(path)
         }
 
         /**
@@ -339,13 +368,12 @@ data class DatabaseRepository(override val path: Path, override val config: Repo
          *
          * @param [source] The file to import the repository from.
          * @param [target] The path to create the repository at.
-         * @param [config] The configuration for the repository.
          *
          * @throws [IOException] An I/O error occurred.
          */
-        fun import(source: Path, target: Path, config: RepositoryConfig): DatabaseRepository {
+        fun import(source: Path, target: Path): DatabaseRepository {
             ZipUtil.unpack(source.toFile(), target.toFile())
-            return open(target, config)
+            return open(target)
         }
 
         /**
