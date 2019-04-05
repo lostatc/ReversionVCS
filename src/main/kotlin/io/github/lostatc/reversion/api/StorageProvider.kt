@@ -45,19 +45,18 @@ interface StorageProvider {
     val description: String
 
     /**
-     * The default repository configuration for this storage provider.
+     * The list of properties supported by this storage provider.
      */
-    val config: RepositoryConfig
+    val properties: List<ConfigProperty<*>>
 
     /**
      * Opens the repository at [path] and returns it.
      *
      * @param [path] The path of the repository.
-     * @param [config] The configuration for the repository.
      *
      * @throws [UnsupportedFormatException] There is no compatible repository at [path].
      */
-    fun openRepository(path: Path, config: RepositoryConfig = this.config): Repository
+    fun openRepository(path: Path): Repository
 
     /**
      * Creates a repository at [path] and returns it.
@@ -68,7 +67,7 @@ interface StorageProvider {
      * @throws [FileAlreadyExistsException] There is already a file at [path].
      * @throws [IOException] An I/O error occurred.
      */
-    fun createRepository(path: Path, config: RepositoryConfig = this.config): Repository
+    fun createRepository(path: Path, config: Config = Config()): Repository
 
     /**
      * Imports a repository from a file and returns it.
@@ -77,11 +76,10 @@ interface StorageProvider {
      *
      * @param [source] The file to import the repository from.
      * @param [target] The path to create the repository at.
-     * @param [config] The configuration for the repository.
      *
      * @throws [IOException] An I/O error occurred.
      */
-    fun importRepository(source: Path, target: Path, config: RepositoryConfig = this.config): Repository
+    fun importRepository(source: Path, target: Path): Repository
 
     /**
      * Returns whether there is a repository compatible with this storage provider at [path].
