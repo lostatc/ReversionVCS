@@ -20,12 +20,19 @@
 package io.github.lostatc.reversion.cli.repo
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 
 private val COMMAND_HELP: String = """
     Create a new empty repository.
+
+    By default, the repository is created using the default storage provider with the default configuration.
 """.trimIndent()
 
 class Create(val parent: Repo) : CliktCommand(help = COMMAND_HELP) {
+    val interactive: Boolean by option("-i", "--interactive", help = "Interactively configure the repository.")
+        .flag()
+
     override fun run() {
         // TODO: Not implemented.
     }
