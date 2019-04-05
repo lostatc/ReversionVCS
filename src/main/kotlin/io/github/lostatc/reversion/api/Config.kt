@@ -80,9 +80,9 @@ data class ConfigProperty<T>(
 }
 
 /**
- * A configuration consisting of key-value pairs.
+ * A configuration that maps [config properties][ConfigProperty] to values.
  *
- * This class maps [properties][ConfigProperty] used for configuration to their values.
+ * The [key][ConfigProperty.key] of each property in this config is unique.
  */
 class Config {
     /**
@@ -91,14 +91,17 @@ class Config {
     private val valueByProperty: MutableMap<ConfigProperty<*>, Any?> = mutableMapOf()
 
     /**
-     * The set of [properties][ConfigProperty] contained in this config.
+     * The set of properties contained in this config.
      */
     val properties: Set<ConfigProperty<*>> = valueByProperty.keys
 
     /**
      * Sets the [value] of the given [property] in this config.
+     *
+     * If another property with the same [key][ConfigProperty.key] exists in this config, it is removed.
      */
     operator fun <T> set(property: ConfigProperty<T>, value: T) {
+        valueByProperty.keys.removeAll { it.key == property.key }
         valueByProperty[property] = value
     }
 
