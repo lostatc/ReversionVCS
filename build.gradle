@@ -19,10 +19,11 @@ dependencies {
     implementation 'commons-io:commons-io:2.6'
     implementation 'commons-codec:commons-codec:1.12'
     implementation 'org.zeroturnaround:zt-zip:1.13'
+    implementation 'com.google.code.gson:gson:2.8.5'
 }
 
 application {
-    mainClassName = 'io.github.lostatc.reversion.cli.MainKt'
+    mainClassName = 'io.github.lostatc.reversion.MainKt'
 }
 
 compileKotlin {
