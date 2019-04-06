@@ -33,8 +33,7 @@ import java.time.Instant
 /**
  * An implementation of [Snapshot] which is backed by a relational database.
  */
-data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository: DatabaseRepository) :
-    Snapshot {
+data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository: DatabaseRepository) : Snapshot {
     override val revision: Int
         get() = transaction { entity.revision }
 

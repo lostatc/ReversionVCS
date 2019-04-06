@@ -33,8 +33,7 @@ import java.nio.file.attribute.PosixFilePermission
 /**
  * An implementation of [Version] which is backed by a relational database.
  */
-data class DatabaseVersion(val entity: VersionEntity, override val repository: DatabaseRepository) :
-    Version {
+data class DatabaseVersion(val entity: VersionEntity, override val repository: DatabaseRepository) : Version {
     override val path: Path
         get() = transaction { entity.path }
 

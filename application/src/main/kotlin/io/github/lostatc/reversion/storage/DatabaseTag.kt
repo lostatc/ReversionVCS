@@ -26,8 +26,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 /**
  * An implementation of [Tag] which is backed by a relational database.
  */
-data class DatabaseTag(val entity: TagEntity, override val repository: DatabaseRepository) :
-    Tag {
+data class DatabaseTag(val entity: TagEntity, override val repository: DatabaseRepository) : Tag {
     override var name: String
         get() = transaction { entity.name }
         set(value) {
