@@ -62,11 +62,12 @@ interface Timeline {
     val repository: Repository
 
     /**
-     * Creates a new snapshot in this timeline and returns it.
+     * Creates a new snapshot in this timeline containing the given [paths] and returns it.
      *
-     * @param [paths] The paths of files to include in the snapshot.
+     * @param [paths] The paths of the files relative to their working directory.
+     * @param [workDirectory] The path of the working directory containing the files.
      */
-    fun createSnapshot(paths: Collection<Path>): Snapshot
+    fun createSnapshot(paths: Iterable<Path>, workDirectory: Path): Snapshot
 
     /**
      * Removes the snapshot with the given [revision] number from this timeline.
@@ -105,15 +106,17 @@ interface Timeline {
 
     /**
      * Returns a sequence of the versions in this timeline of the file with the given [path].
+     *
+     * @param [path] The path of the file relative to its working directory.
      */
     fun listVersions(path: Path): Sequence<Version> = listSnapshots().mapNotNull { it.getVersion(path) }
 
     /**
-     * Removes old versions of files.
+     * Removes old versions of files with the given [paths].
      *
      * The timeline's [retentionPolicies] govern which versions are removed.
      *
-     * @param [paths] The paths of the files to remove old versions of.
+     * @param [paths] The paths of the files relative to their working directory.
      *
      * @return The number of versions that were removed.
      */

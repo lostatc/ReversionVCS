@@ -43,7 +43,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.timeline, repository) }
 
-    override fun createVersion(path: Path): DatabaseVersion = transaction {
+    override fun createVersion(path: Path, workDirectory: Path): DatabaseVersion = transaction {
         // Record file metadata in the database.
         val versionEntity = VersionEntity.new {
             this.path = path
@@ -54,8 +54,10 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
             checksum = Checksum.fromFile(path, repository.hashAlgorithm)
         }
 
+        val absolutePath = workDirectory.resolve(path)
+
         // Create a list of blobs from the file.
-        val blobs = Blob.chunkFile(path, repository.blockSize, repository.hashAlgorithm)
+        val blobs = Blob.chunkFile(absolutePath, repository.blockSize, repository.hashAlgorithm)
 
         // Add the blobs to the file system. Because this is wrapped in a transaction, records in the database won't be
         // updated until all the blobs have been added. This is to prevent corruption in case the operation is
@@ -103,11 +105,10 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
             ?.let { DatabaseVersion(it, repository) }
     }
 
-    override fun listVersions(parent: Path?): Sequence<DatabaseVersion> = transaction {
+    override fun listVersions(): Sequence<DatabaseVersion> = transaction {
         entity.versions
             .asSequence()
             .map { DatabaseVersion(it, repository) }
-            .filter { parent == null || it.path.startsWith(parent) }
     }
 
     override fun addTag(name: String, description: String, pinned: Boolean): DatabaseTag = transaction {

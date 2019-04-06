@@ -32,6 +32,11 @@ import java.time.Instant
 import java.util.*
 
 /**
+ * The revision number that snapshots start incrementing from.
+ */
+private const val STARTING_REVISION: Int = 1
+
+/**
  * An implementation of [Timeline] which is backed by a relational database.
  */
 data class DatabaseTimeline(val entity: TimelineEntity, override val repository: DatabaseRepository) : Timeline {
@@ -71,14 +76,14 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             }
         }
 
-    override fun createSnapshot(paths: Collection<Path>): DatabaseSnapshot {
+    override fun createSnapshot(paths: Iterable<Path>, workDirectory: Path): DatabaseSnapshot {
         val snapshot = transaction {
             val snapshotEntity = SnapshotEntity.new {
                 revision = SnapshotEntity
                     .find { SnapshotTable.timeline eq entity.id }
                     .orderBy(SnapshotTable.revision to SortOrder.DESC)
                     .firstOrNull()
-                    ?.revision ?: 1
+                    ?.revision ?: STARTING_REVISION
                 timeCreated = Instant.now()
                 timeline = entity
             }
@@ -87,7 +92,7 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
         }
 
         for (path in paths) {
-            snapshot.createVersion(path)
+            snapshot.createVersion(path, workDirectory)
         }
 
         return snapshot
