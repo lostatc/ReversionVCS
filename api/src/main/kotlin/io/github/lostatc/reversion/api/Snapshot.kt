@@ -49,12 +49,19 @@ interface Snapshot {
     val repository: Repository
 
     /**
-     * Adds the file with the given [path] to this snapshot and returns a version.
+     * Creates a [Version] from the given file with the given [path] and adds it to this snapshot.
+     *
+     * @param [path] The path of the file relative to its working directory.
+     * @param [workDirectory] The path of the file's working directory.
+     *
+     * @return The version that was added to the snapshot.
      */
-    fun createVersion(path: Path): Version
+    fun createVersion(path: Path, workDirectory: Path): Version
 
     /**
      * Removes the version with the given [path] from this snapshot.
+     *
+     * @param [path] The path of the file relative to its working directory.
      *
      * @return `true` if the version was removed, `false` if it didn't exist.
      */
@@ -63,16 +70,16 @@ interface Snapshot {
     /**
      * Returns the version in this snapshot with the given [path].
      *
+     * @param [path] The path of the file relative to its working directory.
+     *
      * @return The version or `null` if it doesn't exist.
      */
     fun getVersion(path: Path): Version?
 
     /**
      * Returns a sequence of the versions in this snapshot.
-     *
-     * @param [parent] If not `null`, only the version which are descendants of this relative path will be returned.
      */
-    fun listVersions(parent: Path? = null): Sequence<Version>
+    fun listVersions(): Sequence<Version>
 
     /**
      * Adds a tag to this snapshot and returns it.
