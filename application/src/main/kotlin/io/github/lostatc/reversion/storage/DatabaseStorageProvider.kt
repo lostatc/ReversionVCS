@@ -48,5 +48,8 @@ object DatabaseStorageProvider : StorageProvider {
         DatabaseRepository.import(source, target)
 
     override fun checkRepository(path: Path): Boolean =
-        DatabaseRepository.check(path)
+        DatabaseRepository.checkRepository(path)
+
+    override fun checkArchive(path: Path): Boolean =
+        DatabaseRepository.checkArchive(path)
 }

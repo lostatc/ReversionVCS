@@ -101,9 +101,9 @@ interface Repository : Configurable {
     fun verify(): IntegrityReport
 
     /**
-     * Exports the repository to the file at [target].
+     * Exports this repository to an archive at [target].
      *
-     * The file created is guaranteed to be importable by [StorageProvider.importRepository].
+     * The file created is guaranteed to be a regular file that can be imported with [StorageProvider.importRepository].
      *
      * @throws [IOException] An I/O error occurred.
      */
