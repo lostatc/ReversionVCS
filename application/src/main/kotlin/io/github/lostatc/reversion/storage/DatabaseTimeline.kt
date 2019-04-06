@@ -34,8 +34,7 @@ import java.util.*
 /**
  * An implementation of [Timeline] which is backed by a relational database.
  */
-data class DatabaseTimeline(val entity: TimelineEntity, override val repository: DatabaseRepository) :
-    Timeline {
+data class DatabaseTimeline(val entity: TimelineEntity, override val repository: DatabaseRepository) : Timeline {
     override var name: String
         get() = transaction { entity.name }
         set(value) {
