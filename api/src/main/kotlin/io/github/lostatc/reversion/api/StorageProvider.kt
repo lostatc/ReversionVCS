@@ -70,14 +70,15 @@ interface StorageProvider {
     fun createRepository(path: Path, config: Config = Config()): Repository
 
     /**
-     * Imports a repository from a file and returns it.
+     * Creates a new repository at [target] from the archive file at [source].
      *
-     * This is guaranteed to support importing the file created by [Repository.export].
+     * This is used to import the file created by [Repository.export].
      *
      * @param [source] The file to import the repository from.
      * @param [target] The path to create the repository at.
      *
      * @throws [IOException] An I/O error occurred.
+     * @throws [UnsupportedFormatException] There is no compatible archive at [source].
      */
     fun importRepository(source: Path, target: Path): Repository
 
@@ -85,6 +86,11 @@ interface StorageProvider {
      * Returns whether there is a repository compatible with this storage provider at [path].
      */
     fun checkRepository(path: Path): Boolean
+
+    /**
+     * Returns whether the file at [path] can be [imported][importRepository] as a repository.
+     */
+    fun checkArchive(path: Path): Boolean
 
     companion object {
         /**
@@ -94,10 +100,33 @@ interface StorageProvider {
             ServiceLoader.load(StorageProvider::class.java).asSequence()
 
         /**
-         * Returns the first [StorageProvider] which is compatible with the repository at the given [path].
+         * Opens the repository at [path] with the first [StorageProvider] that supports it.
          *
-         * @return The first compatible storage provider or `null` if none was found.
+         * @throws [UnsupportedFormatException] There is no installed provider that can open the repository.
+         *
+         * @see [StorageProvider.checkRepository]
+         * @see [StorageProvider.openRepository]
          */
-        fun findProvider(path: Path): StorageProvider? = listProviders().find { it.checkRepository(path) }
+        fun openRepository(path: Path): Repository {
+            val exception = UnsupportedFormatException("No installed provider can open the repository at '$path'.")
+            return listProviders()
+                .find { it.checkRepository(path) }
+                ?.openRepository(path) ?: throw exception
+        }
+
+        /**
+         * Imports a repository at with the first [StorageProvider] that supports it.
+         *
+         * @throws [UnsupportedFormatException] There is no installed provider that can import the repository.
+         *
+         * @see [StorageProvider.checkArchive]
+         * @see [StorageProvider.importRepository]
+         */
+        fun importRepository(source: Path, target: Path): Repository {
+            val exception = UnsupportedFormatException("No installed provider can import the archive at '$source'.")
+            return listProviders()
+                .find { it.checkArchive(source) }
+                ?.importRepository(source, target) ?: throw exception
+        }
     }
 }

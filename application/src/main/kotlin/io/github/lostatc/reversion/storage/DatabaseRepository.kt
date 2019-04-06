@@ -28,6 +28,7 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.zeroturnaround.zip.ZipUtil
 import java.io.IOException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -305,7 +306,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          * @throws [UnsupportedFormatException] There is no compatible repository at [path].
          */
         fun open(path: Path): DatabaseRepository {
-            if (!check(path))
+            if (!checkRepository(path))
                 throw UnsupportedFormatException("The format of the repository at '$path' is not supported.")
 
             val configPath = path.resolve(relativeConfigPath)
@@ -377,16 +378,34 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         }
 
         /**
-         * Returns whether there is a compatible repository at [path].
+         * Returns whether the version file at [path] represents a compatible repository.
          */
-        fun check(path: Path): Boolean = try {
-            val versionPath = path.resolve(relativeVersionPath)
-            val version = UUID.fromString(Files.readString(versionPath))
+        private fun checkVersionFile(path: Path): Boolean = try {
+            val version = UUID.fromString(Files.readString(path))
             version in supportedVersions
         } catch (e: IOException) {
             false
         } catch (e: IllegalArgumentException) {
             false
+        }
+
+        /**
+         * Returns whether there is a compatible repository at [path].
+         */
+        fun checkRepository(path: Path): Boolean = checkVersionFile(path.resolve(relativeVersionPath))
+
+        /**
+         * Returns whether the file at [path] can be imported as a repository.
+         */
+        fun checkArchive(path: Path): Boolean {
+            val tempFile = Files.createTempFile("reversion-", "")
+
+            try {
+                ZipUtil.unpackEntry(path.toFile(), relativeVersionPath.toString(), tempFile.toFile())
+                return checkVersionFile(tempFile)
+            } finally {
+                Files.deleteIfExists(tempFile)
+            }
         }
     }
 }
