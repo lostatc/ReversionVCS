@@ -86,8 +86,6 @@ interface Timeline {
     /**
      * Returns a sequence of the snapshots in this timeline.
      *
-     * Snapshots are ordered from most recent to least recent.
-     *
      * @return A sequence of snapshots sorted from newest to oldest.
      */
     fun listSnapshots(): Sequence<Snapshot>
@@ -108,6 +106,8 @@ interface Timeline {
      * Returns a sequence of the versions in this timeline of the file with the given [path].
      *
      * @param [path] The path of the file relative to its working directory.
+     *
+     * @return A sequence of versions sorted from newest to oldest.
      */
     fun listVersions(path: Path): Sequence<Version> = listSnapshots().mapNotNull { it.getVersion(path) }
 
@@ -125,8 +125,8 @@ interface Timeline {
 
         for (policy in retentionPolicies) {
             for (path in paths) {
-                // Sort versions with this path from newest to oldest.
-                val sortedVersions = listVersions(path).sortedByDescending { it.snapshot.timeCreated }.toList()
+                // Get versions with this path sorted from newest to oldest.
+                val sortedVersions = listVersions(path).toList()
 
                 val timeFrameEnd = sortedVersions.first().snapshot.timeCreated
                 val timeFrameStart = timeFrameEnd.minus(policy.timeFrame)

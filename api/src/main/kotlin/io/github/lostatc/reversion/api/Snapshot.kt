@@ -29,7 +29,8 @@ interface Snapshot {
     /**
      * The revision number of the snapshot.
      *
-     * This is unique with respect to other snapshots in the same timeline.
+     * A snapshot's revision number is always greater than the revision number of the previous snapshot. Revision
+     * numbers are unique within the same timeline, but not across timelines.
      */
     val revision: Int
 

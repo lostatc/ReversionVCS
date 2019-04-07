@@ -97,7 +97,7 @@ interface Version {
         // Check the data for corruption.
         if (verify && !isValid()) {
             // TODO: Consider using a more specific exception.
-            throw IOException("The data for this file is corrupt.")
+            throw IOException("The data for the file '$path' is corrupt.")
         }
 
         // Write the file contents to a temporary file.

@@ -116,7 +116,7 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
 
     override fun listSnapshots(): Sequence<DatabaseSnapshot> = transaction {
         entity.snapshots
-            .orderBy(SnapshotTable.timeCreated to SortOrder.DESC)
+            .orderBy(SnapshotTable.revision to SortOrder.DESC)
             .asSequence()
             .map { DatabaseSnapshot(it, repository) }
     }
@@ -136,6 +136,7 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
         val query = VersionTable.innerJoin(SnapshotTable)
             .slice(VersionTable.columns)
             .select { (SnapshotTable.timeline eq entity.id) and (VersionTable.path eq path) }
+            .orderBy(SnapshotTable.revision to SortOrder.DESC)
 
         VersionEntity
             .wrapRows(query)
