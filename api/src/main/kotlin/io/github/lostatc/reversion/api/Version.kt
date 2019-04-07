@@ -76,6 +76,13 @@ interface Version {
     fun getData(): Blob
 
     /**
+     * Returns whether the given [file] has changed since this version.
+     *
+     * @param [file] The path of the current version of the file represented by this version.
+     */
+    fun isChanged(file: Path): Boolean
+
+    /**
      * Checks the integrity of the data in the repository for this file.
      *
      * @return `true` if the data is valid, `false` if it is corrupt.
