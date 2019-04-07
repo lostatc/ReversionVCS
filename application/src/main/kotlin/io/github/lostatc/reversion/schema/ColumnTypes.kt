@@ -85,7 +85,7 @@ fun Table.filePermissions(name: String): Column<PermissionSet> = registerColumn(
  * A column type for storing [Checksum] objects.
  */
 class ChecksumColumnType : ColumnType() {
-    override fun sqlType(): String = VarCharColumnType(64).sqlType()
+    override fun sqlType(): String = VarCharColumnType(128).sqlType()
 
     override fun notNullValueToDB(value: Any): Any = if (value is Checksum) value.hex else value
 

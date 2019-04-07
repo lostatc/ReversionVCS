@@ -76,7 +76,7 @@ class Checksum(private val bytes: ByteArray) {
          * @param [inputStream] The source of the data to calculate the checksum of.
          * @param [algorithm] The name of the hash algorithm to use.
          */
-        fun fromInputStream(inputStream: InputStream, algorithm: String = "SHA-256"): Checksum =
+        fun fromInputStream(inputStream: InputStream, algorithm: String): Checksum =
             Checksum(DigestUtils(algorithm).digest(inputStream))
 
         /**
@@ -87,7 +87,7 @@ class Checksum(private val bytes: ByteArray) {
          * @param [path] The path of the file to calculate the checksum of.
          * @param [algorithm] The name of the hash algorithm to use.
          */
-        fun fromFile(path: Path, algorithm: String = "SHA-256"): Checksum =
+        fun fromFile(path: Path, algorithm: String): Checksum =
             Checksum(DigestUtils(algorithm).digest(path.toFile()))
     }
 }

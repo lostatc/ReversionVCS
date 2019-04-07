@@ -110,7 +110,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         return if (lastVersion == null) {
             fileExists
         } else {
-            if (fileExists) Checksum.fromFile(file) == lastVersion.checksum else false
+            if (fileExists) lastVersion.isChanged(file) else false
         }
     }
 

@@ -59,7 +59,7 @@ interface Blob {
          *
          * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
          */
-        fun fromFile(path: Path, algorithm: String = "SHA-256"): Blob = object : Blob {
+        fun fromFile(path: Path, algorithm: String): Blob = object : Blob {
             override fun newInputStream() = Files.newInputStream(path)
 
             override val checksum: Checksum by lazy { Checksum.fromFile(path, algorithm) }
@@ -72,10 +72,10 @@ interface Blob {
          * accepted by [MessageDigest].
          *
          * @param [path] The path of the file.
-         * @param [blockSize] The maximum number of bytes in each blob.
          * @param [algorithm] The name of the algorithm to compute the checksum with.
+         * @param [blockSize] The maximum number of bytes in each blob.
          */
-        fun chunkFile(path: Path, blockSize: Long = Long.MAX_VALUE, algorithm: String = "SHA-256"): List<Blob> {
+        fun chunkFile(path: Path, algorithm: String, blockSize: Long = Long.MAX_VALUE): List<Blob> {
             val fileSize = Files.size(path)
             var position = 0L
             val blobs = mutableListOf<Blob>()
@@ -105,7 +105,7 @@ interface Blob {
          *
          * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
          */
-        fun fromBlobs(blobs: Iterable<Blob>, algorithm: String = "SHA-256"): Blob = object : Blob {
+        fun fromBlobs(blobs: Iterable<Blob>, algorithm: String): Blob = object : Blob {
             // Lazily evaluate the input streams to avoid having too many open at once.
             override fun newInputStream(): InputStream = blobs
                 .asSequence()
