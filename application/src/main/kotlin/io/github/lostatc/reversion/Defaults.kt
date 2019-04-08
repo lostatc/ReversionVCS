@@ -19,6 +19,8 @@
 
 package io.github.lostatc.reversion
 
+import io.github.lostatc.reversion.api.StorageProvider
+import io.github.lostatc.reversion.storage.DatabaseStorageProvider
 import net.harawata.appdirs.AppDirs
 import net.harawata.appdirs.AppDirsFactory
 import java.nio.file.Path
@@ -40,3 +42,8 @@ val DATA_DIR: Path = Paths.get(appDirs.getUserDataDir("Reversion", null, "Wren P
  * The path of the default repository.
  */
 val DEFAULT_REPO: Path = System.getenv(DEFAULT_REPO_ENV)?.let { Paths.get(it) } ?: DATA_DIR.resolve("repository")
+
+/**
+ * The default storage provider.
+ */
+val DEFAULT_PROVIDER: StorageProvider = DatabaseStorageProvider
