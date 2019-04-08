@@ -75,22 +75,7 @@ class RepoInfo(val parent: Repo) : CliktCommand(
 ) {
     override fun run() {
         val repository = StorageProvider.openRepository(parent.repo)
-        echo("Path: ${repository.path}")
-        echo("Timelines:")
-        echo(
-            repository
-                .listTimelines()
-                .joinToString(separator = "\n") { it.name }
-                .prependIndent("  ")
-        )
-        echo("Properties:")
-        echo(
-            repository
-                .config
-                .properties
-                .joinToString(separator = "\n") { "${it.name} = ${repository.config[it]}" }
-                .prependIndent("  ")
-        )
+        echo(repository.info)
     }
 }
 

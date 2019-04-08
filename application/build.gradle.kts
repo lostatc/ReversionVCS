@@ -14,6 +14,7 @@ dependencies {
     implementation(group = "net.harawata", name = "appdirs", version = "1.0.3")
     implementation(group = "org.zeroturnaround", name = "zt-zip", version = "1.13")
     implementation(group = "com.google.code.gson", name = "gson", version = "2.8.5")
+    implementation(group = "commons-io", name = "commons-io", version = "2.6")
 }
 
 application {

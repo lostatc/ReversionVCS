@@ -24,7 +24,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.FileTime
-import java.nio.file.attribute.PosixFilePermission
 
 /**
  * A version of a file stored in a repository.
@@ -43,7 +42,7 @@ interface Version {
     /**
      * The permissions of the file or `null` if POSIX permissions are not applicable.
      */
-    val permissions: Set<PosixFilePermission>?
+    val permissions: PermissionSet?
 
     /**
      * The size of the file in bytes.
