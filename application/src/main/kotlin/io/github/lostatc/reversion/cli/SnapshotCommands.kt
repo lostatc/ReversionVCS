@@ -91,7 +91,9 @@ class SnapshotList(val parent: Snapshot) : CliktCommand(
         .multiple()
 
     override fun run() {
-        // TODO: Not implemented.
+        val repository = StorageProvider.openRepository(parent.repo)
+        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
+        echo(timeline.listSnapshots().joinToString(separator = "\n") { it.info })
     }
 }
 
@@ -109,22 +111,6 @@ class SnapshotInfo(val parent: Snapshot) : CliktCommand(
         val repository = StorageProvider.openRepository(parent.repo)
         val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
         val snapshot = timeline.getSnapshot(revision) ?: throw UsageError("No snapshot with the revision '$revision'.")
-        echo("Revision: $revision")
-        echo("Timeline: ${timeline.name}")
-        echo("Created: ${snapshot.timeCreated}")
-        echo("Files:")
-        echo(
-            snapshot
-                .listVersions()
-                .joinToString(separator = "\n") { it.path.toString() }
-                .prependIndent("  ")
-        )
-        echo("Tags:")
-        echo(
-            snapshot
-                .listTags()
-                .joinToString(separator = "\n") { it.name }
-                .prependIndent("  ")
-        )
+        echo(snapshot.info)
     }
 }

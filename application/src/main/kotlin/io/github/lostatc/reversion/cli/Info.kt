@@ -1,0 +1,68 @@
+/*
+ * Copyright © 2019 Wren Powell
+ *
+ * This file is part of Reversion.
+ *
+ * Reversion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Reversion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package io.github.lostatc.reversion.cli
+
+import io.github.lostatc.reversion.api.Repository
+import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.Version
+import org.apache.commons.io.FileUtils
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+
+/**
+ * The string used to indent nested information.
+ */
+private const val INDENT: String = "  "
+
+/**
+ * Format an [Instant] as a string using the given [style].
+ */
+private fun Instant.format(style: FormatStyle = FormatStyle.MEDIUM): String =
+    DateTimeFormatter.ofLocalizedDateTime(style).format(this)
+
+val Repository.info: String
+    get() = """
+        Path: $path
+        Properties:
+        ${config.properties.joinToString(separator = "\n") { "${it.name} = ${config[it]}" }.prependIndent(INDENT)}
+    """.trimIndent()
+
+val Timeline.info: String
+    get() = """
+        Name: $name
+        Created: ${timeCreated.format()}
+    """.trimIndent()
+
+val Snapshot.info: String
+    get() = """
+        Revision: $revision
+        Created: ${timeCreated.format()}
+    """.trimIndent()
+
+val Version.info: String
+    get() = """
+        Path: $path
+        Last Modified: ${lastModifiedTime.toInstant().format()}
+        Permissions: ${permissions.toString()}
+        Size: ${FileUtils.byteCountToDisplaySize(size)}
+        Checksum: ${checksum.hex}
+    """.trimIndent()
