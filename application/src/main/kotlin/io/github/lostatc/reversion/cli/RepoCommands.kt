@@ -1,0 +1,122 @@
+/*
+ * Copyright © 2019 Garrett Powell
+ *
+ * This file is part of Reversion.
+ *
+ * Reversion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Reversion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package io.github.lostatc.reversion.cli
+
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.path
+import io.github.lostatc.reversion.DEFAULT_PROVIDER
+import io.github.lostatc.reversion.DEFAULT_REPO
+import io.github.lostatc.reversion.api.StorageProvider
+import java.nio.file.Path
+
+class Repo : CliktCommand(
+    help = """
+    Manage repositories.
+"""
+) {
+    val repo: Path by option(help = "Use this repository instead of the default repository.")
+        .path()
+        .default(DEFAULT_REPO)
+
+    init {
+        subcommands(
+            RepoCreate(this),
+            RepoInfo(this),
+            RepoExport(this),
+            RepoImport(this)
+        )
+    }
+
+    override fun run() {}
+}
+
+class RepoCreate(val parent: Repo) : CliktCommand(
+    name = "create", help = """
+    Create a new empty repository.
+
+    By default, the repository is created using the default storage provider with the default configuration.
+"""
+) {
+    // TODO: Not implemented.
+    val configure by option("-c", "--configure", help = "Interactively configure the repository.")
+        .flag()
+
+    override fun run() {
+        DEFAULT_PROVIDER.createRepository(parent.repo)
+    }
+}
+
+class RepoInfo(val parent: Repo) : CliktCommand(
+    name = "info", help = """
+    Get information about a repository.
+"""
+) {
+    override fun run() {
+        val repository = StorageProvider.openRepository(parent.repo)
+        echo("Path: ${repository.path}")
+        echo("Timelines:")
+        echo(
+            repository
+                .listTimelines()
+                .joinToString(separator = "\n") { it.name }
+                .prependIndent("  ")
+        )
+        echo("Properties:")
+        echo(
+            repository
+                .config
+                .properties
+                .joinToString(separator = "\n") { "${it.name} = ${repository.config[it]}" }
+                .prependIndent("  ")
+        )
+    }
+}
+
+class RepoExport(val parent: Repo) : CliktCommand(
+    name = "export", help = """
+    Export the repository to a file.
+"""
+) {
+    val destination by argument(help = "The file to export the repository to.")
+        .path(fileOkay = false, folderOkay = false)
+
+    override fun run() {
+        val repository = StorageProvider.openRepository(parent.repo)
+        repository.export(destination)
+    }
+}
+
+class RepoImport(val parent: Repo) : CliktCommand(
+    name = "import", help = """
+    Import the repository from a file.
+"""
+) {
+    val source by argument(help = "The file to import the repository from.")
+        .path(exists = true)
+
+    override fun run() {
+        StorageProvider.importRepository(source = source, target = parent.repo)
+    }
+}
