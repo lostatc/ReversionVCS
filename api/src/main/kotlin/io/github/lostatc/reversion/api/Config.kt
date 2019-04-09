@@ -22,6 +22,7 @@ package io.github.lostatc.reversion.api
 import java.util.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
+import kotlin.reflect.full.createType
 
 /**
  * An property used for configuration.
@@ -71,7 +72,7 @@ data class ConfigProperty<T>(
             return ConfigProperty(
                 key = key,
                 default = default,
-                type = T::class as KType,
+                type = T::class.createType(),
                 name = name,
                 description = description
             )
