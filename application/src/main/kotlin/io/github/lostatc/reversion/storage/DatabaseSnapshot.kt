@@ -43,6 +43,13 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.timeline, repository) }
 
+    override val pinned: Boolean
+        get() = transaction {
+            TagEntity
+                .find { (TagTable.snapshot eq entity.id) and (TagTable.pinned eq true) }
+                .any()
+        }
+
     override fun createVersion(path: Path, workDirectory: Path): DatabaseVersion = transaction {
         // Record file metadata in the database.
         val versionEntity = VersionEntity.new {
