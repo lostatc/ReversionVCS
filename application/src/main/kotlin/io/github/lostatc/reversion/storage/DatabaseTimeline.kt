@@ -121,6 +121,15 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             .map { DatabaseSnapshot(it, repository) }
     }
 
+    override fun removeTag(name: String): Boolean = transaction {
+        val tagEntity = TagEntity
+            .find { (TagTable.timeline eq entity.id) and (TagTable.name eq name) }
+            .singleOrNull()
+
+        tagEntity?.delete()
+        tagEntity != null
+    }
+
     override fun getTag(name: String): DatabaseTag? = transaction {
         TagEntity
             .find { TagTable.name eq name }

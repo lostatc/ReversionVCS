@@ -91,6 +91,13 @@ interface Timeline {
     fun listSnapshots(): Sequence<Snapshot>
 
     /**
+     * Removes the tag with the given [name] from this timeline.
+     *
+     * @return `true` if the tag was removed, `false` if it didn't exist.
+     */
+    fun removeTag(name: String): Boolean = listSnapshots().any { it.removeTag(name) }
+
+    /**
      * Returns the tag in this timeline with the given [name].
      *
      * @return The tag or `null` if it doesn't exist.
