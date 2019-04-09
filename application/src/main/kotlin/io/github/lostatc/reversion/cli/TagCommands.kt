@@ -31,8 +31,8 @@ import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
 import java.nio.file.Path
 
-class Tag : CliktCommand(
-    help = """
+class TagCommand : CliktCommand(
+    name = "tag", help = """
     Manage tags.
 """
 ) {
@@ -42,11 +42,11 @@ class Tag : CliktCommand(
 
     init {
         subcommands(
-            TagCreate(this),
-            TagRemove(this),
-            TagModify(this),
-            TagList(this),
-            TagInfo(this)
+            TagCreateCommand(this),
+            TagRemoveCommand(this),
+            TagModifyCommand(this),
+            TagListCommand(this),
+            TagInfoCommand(this)
         )
     }
 
@@ -55,7 +55,7 @@ class Tag : CliktCommand(
     }
 }
 
-class TagCreate(val parent: Tag) : CliktCommand(
+class TagCreateCommand(val parent: TagCommand) : CliktCommand(
     name = "create", help = """
     Create a new tag.
 """
@@ -77,7 +77,7 @@ class TagCreate(val parent: Tag) : CliktCommand(
     }
 }
 
-class TagRemove(val parent: Tag) : CliktCommand(
+class TagRemoveCommand(val parent: TagCommand) : CliktCommand(
     name = "remove", help = """
     Delete a tag.
 
@@ -93,7 +93,7 @@ class TagRemove(val parent: Tag) : CliktCommand(
     }
 }
 
-class TagModify(val parent: Tag) : CliktCommand(
+class TagModifyCommand(val parent: TagCommand) : CliktCommand(
     name = "modify", help = """
     Modify an existing tag.
 """
@@ -115,7 +115,7 @@ class TagModify(val parent: Tag) : CliktCommand(
     }
 }
 
-class TagList(val parent: Tag) : CliktCommand(
+class TagListCommand(val parent: TagCommand) : CliktCommand(
     name = "list", help = """
     List the tags in a timeline.
 """
@@ -134,7 +134,7 @@ class TagList(val parent: Tag) : CliktCommand(
     }
 }
 
-class TagInfo(val parent: Tag) : CliktCommand(
+class TagInfoCommand(val parent: TagCommand) : CliktCommand(
     name = "info", help = """
     Show information about a tag.
 """

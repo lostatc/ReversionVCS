@@ -30,8 +30,8 @@ import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
 import java.nio.file.Path
 
-class Version : CliktCommand(
-    help = """
+class VersionCommand : CliktCommand(
+    name = "version", help = """
     Manage versions of files.
 """
 ) {
@@ -42,9 +42,9 @@ class Version : CliktCommand(
 
     init {
         subcommands(
-            VersionRemove(this),
-            VersionList(this),
-            VersionInfo(this)
+            VersionRemoveCommand(this),
+            VersionListCommand(this),
+            VersionInfoCommand(this)
         )
     }
 
@@ -53,7 +53,7 @@ class Version : CliktCommand(
     }
 }
 
-class VersionRemove(val parent: Version) : CliktCommand(
+class VersionRemoveCommand(val parent: VersionCommand) : CliktCommand(
     name = "remove", help = """
     Remove a version of a file from the timeline.
 """
@@ -71,7 +71,7 @@ class VersionRemove(val parent: Version) : CliktCommand(
     }
 }
 
-class VersionList(val parent: Version) : CliktCommand(
+class VersionListCommand(val parent: VersionCommand) : CliktCommand(
     name = "list", help = """
     List versions of a file in a given snapshot.
 """
@@ -89,7 +89,7 @@ class VersionList(val parent: Version) : CliktCommand(
     }
 }
 
-class VersionInfo(val parent: Version) : CliktCommand(
+class VersionInfoCommand(val parent: VersionCommand) : CliktCommand(
     name = "info", help = """
     Show information about a version of a file.
 """

@@ -35,20 +35,21 @@ import java.nio.file.Paths
 /**
  * The main command of the CLI.
  */
-class Reversion : CliktCommand() {
+class ReversionCommand : CliktCommand(name = "reversion") {
     init {
         subcommands(
-            Repo(),
-            Timeline(),
-            Snapshot(),
-            Tag(),
-            Init(),
-            Status(),
-            Commit(),
-            Checkout(),
-            Update(),
-            Clean(),
-            Verify()
+            RepoCommand(),
+            TimelineCommand(),
+            SnapshotCommand(),
+            TagCommand(),
+            VersionCommand(),
+            InitCommand(),
+            StatusCommand(),
+            CommitCommand(),
+            CheckoutCommand(),
+            UpdateCommand(),
+            CleanCommand(),
+            VerifyCommand()
         )
     }
 
@@ -57,8 +58,8 @@ class Reversion : CliktCommand() {
     }
 }
 
-class Init : CliktCommand(
-    help = """
+class InitCommand : CliktCommand(
+    name = "init", help = """
     Begin tracking changes in an existing directory.
 
     This associates the directory with a timeline, making it a working directory. The contents of the directory and the
@@ -83,8 +84,8 @@ class Init : CliktCommand(
     }
 }
 
-class Status : CliktCommand(
-    help = """
+class StatusCommand : CliktCommand(
+    name = "status", help = """
     Show changes that have occurred since the most recent snapshot.
 """
 ) {
@@ -99,8 +100,8 @@ class Status : CliktCommand(
     }
 }
 
-class Commit : CliktCommand(
-    help = """
+class CommitCommand : CliktCommand(
+    name = "commit", help = """
     Commit changes to the directory, creating a new snapshot.
 
     If no paths are specified, the entire working directory is committed.
@@ -121,8 +122,8 @@ class Commit : CliktCommand(
     }
 }
 
-class Checkout : CliktCommand(
-    help = """
+class CheckoutCommand : CliktCommand(
+    name = "checkout", help = """
     Get versions of files from a timeline.
 
     This gets a version of a file from a snapshot in a timeline and copies it to a local path. By default, the latest
@@ -149,8 +150,8 @@ class Checkout : CliktCommand(
     }
 }
 
-class Update : CliktCommand(
-    help = """
+class UpdateCommand : CliktCommand(
+    name = "update", help = """
     Update the working directory with data from the timeline.
 
     This can be used to update files to a past or future revision. By default, the latest revision is chosen.
@@ -179,8 +180,8 @@ class Update : CliktCommand(
     }
 }
 
-class Clean : CliktCommand(
-    help = """
+class CleanCommand : CliktCommand(
+    name = "clean", help = """
     Clean up old snapshots in a timeline.
 
     Old snapshots are deleted according to the rules set for the timeline.
@@ -197,8 +198,8 @@ class Clean : CliktCommand(
     }
 }
 
-class Verify : CliktCommand(
-    help = """
+class VerifyCommand : CliktCommand(
+    name = "verify", help = """
     Verify the integrity of a repository.
 """
 ) {

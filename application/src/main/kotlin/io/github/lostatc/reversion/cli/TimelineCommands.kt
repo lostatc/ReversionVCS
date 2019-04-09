@@ -29,8 +29,8 @@ import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
 import java.nio.file.Path
 
-class Timeline : CliktCommand(
-    help = """
+class TimelineCommand : CliktCommand(
+    name = "timeline", help = """
     Manage timelines.
 """
 ) {
@@ -40,11 +40,11 @@ class Timeline : CliktCommand(
 
     init {
         subcommands(
-            TimelineCreate(this),
-            TimelineRemove(this),
-            TimelineModify(this),
-            TimelineList(this),
-            TimelineInfo(this)
+            TimelineCreateCommand(this),
+            TimelineRemoveCommand(this),
+            TimelineModifyCommand(this),
+            TimelineListCommand(this),
+            TimelineInfoCommand(this)
         )
     }
 
@@ -53,7 +53,7 @@ class Timeline : CliktCommand(
     }
 }
 
-class TimelineCreate(val parent: Timeline) : CliktCommand(
+class TimelineCreateCommand(val parent: TimelineCommand) : CliktCommand(
     name = "create", help = """
     Create a new timeline.
 """
@@ -65,7 +65,7 @@ class TimelineCreate(val parent: Timeline) : CliktCommand(
     }
 }
 
-class TimelineRemove(val parent: Timeline) : CliktCommand(
+class TimelineRemoveCommand(val parent: TimelineCommand) : CliktCommand(
     name = "remove", help = """
     Delete a timeline.
 
@@ -82,7 +82,7 @@ class TimelineRemove(val parent: Timeline) : CliktCommand(
     }
 }
 
-class TimelineModify(val parent: Timeline) : CliktCommand(
+class TimelineModifyCommand(val parent: TimelineCommand) : CliktCommand(
     name = "modify", help = """
     Modify an existing timeline.
 """
@@ -96,7 +96,7 @@ class TimelineModify(val parent: Timeline) : CliktCommand(
     }
 }
 
-class TimelineList(val parent: Timeline) : CliktCommand(
+class TimelineListCommand(val parent: TimelineCommand) : CliktCommand(
     name = "list", help = """
     List the timelines in a repository.
 """
@@ -108,7 +108,7 @@ class TimelineList(val parent: Timeline) : CliktCommand(
     }
 }
 
-class TimelineInfo(val parent: Timeline) : CliktCommand(
+class TimelineInfoCommand(val parent: TimelineCommand) : CliktCommand(
     name = "info", help = """
     Show information about a timeline.
 """
