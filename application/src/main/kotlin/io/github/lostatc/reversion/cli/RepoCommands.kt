@@ -31,8 +31,8 @@ import io.github.lostatc.reversion.DEFAULT_REPO
 import io.github.lostatc.reversion.api.StorageProvider
 import java.nio.file.Path
 
-class Repo : CliktCommand(
-    help = """
+class RepoCommand : CliktCommand(
+    name = "repo", help = """
     Manage repositories.
 """
 ) {
@@ -42,17 +42,17 @@ class Repo : CliktCommand(
 
     init {
         subcommands(
-            RepoCreate(this),
-            RepoInfo(this),
-            RepoExport(this),
-            RepoImport(this)
+            RepoCreateCommand(this),
+            RepoInfoCommand(this),
+            RepoExportCommand(this),
+            RepoImportCommand(this)
         )
     }
 
     override fun run() {}
 }
 
-class RepoCreate(val parent: Repo) : CliktCommand(
+class RepoCreateCommand(val parent: RepoCommand) : CliktCommand(
     name = "create", help = """
     Create a new empty repository.
 
@@ -68,7 +68,7 @@ class RepoCreate(val parent: Repo) : CliktCommand(
     }
 }
 
-class RepoInfo(val parent: Repo) : CliktCommand(
+class RepoInfoCommand(val parent: RepoCommand) : CliktCommand(
     name = "info", help = """
     Get information about a repository.
 """
@@ -79,7 +79,7 @@ class RepoInfo(val parent: Repo) : CliktCommand(
     }
 }
 
-class RepoExport(val parent: Repo) : CliktCommand(
+class RepoExportCommand(val parent: RepoCommand) : CliktCommand(
     name = "export", help = """
     Export the repository to a file.
 """
@@ -93,7 +93,7 @@ class RepoExport(val parent: Repo) : CliktCommand(
     }
 }
 
-class RepoImport(val parent: Repo) : CliktCommand(
+class RepoImportCommand(val parent: RepoCommand) : CliktCommand(
     name = "import", help = """
     Import the repository from a file.
 """

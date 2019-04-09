@@ -19,11 +19,11 @@
 
 package io.github.lostatc.reversion
 
-import io.github.lostatc.reversion.cli.Reversion
+import io.github.lostatc.reversion.cli.ReversionCommand
 
 /**
  * Start the CLI.
  */
 fun main(args: Array<String>) {
-    Reversion().main(args)
+    ReversionCommand().main(args)
 }

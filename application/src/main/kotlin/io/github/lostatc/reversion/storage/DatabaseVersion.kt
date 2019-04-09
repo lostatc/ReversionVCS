@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Blob
 import io.github.lostatc.reversion.api.Checksum
+import io.github.lostatc.reversion.api.PermissionSet
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.BlockTable
 import io.github.lostatc.reversion.schema.VersionEntity
@@ -29,7 +30,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
-import java.nio.file.attribute.PosixFilePermission
 
 /**
  * An implementation of [Version] which is backed by a relational database.
@@ -41,7 +41,7 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
     override val lastModifiedTime: FileTime
         get() = transaction { entity.lastModifiedTime }
 
-    override val permissions: Set<PosixFilePermission>?
+    override val permissions: PermissionSet?
         get() = transaction { entity.permissions }
 
     override val size: Long

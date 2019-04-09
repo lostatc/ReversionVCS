@@ -32,8 +32,8 @@ import io.github.lostatc.reversion.DEFAULT_REPO
 import io.github.lostatc.reversion.api.StorageProvider
 import java.nio.file.Path
 
-class Snapshot : CliktCommand(
-    help = """
+class SnapshotCommand : CliktCommand(
+    name = "snapshot", help = """
     Manage snapshots.
 """
 ) {
@@ -43,16 +43,16 @@ class Snapshot : CliktCommand(
 
     init {
         subcommands(
-            SnapshotRemove(this),
-            SnapshotList(this),
-            SnapshotInfo(this)
+            SnapshotRemoveCommand(this),
+            SnapshotListCommand(this),
+            SnapshotInfoCommand(this)
         )
     }
 
     override fun run() {}
 }
 
-class SnapshotRemove(val parent: Snapshot) : CliktCommand(
+class SnapshotRemoveCommand(val parent: SnapshotCommand) : CliktCommand(
     name = "remove", help = """
     Remove a snapshot from a timeline.
 
@@ -72,7 +72,7 @@ class SnapshotRemove(val parent: Snapshot) : CliktCommand(
     }
 }
 
-class SnapshotList(val parent: Snapshot) : CliktCommand(
+class SnapshotListCommand(val parent: SnapshotCommand) : CliktCommand(
     name = "list", help = """
     List the snapshots in a timeline.
 """
@@ -81,7 +81,7 @@ class SnapshotList(val parent: Snapshot) : CliktCommand(
 
     val paths: List<Path> by option(
         "-p", "--path",
-        help = "Show only snapshots containing a file with this path. This can be specified multiple times."
+        help = "Show only snapshots containing a file with this relative path. This can be specified multiple times."
     )
         .path()
         .multiple()
@@ -93,7 +93,7 @@ class SnapshotList(val parent: Snapshot) : CliktCommand(
     }
 }
 
-class SnapshotInfo(val parent: Snapshot) : CliktCommand(
+class SnapshotInfoCommand(val parent: SnapshotCommand) : CliktCommand(
     name = "info", help = """
     Show information about a snapshot.
 """
