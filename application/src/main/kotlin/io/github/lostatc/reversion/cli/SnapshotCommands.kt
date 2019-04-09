@@ -24,7 +24,6 @@ import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
-import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
@@ -80,10 +79,7 @@ class SnapshotList(val parent: Snapshot) : CliktCommand(
 ) {
     val timeline: String by argument(help = "The timeline to list snapshots from.")
 
-    val info: Boolean by option("-i", "--info", help = "Show detailed information about each snapshot.")
-        .flag()
-
-    val paths: kotlin.collections.List<Path> by option(
+    val paths: List<Path> by option(
         "-p", "--path",
         help = "Show only snapshots containing a file with this path. This can be specified multiple times."
     )

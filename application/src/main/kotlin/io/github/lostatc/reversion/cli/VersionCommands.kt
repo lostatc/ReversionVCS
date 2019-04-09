@@ -25,26 +25,26 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
 import java.nio.file.Path
 
-class Timeline : CliktCommand(
+class Version : CliktCommand(
     help = """
-    Manage timelines.
+    Manage versions of files.
 """
 ) {
+
     val repo: Path by option(help = "Use this repository instead of the default repository.")
         .path()
         .default(DEFAULT_REPO)
 
     init {
         subcommands(
-            TimelineCreate(this),
-            TimelineRemove(this),
-            TimelineModify(this),
-            TimelineList(this),
-            TimelineInfo(this)
+            VersionRemove(this),
+            VersionList(this),
+            VersionInfo(this)
         )
     }
 
@@ -53,69 +53,56 @@ class Timeline : CliktCommand(
     }
 }
 
-class TimelineCreate(val parent: Timeline) : CliktCommand(
-    name = "create", help = """
-    Create a new timeline.
+class VersionRemove(val parent: Version) : CliktCommand(
+    name = "remove", help = """
+    Remove a version of a file from the timeline.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
+    val timeline: String by argument(help = "The timeline the snapshot is in.")
+
+    val revision: Int by argument(help = "The revision number of the snapshot.")
+        .int()
+
+    val path: Path by argument(help = "The relative path of the version.")
+        .path()
 
     override fun run() {
-        // TODO: Not implemented.
+        TODO("not implemented")
     }
 }
 
-class TimelineRemove(val parent: Timeline) : CliktCommand(
-    name = "remove", help = """
-    Delete a timeline.
-
-    The timeline is only deleted if it has no snapshots.
+class VersionList(val parent: Version) : CliktCommand(
+    name = "list", help = """
+    List versions of a file in a given snapshot.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
+    val timeline: String by argument(help = "The timeline of the snapshot.")
 
-    val force: Boolean by option(help = "Delete the timeline even if it has snapshots. All snapshots will be deleted.")
+    val revision: Int by argument(help = "The revision number of the snapshot.")
+        .int()
+
+    val info: Boolean by option("-i", "--info", help = "Show detailed information about each version.")
         .flag()
 
     override fun run() {
-        // TODO: Not implemented.
+        TODO("not implemented")
     }
 }
 
-class TimelineModify(val parent: Timeline) : CliktCommand(
-    name = "modify", help = """
-    Modify an existing timeline.
-"""
-) {
-    val name: String by argument(help = "The name of the timeline.")
-
-    val newName: String? by option("--name", help = "The new name of the timeline.")
-
-    override fun run() {
-        // TODO: Not implemented.
-    }
-}
-
-class TimelineList(val parent: Timeline) : CliktCommand(
-    name = "list", help = """
-    List the timelines in a repository.
-"""
-) {
-    val name: String by argument(help = "The name of the timeline.")
-
-    override fun run() {
-        // TODO: Not implemented.
-    }
-}
-
-class TimelineInfo(val parent: Timeline) : CliktCommand(
+class VersionInfo(val parent: Version) : CliktCommand(
     name = "info", help = """
-    Show information about a timeline.
+    Show information about a version of a file.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
+    val timeline: String by argument(help = "The timeline the snapshot is in.")
+
+    val revision: Int by argument(help = "The revision number of the snapshot.")
+        .int()
+
+    val path: Path by argument(help = "The relative path of the version.")
+        .path()
 
     override fun run() {
-        // TODO: Not implemented.
+        TODO("not implemented")
     }
 }
