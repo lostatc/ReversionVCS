@@ -125,8 +125,8 @@ interface Timeline {
 
         for (policy in retentionPolicies) {
             for (path in paths) {
-                // Get versions with this path sorted from newest to oldest.
-                val sortedVersions = listVersions(path).toList()
+                // Get versions with this path sorted from newest to oldest. Skip versions that are pinned.
+                val sortedVersions = listVersions(path).filter { !it.snapshot.pinned }.toList()
 
                 val timeFrameEnd = sortedVersions.first().snapshot.timeCreated
                 val timeFrameStart = timeFrameEnd.minus(policy.timeFrame)

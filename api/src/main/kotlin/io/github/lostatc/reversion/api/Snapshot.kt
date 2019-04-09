@@ -50,6 +50,12 @@ interface Snapshot {
     val repository: Repository
 
     /**
+     * Whether this snapshot is pinned by at least one tag.
+     */
+    val pinned: Boolean
+        get() = listTags().any { it.pinned }
+
+    /**
      * Creates a [Version] from the given file with the given [path] and adds it to this snapshot.
      *
      * @param [path] The path of the file relative to its working directory.
