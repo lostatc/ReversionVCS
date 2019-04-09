@@ -103,9 +103,6 @@ class TimelineList(val parent: Timeline) : CliktCommand(
 ) {
     val name: String by argument(help = "The name of the timeline.")
 
-    val info: Boolean by option("-i", "--info", help = "Show detailed information about each timeline.")
-        .flag()
-
     override fun run() {
         // TODO: Not implemented.
     }

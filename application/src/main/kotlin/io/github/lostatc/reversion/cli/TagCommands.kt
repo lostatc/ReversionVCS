@@ -24,7 +24,9 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
 import java.nio.file.Path
@@ -120,8 +122,12 @@ class TagList(val parent: Tag) : CliktCommand(
 ) {
     val timeline: String by argument(help = "The timeline to list tags from.")
 
-    val info: Boolean by option("-i", "--info", help = "Show detailed information about each tag.")
-        .flag()
+    val revision: List<Int> by option(
+        "-r", "--revision",
+        help = "Only list tags on the snapshot with this revision number. This can be specified multiple times."
+    )
+        .int()
+        .multiple()
 
     override fun run() {
         // TODO: Not implemented.

@@ -19,8 +19,9 @@
 
 package io.github.lostatc.reversion.cli
 
-import io.github.lostatc.reversion.api.Repository
+import io.github.lostatc.reversion.api.*
 import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.Tag
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
 import org.apache.commons.io.FileUtils
@@ -39,6 +40,9 @@ private const val INDENT: String = "  "
 private fun Instant.format(style: FormatStyle = FormatStyle.MEDIUM): String =
     DateTimeFormatter.ofLocalizedDateTime(style).format(this)
 
+/**
+ * Human-readable information about the repository.
+ */
 val Repository.info: String
     get() = """
         Path: $path
@@ -46,18 +50,37 @@ val Repository.info: String
         ${config.properties.joinToString(separator = "\n") { "${it.name} = ${config[it]}" }.prependIndent(INDENT)}
     """.trimIndent()
 
+/**
+ * Human-readable information about the timeline.
+ */
 val Timeline.info: String
     get() = """
         Name: $name
         Created: ${timeCreated.format()}
     """.trimIndent()
 
+/**
+ * Human-readable information about the snapshot.
+ */
 val Snapshot.info: String
     get() = """
         Revision: $revision
         Created: ${timeCreated.format()}
     """.trimIndent()
 
+/**
+ * Human-readable information about the tag.
+ */
+val Tag.info: String
+    get() = """
+        Name: $name
+        Description: $description
+        Pinned: ${if (pinned) "Yes" else "No"}
+    """.trimIndent()
+
+/**
+ * Human-readable information about the version.
+ */
 val Version.info: String
     get() = """
         Path: $path
