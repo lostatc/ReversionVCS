@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
@@ -29,6 +30,8 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
+import io.github.lostatc.reversion.api.StorageProvider
+import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -53,9 +56,7 @@ class ReversionCommand : CliktCommand(name = "reversion") {
         )
     }
 
-    override fun run() {
-
-    }
+    override fun run() = Unit
 }
 
 class InitCommand : CliktCommand(
@@ -72,7 +73,7 @@ class InitCommand : CliktCommand(
         .path()
         .default(DEFAULT_REPO)
 
-    val workDir: Path by option(
+    val workPath: Path by option(
         "-w", "--work-dir", help = "Use this directory instead of the current working directory."
     )
         .path()
@@ -80,7 +81,10 @@ class InitCommand : CliktCommand(
 
 
     override fun run() {
-        // TODO: Not implemented.
+        val repository = StorageProvider.openRepository(repo)
+        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
+
+        WorkDirectory.init(workPath, timeline)
     }
 }
 
@@ -89,7 +93,7 @@ class StatusCommand : CliktCommand(
     Show changes that have occurred since the most recent snapshot.
 """
 ) {
-    val workDir: Path by option(
+    val workPath: Path by option(
         "-w", "--work-dir", help = "Use this directory instead of the current working directory."
     )
         .path()
@@ -111,14 +115,15 @@ class CommitCommand : CliktCommand(
         .path(exists = true)
         .multiple()
 
-    val workDir: Path by option(
+    val workPath: Path by option(
         "-w", "--work-dir", help = "Use this directory instead of the current working directory."
     )
         .path()
         .default(Paths.get("").toAbsolutePath())
 
     override fun run() {
-        // TODO: Not implemented.
+        val workDir = WorkDirectory.open(workPath)
+        workDir.commit(paths)
     }
 }
 
@@ -130,11 +135,7 @@ class CheckoutCommand : CliktCommand(
     revision is chosen.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
-
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
-        .path()
-        .default(DEFAULT_REPO)
+    val timelineName: String by argument(name = "TIMELINE", help = "The name of the timeline.")
 
     val source: Path by argument(help = "The relative path of the file to retrieve from the timeline.")
         .path()
@@ -142,11 +143,25 @@ class CheckoutCommand : CliktCommand(
     val dest: Path by argument(help = "The path to copy the file to.")
         .path()
 
-    val revision: Int? by option(help = "The revision number of the snapshot to get the file from.")
+    val repo: Path by option(help = "Use this repository instead of the default repository.")
+        .path()
+        .default(DEFAULT_REPO)
+
+    val revision: Int? by option("-r", "--revision", help = "The revision number of the snapshot to get the file from.")
         .int()
 
     override fun run() {
-        // TODO: Not implemented.
+        val repository = StorageProvider.openRepository(repo)
+        val timeline = repository.getTimeline(timelineName) ?: throw UsageError("No such timeline '$timelineName'.")
+
+        val snapshot = revision?.let {
+            timeline.getSnapshot(it) ?: throw UsageError("No snapshot with the revision '$revision'.")
+        } ?: timeline.listSnapshots().firstOrNull() ?: throw UsageError("There are no snapshots in '$timelineName'.")
+
+        val version = snapshot.getVersion(source)
+            ?: throw UsageError("No version of '$source' with revision '$revision'.")
+
+        version.checkout(dest)
     }
 }
 
@@ -163,7 +178,7 @@ class UpdateCommand : CliktCommand(
         .path(exists = true)
         .multiple()
 
-    val workDir: Path by option(
+    val workPath: Path by option(
         "-w", "--work-dir", help = "Use this directory instead of the current working directory."
     )
         .path()

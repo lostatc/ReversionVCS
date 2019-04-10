@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
@@ -27,6 +28,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
+import io.github.lostatc.reversion.api.StorageProvider
 import java.nio.file.Path
 
 class TimelineCommand : CliktCommand(
@@ -48,9 +50,7 @@ class TimelineCommand : CliktCommand(
         )
     }
 
-    override fun run() {
-        // TODO: Not implemented.
-    }
+    override fun run() = Unit
 }
 
 class TimelineCreateCommand(val parent: TimelineCommand) : CliktCommand(
@@ -61,7 +61,8 @@ class TimelineCreateCommand(val parent: TimelineCommand) : CliktCommand(
     val name: String by argument(help = "The name of the timeline.")
 
     override fun run() {
-        // TODO: Not implemented.
+        val repository = StorageProvider.openRepository(parent.repo)
+        repository.createTimeline(name)
     }
 }
 
@@ -78,7 +79,12 @@ class TimelineRemoveCommand(val parent: TimelineCommand) : CliktCommand(
         .flag()
 
     override fun run() {
-        // TODO: Not implemented.
+        val repository = StorageProvider.openRepository(parent.repo)
+        val timeline = repository.getTimeline(name) ?: throw UsageError("No such timeline '$name'.")
+        if (!force && timeline.listSnapshots().any()) {
+            throw UsageError("Will not remove a timeline with snapshots. Use --force to override.")
+        }
+        repository.removeTimeline(name)
     }
 }
 
@@ -92,7 +98,9 @@ class TimelineModifyCommand(val parent: TimelineCommand) : CliktCommand(
     val newName: String? by option("--name", help = "The new name of the timeline.")
 
     override fun run() {
-        // TODO: Not implemented.
+        val repository = StorageProvider.openRepository(parent.repo)
+        val timeline = repository.getTimeline(name) ?: throw UsageError("No such timeline '$name'.")
+        newName?.let { timeline.name = it }
     }
 }
 
@@ -101,10 +109,9 @@ class TimelineListCommand(val parent: TimelineCommand) : CliktCommand(
     List the timelines in a repository.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
-
     override fun run() {
-        // TODO: Not implemented.
+        val repository = StorageProvider.openRepository(parent.repo)
+        echo(repository.listTimelines().joinToString(separator = "\n\n") { it.info })
     }
 }
 
@@ -116,6 +123,8 @@ class TimelineInfoCommand(val parent: TimelineCommand) : CliktCommand(
     val name: String by argument(help = "The name of the timeline.")
 
     override fun run() {
-        // TODO: Not implemented.
+        val repository = StorageProvider.openRepository(parent.repo)
+        val timeline = repository.getTimeline(name) ?: throw UsageError("No such timeline '$name'.")
+        echo(timeline.info)
     }
 }
