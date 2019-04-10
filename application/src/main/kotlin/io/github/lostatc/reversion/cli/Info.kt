@@ -20,10 +20,6 @@
 package io.github.lostatc.reversion.cli
 
 import io.github.lostatc.reversion.api.*
-import io.github.lostatc.reversion.api.Snapshot
-import io.github.lostatc.reversion.api.Tag
-import io.github.lostatc.reversion.api.Timeline
-import io.github.lostatc.reversion.api.Version
 import org.apache.commons.io.FileUtils
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -85,7 +81,7 @@ val Version.info: String
     get() = """
         Path: $path
         Last Modified: ${lastModifiedTime.toInstant().format()}
-        Permissions: ${permissions.toString()}
         Size: ${FileUtils.byteCountToDisplaySize(size)}
+        Permissions: ${permissions.toString()}
         Checksum: ${checksum.hex}
     """.trimIndent()

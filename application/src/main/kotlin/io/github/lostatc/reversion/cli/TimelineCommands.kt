@@ -28,7 +28,6 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
-import io.github.lostatc.reversion.api.StorageProvider
 import java.nio.file.Path
 
 class TimelineCommand : CliktCommand(
@@ -36,7 +35,7 @@ class TimelineCommand : CliktCommand(
     Manage timelines.
 """
 ) {
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
+    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
         .path()
         .default(DEFAULT_REPO)
 
@@ -58,11 +57,11 @@ class TimelineCreateCommand(val parent: TimelineCommand) : CliktCommand(
     Create a new timeline.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
+    val timelineName: String by argument("NAME", help = "The name of the timeline.")
 
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        repository.createTimeline(name)
+        val repository = getRepository(parent.repoPath)
+        repository.createTimeline(timelineName)
     }
 }
 
@@ -73,18 +72,21 @@ class TimelineRemoveCommand(val parent: TimelineCommand) : CliktCommand(
     The timeline is only deleted if it has no snapshots.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
-
-    val force: Boolean by option(help = "Delete the timeline even if it has snapshots. All snapshots will be deleted.")
+    val force: Boolean by option(
+        "--force",
+        help = "Delete the timeline even if it has snapshots. All snapshots will be deleted."
+    )
         .flag()
 
+    val timelineName: String by argument("TIMELINE", help = "The name of the timeline.")
+
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(name) ?: throw UsageError("No such timeline '$name'.")
+        val timeline = getTimeline(parent.repoPath, timelineName)
+
         if (!force && timeline.listSnapshots().any()) {
             throw UsageError("Will not remove a timeline with snapshots. Use --force to override.")
         }
-        repository.removeTimeline(name)
+        timeline.repository.removeTimeline(timelineName)
     }
 }
 
@@ -93,13 +95,12 @@ class TimelineModifyCommand(val parent: TimelineCommand) : CliktCommand(
     Modify an existing timeline.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
-
     val newName: String? by option("--name", help = "The new name of the timeline.")
 
+    val timelineName: String by argument("NAME", help = "The name of the timeline.")
+
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(name) ?: throw UsageError("No such timeline '$name'.")
+        val timeline = getTimeline(parent.repoPath, timelineName)
         newName?.let { timeline.name = it }
     }
 }
@@ -110,7 +111,7 @@ class TimelineListCommand(val parent: TimelineCommand) : CliktCommand(
 """
 ) {
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
+        val repository = getRepository(parent.repoPath)
         echo(repository.listTimelines().joinToString(separator = "\n\n") { it.info })
     }
 }
@@ -120,11 +121,10 @@ class TimelineInfoCommand(val parent: TimelineCommand) : CliktCommand(
     Show information about a timeline.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
+    val timelineName: String by argument("NAME", help = "The name of the timeline.")
 
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(name) ?: throw UsageError("No such timeline '$name'.")
+        val timeline = getTimeline(parent.repoPath, timelineName)
         echo(timeline.info)
     }
 }

@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
@@ -29,7 +28,6 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
-import io.github.lostatc.reversion.api.StorageProvider
 import java.nio.file.Path
 
 class VersionCommand : CliktCommand(
@@ -38,7 +36,7 @@ class VersionCommand : CliktCommand(
 """
 ) {
 
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
+    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
         .path()
         .default(DEFAULT_REPO)
 
@@ -58,20 +56,17 @@ class VersionRemoveCommand(val parent: VersionCommand) : CliktCommand(
     Remove a version of a file from the timeline.
 """
 ) {
-    val timeline: String by argument(help = "The timeline the snapshot is in.")
+    val timelineName: String by argument("TIMELINE", help = "The timeline the snapshot is in.")
 
-    val revision: Int by argument(help = "The revision number of the snapshot.")
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot.")
         .int()
 
-    val path: Path by argument(help = "The relative path of the version.")
+    val versionPath: Path by argument("PATH", help = "The relative path of the version.")
         .path()
 
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-        val snapshot = timeline.getSnapshot(revision) ?: throw UsageError("No snapshot with the revision '$revision'.")
-
-        if (!snapshot.removeVersion(path)) throw UsageError("No version of '$path' with revision '$revision'.")
+        val version = getVersion(parent.repoPath, timelineName, revision, versionPath)
+        version.snapshot.removeVersion(versionPath)
     }
 }
 
@@ -80,19 +75,17 @@ class VersionListCommand(val parent: VersionCommand) : CliktCommand(
     List versions of a file in a given snapshot.
 """
 ) {
-    val timeline: String by argument(help = "The timeline of the snapshot.")
-
-    val revision: Int by argument(help = "The revision number of the snapshot.")
-        .int()
-
     val info: Boolean by option("-i", "--info", help = "Show detailed information about each version.")
         .flag()
 
+    val timelineName: String by argument("NAME", help = "The timeline of the snapshot.")
+
+    val revision: Int by argument(" REVISION", help = "The revision number of the snapshot.")
+        .int()
+
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-        val snapshot = timeline.getSnapshot(revision) ?: throw UsageError("No snapshot with the revision '$revision'.")
-        val versions = snapshot.listVersions()
+        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
+        val versions = snapshot.listVersions().sortedBy { it.path }
 
         if (info) {
             echo(versions.joinToString(separator = "\n\n") { it.info })
@@ -107,20 +100,16 @@ class VersionInfoCommand(val parent: VersionCommand) : CliktCommand(
     Show information about a version of a file.
 """
 ) {
-    val timeline: String by argument(help = "The timeline the snapshot is in.")
+    val timelineName: String by argument("TIMELINE", help = "The timeline the snapshot is in.")
 
-    val revision: Int by argument(help = "The revision number of the snapshot.")
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot.")
         .int()
 
-    val path: Path by argument(help = "The relative path of the version.")
+    val versionPath: Path by argument("PATH", help = "The relative path of the version.")
         .path()
 
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-        val snapshot = timeline.getSnapshot(revision) ?: throw UsageError("No snapshot with the revision '$revision'.")
-        val version = snapshot.getVersion(path) ?: throw UsageError("No version of '$path' with revision '$revision'.")
-
+        val version = getVersion(parent.repoPath, timelineName, revision, versionPath)
         echo(version.info)
     }
 }
