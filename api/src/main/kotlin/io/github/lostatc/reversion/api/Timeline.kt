@@ -119,15 +119,21 @@ interface Timeline {
     fun listVersions(path: Path): Sequence<Version> = listSnapshots().mapNotNull { it.getVersion(path) }
 
     /**
+     * Returns a sequence of all the distinct paths of files in this timeline.
+     */
+    fun listPaths(): Sequence<Path> = listSnapshots().flatMap { it.listVersions() }.map { it.path }.distinct()
+
+    /**
      * Removes old versions of files with the given [paths].
      *
-     * The timeline's [retentionPolicies] govern which versions are removed.
+     * The timeline's [retentionPolicies] govern which versions are removed. By default, old versions of all files are
+     * removed.
      *
      * @param [paths] The paths of the files relative to their working directory.
      *
      * @return The number of versions that were removed.
      */
-    fun clean(paths: Collection<Path>): Int {
+    fun clean(paths: Iterable<Path> = listPaths().asIterable()): Int {
         var totalDeleted = 0
 
         for (policy in retentionPolicies) {

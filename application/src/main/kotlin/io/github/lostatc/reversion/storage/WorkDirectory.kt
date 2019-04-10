@@ -29,6 +29,11 @@ import java.util.*
 import kotlin.streams.asSequence
 
 /**
+ * An exception that is thrown when a working directory is invalid.
+ */
+class InvalidWorkDirException(message: String) : Exception(message)
+
+/**
  * Information about a [Timeline].
  *
  * @param [repositoryPath] The path of the [Repository].
@@ -37,9 +42,17 @@ import kotlin.streams.asSequence
 private data class TimelineInfo(val repositoryPath: Path, val timelineID: UUID)
 
 /**
- * An exception that is thrown when a working directory is invalid.
+ * The status of a working directory.
+ *
+ * @param [modifiedFiles] The set of relative paths of regular files which have uncommitted changes.
  */
-class InvalidWorkDirException(message: String) : Exception(message)
+data class DirectoryStatus(val modifiedFiles: Set<Path>) {
+    /**
+     * Whether any files in the working directory have uncommitted changes.
+     */
+    val isModified: Boolean
+        get() = modifiedFiles.isNotEmpty()
+}
 
 /**
  * A working directory.
@@ -53,7 +66,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      */
     private fun transformPaths(paths: Iterable<Path>): Iterable<Path> = paths
         .asSequence()
-        .flatMap { if (Files.isDirectory(it)) Files.walk(it).asSequence() else sequenceOf(it) }
+        .flatMap { Files.walk(it).asSequence() }
         .filter { Files.isRegularFile(it) }
         .map { if (it.isAbsolute) path.relativize(it) else it }
         .distinct()
@@ -62,31 +75,39 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     /**
      * Creates a new snapshot containing the given [paths] and returns it.
      *
-     * The given [paths] can be absolute or relative to this directory.
+     * The given [paths] can be absolute or relative to this directory. Passing the path of a directory commits all the
+     * files contained in it. By default, this commits all files with uncommitted changes.
      */
-    fun commit(paths: Iterable<Path>): Snapshot =
+    fun commit(paths: Iterable<Path> = getStatus().modifiedFiles): Snapshot =
         timeline.createSnapshot(transformPaths(paths), path)
 
     /**
      * Updates the given [paths] in the working directory.
      *
      * This updates the [paths] in the working directory to the state they were in in the snapshot with the given
-     * [revision]. Uncommitted changes will not be overwritten unless [overwrite] is `true`. The given [paths] can be
-     * absolute or relative to this directory.
+     * [revision]. By default, this is the most recent revision. Uncommitted changes will not be overwritten unless
+     * [overwrite] is `true`.
      *
-     * @param [paths] The paths to update.
-     * @param [revision] The revision number. By default, this uses the most recent revision.
+     * The given [paths] can be absolute or relative to this directory. Passing the path of a directory updates all the
+     * files contained in it. By default, this updates all paths in the working directory.
+     *
+     * @param [paths] The paths of files to update.
+     * @param [revision] The revision number.
      * @param [overwrite] Whether to overwrite uncommitted changes.
      */
-    fun update(paths: Iterable<Path>, revision: Int = Int.MAX_VALUE, overwrite: Boolean = false) {
+    fun update(
+        paths: Iterable<Path> = timeline.listPaths().asIterable(),
+        revision: Int = Int.MAX_VALUE,
+        overwrite: Boolean = false
+    ) {
         for (relativePath in transformPaths(paths)) {
             val absolutePath = path.resolve(relativePath)
 
             // Iterate over the versions of this file from newest to oldest.
             for (version in timeline.listVersions(relativePath)) {
                 // Get the version from the given [revision] or the newest version that comes before it.
-                if (version.snapshot.revision <= revision) {
-                    version.checkout(absolutePath, overwrite = overwrite || !isChanged(path))
+                if (version.snapshot.revision <= (revision)) {
+                    version.checkout(absolutePath, overwrite = overwrite || !isModified(path))
                     break
                 }
             }
@@ -102,26 +123,24 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      *
      * @param [file] The path of a regular file relative to this working directory.
      */
-    fun isChanged(file: Path): Boolean {
+    fun isModified(file: Path): Boolean {
         val absolutePath = path.resolve(file)
-        val lastVersion = timeline.listVersions(file).firstOrNull()
+        val newestVersion = timeline.listVersions(file).firstOrNull()
         val fileExists = Files.exists(absolutePath)
 
-        return if (lastVersion == null) {
+        return if (newestVersion == null) {
             fileExists
         } else {
-            if (fileExists) lastVersion.isChanged(file) else false
+            if (fileExists) newestVersion.isChanged(file) else false
         }
     }
 
     /**
-     * Returns the paths which have uncommitted changes.
-     *
-     * The given [paths] can be absolute or relative to this directory.
-     *
-     * @see [isChanged]
+     * Returns the status of the working directory.
      */
-    fun getChanges(paths: Iterable<Path>): Iterable<Path> = transformPaths(paths).filter { isChanged(it) }
+    fun getStatus(): DirectoryStatus = DirectoryStatus(
+        transformPaths(listOf(path)).filter { isModified(it) }.toSet()
+    )
 
     companion object {
         /**

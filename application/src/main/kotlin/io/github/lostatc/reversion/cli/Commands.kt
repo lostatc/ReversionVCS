@@ -20,7 +20,7 @@
 package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.UsageError
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
@@ -96,7 +96,12 @@ class StatusCommand : CliktCommand(
         .default(Paths.get("").toAbsolutePath())
 
     override fun run() {
-        // TODO: Not implemented.
+        val workDirectory = getWorkDirectory(workPath)
+        val modifiedFiles = workDirectory.getStatus().modifiedFiles
+
+        echo(workDirectory.info)
+        echo("\nFiles with uncommitted changes:")
+        echo(modifiedFiles.joinToString(separator = "\n").prependIndent("    "))
     }
 }
 
@@ -118,7 +123,7 @@ class CommitCommand : CliktCommand(
         .multiple()
 
     override fun run() {
-        val workDir = WorkDirectory.open(workPath)
+        val workDir = getWorkDirectory(workPath)
         workDir.commit(paths)
     }
 }
@@ -150,10 +155,10 @@ class CheckoutCommand : CliktCommand(
     override fun run() {
         val snapshot = revision?.let { getSnapshot(repoPath, timelineName, it) }
             ?: getTimeline(repoPath, timelineName).listSnapshots().firstOrNull()
-            ?: throw UsageError("The timeline '$timelineName' has no snapshots.")
+            ?: throw CliktError("The timeline '$timelineName' has no snapshots.")
 
         val version = snapshot.getVersion(sourcePath)
-            ?: throw UsageError("No version with the path '$sourcePath'.")
+            ?: throw CliktError("No version with the path '$sourcePath'.")
 
         version.checkout(destPath)
     }
@@ -186,15 +191,20 @@ class UpdateCommand : CliktCommand(
         .multiple()
 
     override fun run() {
-        // TODO: Not implemented.
+        val workDirectory = getWorkDirectory(workPath)
+        workDirectory.update(
+            paths = if (paths.isEmpty()) workDirectory.timeline.listPaths().asIterable() else paths,
+            revision = revision ?: Int.MAX_VALUE,
+            overwrite = overwrite
+        )
     }
 }
 
 class CleanCommand : CliktCommand(
     name = "clean", help = """
-    Clean up old snapshots in a timeline.
+    Clean up old versions of files in a timeline.
 
-    Old snapshots are deleted according to the rules set for the timeline.
+    Old versions are deleted according to the rules set for the timeline.
 """
 ) {
     val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
@@ -204,7 +214,8 @@ class CleanCommand : CliktCommand(
     val timelineName: String by argument("TIMELINE", help = "The name of the timeline.")
 
     override fun run() {
-        // TODO: Not implemented.
+        val timeline = getTimeline(repoPath, timelineName)
+        timeline.clean()
     }
 }
 
@@ -218,6 +229,14 @@ class VerifyCommand : CliktCommand(
         .default(DEFAULT_REPO)
 
     override fun run() {
-        // TODO: Not implemented.
+        val repository = getRepository(repoPath)
+        val report = repository.verify()
+
+        if (report.isValid) {
+            echo("No corruption detected.")
+        } else {
+            echo("The following file versions are corrupt:")
+            echo(report.corruptVersions.joinToString(separator = "\n") { it.info }.prependIndent("    "))
+        }
     }
 }
