@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
@@ -30,7 +29,6 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
-import io.github.lostatc.reversion.api.StorageProvider
 import java.nio.file.Path
 
 class TagCommand : CliktCommand(
@@ -38,7 +36,7 @@ class TagCommand : CliktCommand(
     Manage tags.
 """
 ) {
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
+    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
         .path()
         .default(DEFAULT_REPO)
 
@@ -60,25 +58,22 @@ class TagCreateCommand(val parent: TagCommand) : CliktCommand(
     Create a new tag.
 """
 ) {
-    val timeline: String by argument(help = "The timeline to create the tag in.")
-
-    val revision: Int by argument(help = "The revision number of the snapshot to tag.")
-        .int()
-
-    val name: String by argument(help = "The name of the tag.")
-
     val description: String by option("-d", "--description", help = "The description for the tag.")
         .default("")
 
     val pinned: Boolean by option("--pin", help = "Never automatically delete the snapshot with this tag.")
         .flag("--no-pin", default = true)
 
-    override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-        val snapshot = timeline.getSnapshot(revision) ?: throw UsageError("No snapshot with the revision '$revision'.")
+    val timelineName: String by argument("TIMELINE", help = "The timeline to create the tag in.")
 
-        snapshot.addTag(name = name, description = description, pinned = pinned)
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot to tag.")
+        .int()
+
+    val tagName: String by argument("NAME", help = "The name of the tag.")
+
+    override fun run() {
+        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
+        snapshot.addTag(name = tagName, description = description, pinned = pinned)
     }
 }
 
@@ -89,15 +84,13 @@ class TagRemoveCommand(val parent: TagCommand) : CliktCommand(
     This does not affect the snapshot it is applied to.
 """
 ) {
-    val timeline: String by argument(help = "The timeline the tag is in.")
+    val timelineName: String by argument("TIMELINE", help = "The timeline the tag is in.")
 
-    val name: String by argument(help = "The name of the tag.")
+    val tagName: String by argument("NAME", help = "The name of the tag.")
 
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-
-        if (!timeline.removeTag(name)) throw UsageError("No tag with the name '$name'.")
+        val tag = getTag(parent.repoPath, timelineName, tagName)
+        tag.timeline.removeTag(tagName)
     }
 }
 
@@ -106,10 +99,6 @@ class TagModifyCommand(val parent: TagCommand) : CliktCommand(
     Modify an existing tag.
 """
 ) {
-    val timeline: String by argument(help = "The timeline the tag is in.")
-
-    val name: String by argument(help = "The name of the tag.")
-
     val newName: String? by option("-n", "--name", help = "The new name of the tag.")
 
     val description: String? by option("-d", "--description", help = "The new description for the tag.")
@@ -123,10 +112,12 @@ class TagModifyCommand(val parent: TagCommand) : CliktCommand(
     )
         .flag(default = true)
 
+    val timelineName: String by argument("TIMELINE", help = "The timeline the tag is in.")
+
+    val tagName: String by argument("NAME", help = "The name of the tag.")
+
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-        val tag = timeline.getTag(name) ?: throw UsageError("No tag with the name '$name'.")
+        val tag = getTag(parent.repoPath, timelineName, tagName)
 
         newName?.let { tag.name = it }
         description?.let { tag.description = it }
@@ -140,8 +131,6 @@ class TagListCommand(val parent: TagCommand) : CliktCommand(
     List the tags in a timeline.
 """
 ) {
-    val timeline: String by argument(help = "The timeline to list tags from.")
-
     val revisions: List<Int> by option(
         "-r", "--revision",
         help = "Only list tags on the snapshot with this revision number. This can be specified multiple times."
@@ -149,14 +138,13 @@ class TagListCommand(val parent: TagCommand) : CliktCommand(
         .int()
         .multiple()
 
-    override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
+    val timelineName: String by argument("TIMELINE", help = "The timeline to list tags from.")
 
-        val tags = if (revisions.isEmpty()) {
-            timeline.listTags()
-        } else {
-            timeline.listTags().filter { it.snapshot.revision in revisions }
+    override fun run() {
+        val timeline = getTimeline(parent.repoPath, timelineName)
+
+        val tags = timeline.listTags().filter {
+            if (revisions.isEmpty()) true else it.snapshot.revision in revisions
         }
 
         echo(tags.joinToString(separator = "\n\n") { it.info })
@@ -168,15 +156,12 @@ class TagInfoCommand(val parent: TagCommand) : CliktCommand(
     Show information about a tag.
 """
 ) {
-    val timeline: String by argument(help = "The timeline the tag is in.")
+    val timelineName: String by argument("TIMELINE", help = "The timeline the tag is in.")
 
-    val name: String by argument(help = "The name of the tag.")
+    val tagName: String by argument("NAME", help = "The name of the tag.")
 
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-        val tag = timeline.getTag(name) ?: throw UsageError("No tag with the name '$name'.")
-
+        val tag = getTag(parent.repoPath, timelineName, tagName)
         echo(tag.info)
     }
 }

@@ -30,7 +30,6 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_REPO
-import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -67,9 +66,7 @@ class InitCommand : CliktCommand(
     timeline are not modified.
 """
 ) {
-    val timeline: String by argument(help = "The timeline to associate the directory with.")
-
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
+    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
         .path()
         .default(DEFAULT_REPO)
 
@@ -79,11 +76,10 @@ class InitCommand : CliktCommand(
         .path()
         .default(Paths.get("").toAbsolutePath())
 
+    val timelineName: String by argument("TIMELINE", help = "The timeline to associate the directory with.")
 
     override fun run() {
-        val repository = StorageProvider.openRepository(repo)
-        val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-
+        val timeline = getTimeline(repoPath, timelineName)
         WorkDirectory.init(workPath, timeline)
     }
 }
@@ -111,15 +107,15 @@ class CommitCommand : CliktCommand(
     If no paths are specified, the entire working directory is committed.
 """
 ) {
-    val paths: List<Path> by argument(help = "The paths of files to commit.")
-        .path(exists = true)
-        .multiple()
-
     val workPath: Path by option(
         "-w", "--work-dir", help = "Use this directory instead of the current working directory."
     )
         .path()
         .default(Paths.get("").toAbsolutePath())
+
+    val paths: List<Path> by argument("PATH", help = "The paths of files to commit.")
+        .path(exists = true)
+        .multiple()
 
     override fun run() {
         val workDir = WorkDirectory.open(workPath)
@@ -135,33 +131,31 @@ class CheckoutCommand : CliktCommand(
     revision is chosen.
 """
 ) {
-    val timelineName: String by argument(name = "TIMELINE", help = "The name of the timeline.")
 
-    val source: Path by argument(help = "The relative path of the file to retrieve from the timeline.")
-        .path()
-
-    val dest: Path by argument(help = "The path to copy the file to.")
-        .path()
-
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
+    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
         .path()
         .default(DEFAULT_REPO)
 
     val revision: Int? by option("-r", "--revision", help = "The revision number of the snapshot to get the file from.")
         .int()
 
+    val timelineName: String by argument("TIMELINE", help = "The name of the timeline.")
+
+    val sourcePath: Path by argument("SOURCE", help = "The relative path of the file to retrieve from the timeline.")
+        .path()
+
+    val destPath: Path by argument("DESTINATION", help = "The path to copy the file to.")
+        .path()
+
     override fun run() {
-        val repository = StorageProvider.openRepository(repo)
-        val timeline = repository.getTimeline(timelineName) ?: throw UsageError("No such timeline '$timelineName'.")
+        val snapshot = revision?.let { getSnapshot(repoPath, timelineName, it) }
+            ?: getTimeline(repoPath, timelineName).listSnapshots().firstOrNull()
+            ?: throw UsageError("The timeline '$timelineName' has no snapshots.")
 
-        val snapshot = revision?.let {
-            timeline.getSnapshot(it) ?: throw UsageError("No snapshot with the revision '$revision'.")
-        } ?: timeline.listSnapshots().firstOrNull() ?: throw UsageError("There are no snapshots in '$timelineName'.")
+        val version = snapshot.getVersion(sourcePath)
+            ?: throw UsageError("No version with the path '$sourcePath'.")
 
-        val version = snapshot.getVersion(source)
-            ?: throw UsageError("No version of '$source' with revision '$revision'.")
-
-        version.checkout(dest)
+        version.checkout(destPath)
     }
 }
 
@@ -174,12 +168,9 @@ class UpdateCommand : CliktCommand(
     This does not commit anything.
 """
 ) {
-    val paths: List<Path> by argument(help = "The paths of files to commit.")
-        .path(exists = true)
-        .multiple()
-
     val workPath: Path by option(
-        "-w", "--work-dir", help = "Use this directory instead of the current working directory."
+        "-w", "--work-dir",
+        help = "Use this directory instead of the current working directory."
     )
         .path()
         .default(Paths.get("").toAbsolutePath())
@@ -187,8 +178,12 @@ class UpdateCommand : CliktCommand(
     val revision: Int? by option("-r", "--revision", help = "The revision number of the snapshot to update files to.")
         .int()
 
-    val overwrite: Boolean by option(help = "Overwrite uncommitted changes.")
+    val overwrite: Boolean by option("--overwrite", help = "Overwrite uncommitted changes.")
         .flag()
+
+    val paths: List<Path> by argument("PATH", help = "The paths of files to commit.")
+        .path(exists = true)
+        .multiple()
 
     override fun run() {
         // TODO: Not implemented.
@@ -202,11 +197,11 @@ class CleanCommand : CliktCommand(
     Old snapshots are deleted according to the rules set for the timeline.
 """
 ) {
-    val name: String by argument(help = "The name of the timeline.")
-
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
+    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
         .path()
         .default(DEFAULT_REPO)
+
+    val timelineName: String by argument("TIMELINE", help = "The name of the timeline.")
 
     override fun run() {
         // TODO: Not implemented.
@@ -218,7 +213,7 @@ class VerifyCommand : CliktCommand(
     Verify the integrity of a repository.
 """
 ) {
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
+    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
         .path()
         .default(DEFAULT_REPO)
 

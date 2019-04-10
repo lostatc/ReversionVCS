@@ -36,7 +36,7 @@ class RepoCommand : CliktCommand(
     Manage repositories.
 """
 ) {
-    val repo: Path by option(help = "Use this repository instead of the default repository.")
+    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
         .path()
         .default(DEFAULT_REPO)
 
@@ -64,7 +64,7 @@ class RepoCreateCommand(val parent: RepoCommand) : CliktCommand(
         .flag()
 
     override fun run() {
-        DEFAULT_PROVIDER.createRepository(parent.repo)
+        DEFAULT_PROVIDER.createRepository(parent.repoPath)
     }
 }
 
@@ -74,7 +74,7 @@ class RepoInfoCommand(val parent: RepoCommand) : CliktCommand(
 """
 ) {
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
+        val repository = getRepository(parent.repoPath)
         echo(repository.info)
     }
 }
@@ -84,12 +84,12 @@ class RepoExportCommand(val parent: RepoCommand) : CliktCommand(
     Export the repository to a file.
 """
 ) {
-    val destination by argument(help = "The file to export the repository to.")
+    val destPath by argument("DESTINATION", help = "The file to export the repository to.")
         .path(fileOkay = false, folderOkay = false)
 
     override fun run() {
-        val repository = StorageProvider.openRepository(parent.repo)
-        repository.export(destination)
+        val repository = getRepository(parent.repoPath)
+        repository.export(destPath)
     }
 }
 
@@ -98,10 +98,10 @@ class RepoImportCommand(val parent: RepoCommand) : CliktCommand(
     Import the repository from a file.
 """
 ) {
-    val source by argument(help = "The file to import the repository from.")
+    val sourcePath by argument("SOURCE", help = "The file to import the repository from.")
         .path(exists = true)
 
     override fun run() {
-        StorageProvider.importRepository(source = source, target = parent.repo)
+        StorageProvider.importRepository(source = sourcePath, target = parent.repoPath)
     }
 }
