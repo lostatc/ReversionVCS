@@ -49,7 +49,7 @@ class SnapshotCommand : CliktCommand(
         )
     }
 
-    override fun run() {}
+    override fun run() = Unit
 }
 
 class SnapshotRemoveCommand(val parent: SnapshotCommand) : CliktCommand(
@@ -67,8 +67,7 @@ class SnapshotRemoveCommand(val parent: SnapshotCommand) : CliktCommand(
     override fun run() {
         val repository = StorageProvider.openRepository(parent.repo)
         val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-        val removed = timeline.removeSnapshot(revision)
-        if (!removed) throw UsageError("No snapshot with the revision '$revision'.")
+        if (!timeline.removeSnapshot(revision)) throw UsageError("No snapshot with the revision '$revision'.")
     }
 }
 
@@ -81,7 +80,8 @@ class SnapshotListCommand(val parent: SnapshotCommand) : CliktCommand(
 
     val paths: List<Path> by option(
         "-p", "--path",
-        help = "Show only snapshots containing a file with this relative path. This can be specified multiple times."
+        help = """Show only snapshots containing a version with this relative path. Specified multiple times, show
+            snapshots containing any."""
     )
         .path()
         .multiple()
@@ -89,7 +89,19 @@ class SnapshotListCommand(val parent: SnapshotCommand) : CliktCommand(
     override fun run() {
         val repository = StorageProvider.openRepository(parent.repo)
         val timeline = repository.getTimeline(timeline) ?: throw UsageError("No such timeline '$timeline'.")
-        echo(timeline.listSnapshots().joinToString(separator = "\n") { it.info })
+
+        val snapshots = if (paths.isEmpty()) {
+            timeline.listSnapshots()
+        } else {
+            val pathSet = paths.toSet()
+
+            timeline.listSnapshots().filter { snapshot ->
+                snapshot.listVersions().any { it.path in pathSet }
+            }
+
+        }
+
+        echo(snapshots.joinToString(separator = "\n\n") { it.info })
     }
 }
 
