@@ -22,10 +22,7 @@ package io.github.lostatc.reversion.storage
 import io.github.lostatc.reversion.api.RetentionPolicy
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.schema.*
-import org.jetbrains.exposed.sql.SizedCollection
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Path
 import java.time.Instant
@@ -151,5 +148,14 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             .wrapRows(query)
             .asSequence()
             .map { DatabaseVersion(it, repository) }
+    }
+
+    override fun listPaths(): Sequence<Path> = transaction {
+        VersionTable
+            .slice(VersionTable.path)
+            .selectAll()
+            .withDistinct()
+            .asSequence()
+            .map { it[VersionTable.path] }
     }
 }

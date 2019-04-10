@@ -20,7 +20,7 @@
 package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.UsageError
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
@@ -84,7 +84,7 @@ class TimelineRemoveCommand(val parent: TimelineCommand) : CliktCommand(
         val timeline = getTimeline(parent.repoPath, timelineName)
 
         if (!force && timeline.listSnapshots().any()) {
-            throw UsageError("Will not remove a timeline with snapshots. Use --force to override.")
+            throw CliktError("Will not remove a timeline with snapshots. Use --force to override.")
         }
         timeline.repository.removeTimeline(timelineName)
     }

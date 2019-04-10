@@ -19,7 +19,9 @@
 
 package io.github.lostatc.reversion.cli
 
+import io.github.lostatc.reversion.DEFAULT_REPO
 import io.github.lostatc.reversion.api.*
+import io.github.lostatc.reversion.storage.WorkDirectory
 import org.apache.commons.io.FileUtils
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -84,4 +86,19 @@ val Version.info: String
         Size: ${FileUtils.byteCountToDisplaySize(size)}
         Permissions: ${permissions.toString()}
         Checksum: ${checksum.hex}
+    """.trimIndent()
+
+/**
+ * Whether this repository is the default repository.
+ */
+private val Repository.isDefault: Boolean
+    get() = path == DEFAULT_REPO
+
+/**
+ * Human-readable information about the working directory.
+ */
+val WorkDirectory.info: String
+    get() = """
+        Repository: ${timeline.repository.path}  ${if (timeline.repository.isDefault) "(Default)" else ""}
+        Timeline: ${timeline.name}
     """.trimIndent()
