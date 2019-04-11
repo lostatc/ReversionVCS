@@ -21,9 +21,37 @@ package io.github.lostatc.reversion.api
 
 import java.util.*
 import kotlin.reflect.KProperty
-import kotlin.reflect.KType
-import kotlin.reflect.full.createType
 
+/**
+ * An exception that is thrown when a config value cannot be converted.
+ *
+ * @param [property] The config property that the value is being assigned to.
+ * @param [value] The value being converted.
+ */
+data class ValueConvertException(
+    override val message: String,
+    val property: ConfigProperty<*>,
+    val value: String
+) : Exception()
+
+/**
+ * A receiver for value converters.
+ */
+data class ConvertContext(val property: ConfigProperty<*>, val value: String) {
+    /**
+     * Throws an exception indicating that the value could not be converted.
+     */
+    fun fail(message: String = "Invalid value '$value'."): Nothing {
+        throw ValueConvertException(message, property, value)
+    }
+
+    /**
+     * Calls [fail] with the output of [lazyMessage] if [value] is `false`.
+     */
+    fun require(value: Boolean, lazyMessage: () -> String = { "Invalid value '$value'." }) {
+        if (!value) fail(lazyMessage())
+    }
+}
 /**
  * An property used for configuration.
  *
@@ -31,17 +59,22 @@ import kotlin.reflect.full.createType
  *
  * @param [key] The unique identifier of the property.
  * @param [default] The default value of the property.
- * @param [type] The type of the property's value.
+ * @param [converter] A function that converts a string to a valid value for this property.
  * @param [name] The human-readable name of the property.
  * @param [description] The human-readable description of the property.
  */
 data class ConfigProperty<T>(
     val key: String,
-    val default: T,
-    val type: KType,
+    val default: String,
+    val converter: ConvertContext.(String) -> T,
     val name: String = key,
     val description: String = ""
 ) {
+    /**
+     * Convert a string to a valid value for this property.
+     */
+    fun convert(value: String): T = ConvertContext(this, value).converter(value)
+
     /**
      * Gets the value associated with this property from the [config][Configurable.config].
      */
@@ -50,46 +83,102 @@ data class ConfigProperty<T>(
     /**
      * Associates the given [value] with this property in the [config][Configurable.config].
      */
-    operator fun setValue(thisRef: Configurable, property: KProperty<*>, value: T) {
+    operator fun setValue(thisRef: Configurable, property: KProperty<*>, value: String) {
         thisRef.config[this] = value
     }
 
     companion object {
         /**
-         * Constructs a [ConfigProperty] with an inferred type.
-         *
-         * @param [key] The unique identifier of the property.
-         * @param [default] The default value of the property.
-         * @param [name] The human-readable name of the property.
-         * @param [description] The human-readable description of the property.
+         * Constructs a [ConfigProperty] for a [String] value.
          */
-        inline fun <reified T> of(
-            key: String,
-            default: T,
-            name: String = key,
-            description: String = ""
-        ): ConfigProperty<T> {
-            return ConfigProperty(
+        fun of(key: String, default: String, name: String = key, description: String = ""): ConfigProperty<String> =
+            ConfigProperty(
                 key = key,
                 default = default,
-                type = T::class.createType(),
+                converter = { it },
                 name = name,
                 description = description
             )
-        }
+
+        /**
+         * Constructs a [ConfigProperty] for an [Int] value.
+         */
+        fun of(key: String, default: Int, name: String = key, description: String = ""): ConfigProperty<Int> =
+            ConfigProperty(
+                key = key,
+                default = default.toString(),
+                converter = { it.toIntOrNull() ?: fail("The value '$it' must be an integer.") },
+                name = name,
+                description = description
+            )
+
+        /**
+         * Constructs a [ConfigProperty] for a [Long] value.
+         */
+        fun of(key: String, default: Long, name: String = key, description: String = ""): ConfigProperty<Long> =
+            ConfigProperty(
+                key = key,
+                default = default.toString(),
+                converter = { it.toLongOrNull() ?: fail("The value '$it' must be an integer.") },
+                name = name,
+                description = description
+            )
+
+        /**
+         * Constructs a [ConfigProperty] for a [Float] value.
+         */
+        fun of(key: String, default: Float, name: String = key, description: String = ""): ConfigProperty<Float> =
+            ConfigProperty(
+                key = key,
+                default = default.toString(),
+                converter = { it.toFloatOrNull() ?: fail("The value '$it' must be a decimal.") },
+                name = name,
+                description = description
+            )
+
+        /**
+         * Constructs a [ConfigProperty] for a [Double] value.
+         */
+        fun of(key: String, default: Double, name: String = key, description: String = ""): ConfigProperty<Double> =
+            ConfigProperty(
+                key = key,
+                default = default.toString(),
+                converter = { it.toDoubleOrNull() ?: fail("The value '$it' must be a decimal.") },
+                name = name,
+                description = description
+            )
+
+        /**
+         * Constructs a [ConfigProperty] for a [Boolean] value.
+         */
+        fun of(key: String, default: Boolean, name: String = key, description: String = ""): ConfigProperty<Boolean> =
+            ConfigProperty(
+                key = key,
+                default = default.toString(),
+                converter = {
+                    when (it.toLowerCase()) {
+                        "yes", "true" -> true
+                        "no", "false" -> false
+                        else -> fail("The value '$it' must be boolean.")
+                    }
+                },
+                name = name,
+                description = description
+            )
     }
 }
 
 /**
  * A configuration that maps [config properties][ConfigProperty] to values.
  *
- * The [key][ConfigProperty.key] of each property in this config is unique.
+ * @param [properties] Properties to initialize the config with which are mapped to their default values.
  */
-class Config {
+class Config(vararg properties: ConfigProperty<*>) {
     /**
      * A map of properties to their values.
      */
-    private val valueByProperty: MutableMap<ConfigProperty<*>, Any?> = mutableMapOf()
+    private val valueByProperty: MutableMap<ConfigProperty<*>, String> =
+        properties.associate { it to it.default }.toMutableMap()
 
     /**
      * The set of properties contained in this config.
@@ -98,23 +187,26 @@ class Config {
 
     /**
      * Sets the [value] of the given [property] in this config.
-     *
-     * If another property with the same [key][ConfigProperty.key] exists in this config, it is removed.
      */
-    operator fun <T> set(property: ConfigProperty<T>, value: T) {
-        valueByProperty.keys.removeAll { it.key == property.key }
+    operator fun set(property: ConfigProperty<*>, value: String) {
         valueByProperty[property] = value
     }
 
     /**
-     * Returns the value of the given [property] in this config.
+     * Returns the converted value of the given [property] in this config.
      *
      * @return The value in the config or the [default][ConfigProperty.default] value of the property if it is not
      * present in the config.
      */
-    @Suppress("UNCHECKED_CAST")
-    operator fun <T> get(property: ConfigProperty<T>): T =
-        valueByProperty[property]?.let { it as T } ?: property.default
+    operator fun <T> get(property: ConfigProperty<T>): T = property.convert(getRaw(property))
+
+    /**
+     * Returns the raw value of the given [property] in this config.
+     *
+     * @return The value in the config or the [default][ConfigProperty.default] value of the property if it is not
+     * present in the config.
+     */
+    fun getRaw(property: ConfigProperty<*>): String = valueByProperty[property] ?: property.default
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
