@@ -29,14 +29,13 @@ import java.lang.reflect.Type
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.reflect.jvm.javaType
 
 /**
  * A [JsonSerializer] for serializing [Config] objects as JSON.
  */
 object ConfigSerializer : JsonSerializer<Config> {
     override fun serialize(src: Config?, typeOfSrc: Type, context: JsonSerializationContext): JsonElement =
-        context.serialize(src?.properties?.map { it.key to src[it] })
+        context.serialize(src?.properties?.associate { it.key to src.getRaw(it) })
 }
 
 /**
@@ -51,7 +50,7 @@ data class ConfigDeserializer(private val properties: Collection<ConfigProperty<
 
         for ((key, element) in jsonObject.entrySet()) {
             val property = properties.find { it.key == key } ?: continue
-            config[property] = context.deserialize(element, property.type.javaType)
+            config[property] = context.deserialize(element, String::class.java)
         }
 
         return config

@@ -286,21 +286,15 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         )
 
         /**
-         * A list of the properties supported by this repository.
-         */
-        val properties: List<ConfigProperty<*>> = listOf(
-            hashAlgorithmProperty,
-            blockSizeProperty
-        )
-
-        /**
          * An object used for serializing data as JSON.
          */
         private val gson: Gson = GsonBuilder()
             .setPrettyPrinting()
             .registerTypeAdapter(Config::class.java, ConfigSerializer)
-            .registerTypeAdapter(Config::class.java, ConfigDeserializer(properties))
+            .registerTypeAdapter(Config::class.java, ConfigDeserializer(getConfig().properties))
             .create()
+
+        fun getConfig(): Config = Config(hashAlgorithmProperty, blockSizeProperty)
 
         /**
          * Opens the repository at [path] and returns it.

@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Config
-import io.github.lostatc.reversion.api.ConfigProperty
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.StorageProvider
 import java.nio.file.Path
@@ -36,7 +35,8 @@ object DatabaseStorageProvider : StorageProvider {
         without this program.
     """.trimIndent()
 
-    override val properties: List<ConfigProperty<*>> = DatabaseRepository.properties
+    override fun getConfig(): Config =
+        DatabaseRepository.getConfig()
 
     override fun openRepository(path: Path): DatabaseRepository =
         DatabaseRepository.open(path)

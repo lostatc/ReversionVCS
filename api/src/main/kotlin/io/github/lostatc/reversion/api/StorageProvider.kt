@@ -45,9 +45,9 @@ interface StorageProvider {
     val description: String
 
     /**
-     * The list of properties supported by this storage provider.
+     * Returns the default configuration used by this storage provider.
      */
-    val properties: List<ConfigProperty<*>>
+    fun getConfig(): Config
 
     /**
      * Opens the repository at [path] and returns it.
@@ -67,7 +67,7 @@ interface StorageProvider {
      * @throws [FileAlreadyExistsException] There is already a file at [path].
      * @throws [IOException] An I/O error occurred.
      */
-    fun createRepository(path: Path, config: Config = Config()): Repository
+    fun createRepository(path: Path, config: Config = getConfig()): Repository
 
     /**
      * Creates a new repository at [target] from the archive file at [source].
