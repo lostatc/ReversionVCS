@@ -26,11 +26,15 @@ import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 
 object BlockTable : IntIdTable() {
-    val version: Column<EntityID<Int>> = cascadeReference("version", VersionTable).primaryKey(0)
+    val version: Column<EntityID<Int>> = cascadeReference("version", VersionTable)
 
-    val blob: Column<EntityID<Int>> = cascadeReference("blob", BlobTable).primaryKey(1)
+    val blob: Column<EntityID<Int>> = cascadeReference("blob", BlobTable)
 
-    val index: Column<Int> = integer("index").primaryKey(2)
+    val index: Column<Int> = integer("index")
+
+    init {
+        uniqueIndex(version, blob, index)
+    }
 }
 
 /**
