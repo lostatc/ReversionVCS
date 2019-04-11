@@ -25,6 +25,7 @@ import io.github.lostatc.reversion.api.*
 import io.github.lostatc.reversion.schema.*
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.zeroturnaround.zip.ZipUtil
 import java.io.IOException
@@ -32,6 +33,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.sql.Connection
 import java.time.Instant
 import java.util.*
 import kotlin.streams.asSequence
@@ -51,7 +53,9 @@ private object DatabaseFactory {
      * Connect to the database at the given [path].
      */
     fun connect(path: Path): Database = databases.getOrPut(path) {
-        Database.connect("jdbc:sqlite:${path.toUri().path}", driver = "org.sqlite.JDBC")
+        val connection = Database.connect("jdbc:sqlite:${path.toUri().path}", driver = "org.sqlite.JDBC")
+        TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
+        connection
     }
 }
 
@@ -340,16 +344,19 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
             // Create the database.
             DatabaseFactory.connect(databasePath)
-            SchemaUtils.create(
-                TimelineTable,
-                SnapshotTable,
-                VersionTable,
-                TagTable,
-                BlobTable,
-                BlockTable,
-                RetentionPolicyTable,
-                TimelineRetentionPolicyTable
-            )
+
+            transaction {
+                SchemaUtils.create(
+                    TimelineTable,
+                    RetentionPolicyTable,
+                    TimelineRetentionPolicyTable,
+                    SnapshotTable,
+                    TagTable,
+                    VersionTable,
+                    BlobTable,
+                    BlockTable
+                )
+            }
 
             // Serialize the config.
             Files.newBufferedWriter(configPath).use {
