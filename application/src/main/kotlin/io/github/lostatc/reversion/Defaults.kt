@@ -46,4 +46,4 @@ val DEFAULT_REPO: Path = System.getenv(DEFAULT_REPO_ENV)?.let { Paths.get(it) } 
 /**
  * The default storage provider.
  */
-val DEFAULT_PROVIDER: StorageProvider = DatabaseStorageProvider
+val DEFAULT_PROVIDER: StorageProvider = DatabaseStorageProvider()

@@ -27,7 +27,7 @@ import java.nio.file.Path
 /**
  * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
  */
-object DatabaseStorageProvider : StorageProvider {
+class DatabaseStorageProvider : StorageProvider {
     override val name: String = "De-duplicated repository"
 
     override val description: String = """
