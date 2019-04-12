@@ -109,7 +109,7 @@ class CommitCommand : CliktCommand(
     name = "commit", help = """
     Commit changes to the directory, creating a new snapshot.
 
-    If no paths are specified, the entire working directory is committed.
+    By default, files are only committed if they have uncommitted changes.
 """
 ) {
     val workPath: Path by option(
@@ -118,13 +118,16 @@ class CommitCommand : CliktCommand(
         .path()
         .default(Paths.get("").toAbsolutePath())
 
+    val force: Boolean by option("--force", help = "Commit files even if they don't have uncommitted changes.")
+        .flag()
+
     val paths: List<Path> by argument("PATH", help = "The paths of files to commit.")
         .path(exists = true)
-        .multiple()
+        .multiple(required = true)
 
     override fun run() {
         val workDir = getWorkDirectory(workPath)
-        workDir.commit(paths)
+        workDir.commit(paths, force = force)
     }
 }
 
@@ -168,9 +171,9 @@ class UpdateCommand : CliktCommand(
     name = "update", help = """
     Update the working directory with data from the timeline.
 
-    This can be used to update files to a past or future revision. By default, the latest revision is chosen.
-    Uncommitted changes will not be overwritten. If no paths are specified, the entire working directory is updated.
-    This does not commit anything.
+    This updates the given files in the working directory to the state they were in in the snapshot with the given
+    revision. By default, this is the most recent revision. By default, uncommitted changes will not be overwritten. It
+    is possible to update files that don't currently exist in the working directory.
 """
 ) {
     val workPath: Path by option(
@@ -188,15 +191,11 @@ class UpdateCommand : CliktCommand(
 
     val paths: List<Path> by argument("PATH", help = "The paths of files to commit.")
         .path(exists = true)
-        .multiple()
+        .multiple(required = true)
 
     override fun run() {
         val workDirectory = getWorkDirectory(workPath)
-        workDirectory.update(
-            paths = if (paths.isEmpty()) workDirectory.timeline.listPaths().asIterable() else paths,
-            revision = revision ?: Int.MAX_VALUE,
-            overwrite = overwrite
-        )
+        workDirectory.update(paths = paths, revision = revision ?: Int.MAX_VALUE, overwrite = overwrite)
     }
 }
 

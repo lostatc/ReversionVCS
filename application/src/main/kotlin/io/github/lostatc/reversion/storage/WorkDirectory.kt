@@ -55,6 +55,12 @@ data class DirectoryStatus(val modifiedFiles: Set<Path>) {
 }
 
 /**
+ * Filters out paths with are descendants of another path in the iterable.
+ */
+private fun Iterable<Path>.flattenPaths(): Iterable<Path> = this
+    .filterNot { this.any { other -> it != other && it.startsWith(other) } }
+
+/**
  * A working directory.
  *
  * @param [path] The absolute path of the working directory.
@@ -62,45 +68,59 @@ data class DirectoryStatus(val modifiedFiles: Set<Path>) {
  */
 data class WorkDirectory(val path: Path, val timeline: Timeline) {
     /**
-     * Converts the given [paths] into a sequence of relative paths of regular files.
+     * Finds all the descendants of each of the given [paths] in the working directory.
+     *
+     * This returns only the paths of regular files that exist in the working directory.
+     *
+     * @return A sequence of distinct paths relative to the working directory.
      */
-    private fun transformPaths(paths: Iterable<Path>): Iterable<Path> = paths
+    private fun walkDirectory(paths: Iterable<Path>): Sequence<Path> = paths
+        .map { path.relativize(it.toAbsolutePath()) }
+        .flattenPaths()
         .asSequence()
         .flatMap { Files.walk(it).asSequence() }
         .filter { Files.isRegularFile(it) }
-        .map { if (it.isAbsolute) path.relativize(it) else it }
-        .distinct()
-        .asIterable()
+
+    /**
+     * Finds all the descendants of each of the given [paths] in the timeline.
+     *
+     * This returns only the paths of regular files that exist in the timeline. They may or may not exist in the working
+     * directory.
+     *
+     * @return A sequence of distinct paths relative to the working directory.
+     */
+    private fun walkTimeline(paths: Iterable<Path>): Sequence<Path> = paths
+        .map { path.relativize(it.toAbsolutePath()) }
+        .flattenPaths()
+        .asSequence()
+        .flatMap { timeline.listPaths(it) }
 
     /**
      * Creates a new snapshot containing the given [paths] and returns it.
      *
-     * The given [paths] can be absolute or relative to this directory. Passing the path of a directory commits all the
-     * files contained in it. By default, this commits all files with uncommitted changes.
+     * Passing the path of a directory commits all the files contained in it. By default, this only commits files with
+     * uncommitted changes.
+     *
+     * @param [paths] The paths of files to commit.
+     * @param [force] If `true`, commit files that have no uncommitted changes. If `false`, don't commit them.
      */
-    fun commit(paths: Iterable<Path> = getStatus().modifiedFiles): Snapshot =
-        timeline.createSnapshot(transformPaths(paths), path)
+    fun commit(paths: Iterable<Path>, force: Boolean = false): Snapshot = timeline.createSnapshot(
+        walkDirectory(paths).filter { force || isModified(it) }.asIterable(), path
+    )
 
     /**
      * Updates the given [paths] in the working directory.
      *
      * This updates the [paths] in the working directory to the state they were in in the snapshot with the given
      * [revision]. By default, this is the most recent revision. Uncommitted changes will not be overwritten unless
-     * [overwrite] is `true`.
-     *
-     * The given [paths] can be absolute or relative to this directory. Passing the path of a directory updates all the
-     * files contained in it. By default, this updates all paths in the working directory.
+     * [overwrite] is `true`. Passing the path of a directory updates all the files contained in it.
      *
      * @param [paths] The paths of files to update.
      * @param [revision] The revision number.
      * @param [overwrite] Whether to overwrite uncommitted changes.
      */
-    fun update(
-        paths: Iterable<Path> = timeline.listPaths().asIterable(),
-        revision: Int = Int.MAX_VALUE,
-        overwrite: Boolean = false
-    ) {
-        for (relativePath in transformPaths(paths)) {
+    fun update(paths: Iterable<Path>, revision: Int = Int.MAX_VALUE, overwrite: Boolean = false) {
+        for (relativePath in walkTimeline(paths)) {
             val absolutePath = path.resolve(relativePath)
 
             // Iterate over the versions of this file from newest to oldest.
@@ -139,7 +159,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * Returns the status of the working directory.
      */
     fun getStatus(): DirectoryStatus = DirectoryStatus(
-        transformPaths(listOf(path)).filter { isModified(it) }.toSet()
+        walkDirectory(listOf(path)).filter { isModified(it) }.toSet()
     )
 
     companion object {

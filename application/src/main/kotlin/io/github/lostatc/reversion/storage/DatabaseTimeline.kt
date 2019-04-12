@@ -150,12 +150,14 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             .map { DatabaseVersion(it, repository) }
     }
 
-    override fun listPaths(): Sequence<Path> = transaction {
+    // TODO: Optimize by storing the relationships between paths in the database.
+    override fun listPaths(parent: Path?): Sequence<Path> = transaction {
         VersionTable
             .slice(VersionTable.path)
             .selectAll()
             .withDistinct()
             .asSequence()
             .map { it[VersionTable.path] }
+            .filter { if (parent == null) true else it.startsWith(parent) }
     }
 }

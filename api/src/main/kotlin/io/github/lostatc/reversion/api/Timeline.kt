@@ -120,8 +120,14 @@ interface Timeline {
 
     /**
      * Returns a sequence of all the distinct paths of files in this timeline.
+     *
+     * @param [parent] If not `null`, all returned paths will be a descendant of this path.
      */
-    fun listPaths(): Sequence<Path> = listSnapshots().flatMap { it.listVersions() }.map { it.path }.distinct()
+    fun listPaths(parent: Path? = null): Sequence<Path> = listSnapshots()
+        .flatMap { it.listVersions() }
+        .map { it.path }
+        .distinct()
+        .filter { if (parent == null) true else it.startsWith(parent) }
 
     /**
      * Removes old versions of files with the given [paths].
