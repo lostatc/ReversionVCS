@@ -19,8 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.RetentionPolicy
-import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.*
 import io.github.lostatc.reversion.schema.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -111,10 +110,9 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             ?.let { DatabaseSnapshot(it, repository) }
     }
 
-    override fun listSnapshots(): Sequence<DatabaseSnapshot> = transaction {
+    override fun listSnapshots(): List<Snapshot> = transaction {
         entity.snapshots
             .orderBy(SnapshotTable.revision to SortOrder.DESC)
-            .asSequence()
             .map { DatabaseSnapshot(it, repository) }
     }
 
@@ -134,11 +132,11 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             ?.let { DatabaseTag(it, repository) }
     }
 
-    override fun listTags(): Sequence<DatabaseTag> = transaction {
-        TagEntity.all().asSequence().map { DatabaseTag(it, repository) }
+    override fun listTags(): List<Tag> = transaction {
+        TagEntity.all().map { DatabaseTag(it, repository) }
     }
 
-    override fun listVersions(path: Path): Sequence<DatabaseVersion> = transaction {
+    override fun listVersions(path: Path): List<Version> = transaction {
         val query = VersionTable.innerJoin(SnapshotTable)
             .slice(VersionTable.columns)
             .select { (SnapshotTable.timeline eq entity.id) and (VersionTable.path eq path) }
@@ -146,17 +144,15 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
 
         VersionEntity
             .wrapRows(query)
-            .asSequence()
             .map { DatabaseVersion(it, repository) }
     }
 
     // TODO: Optimize by storing the relationships between paths in the database.
-    override fun listPaths(parent: Path?): Sequence<Path> = transaction {
+    override fun listPaths(parent: Path?): List<Path> = transaction {
         VersionTable
             .slice(VersionTable.path)
             .selectAll()
             .withDistinct()
-            .asSequence()
             .map { it[VersionTable.path] }
             .filter { if (parent == null) true else it.startsWith(parent) }
     }

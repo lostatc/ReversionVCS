@@ -88,7 +88,7 @@ interface Timeline {
      *
      * @return A sequence of snapshots sorted from newest to oldest.
      */
-    fun listSnapshots(): Sequence<Snapshot>
+    fun listSnapshots(): List<Snapshot>
 
     /**
      * Removes the tag with the given [name] from this timeline.
@@ -107,7 +107,7 @@ interface Timeline {
     /**
      * Returns a sequence of the tags that are associated with this timeline.
      */
-    fun listTags(): Sequence<Tag> = listSnapshots().flatMap { it.listTags() }
+    fun listTags(): List<Tag> = listSnapshots().flatMap { it.listTags() }
 
     /**
      * Returns a sequence of the versions in this timeline of the file with the given [path].
@@ -116,14 +116,14 @@ interface Timeline {
      *
      * @return A sequence of versions sorted from newest to oldest.
      */
-    fun listVersions(path: Path): Sequence<Version> = listSnapshots().mapNotNull { it.getVersion(path) }
+    fun listVersions(path: Path): List<Version> = listSnapshots().mapNotNull { it.getVersion(path) }
 
     /**
      * Returns a sequence of all the distinct paths of files in this timeline.
      *
      * @param [parent] If not `null`, all returned paths will be a descendant of this path.
      */
-    fun listPaths(parent: Path? = null): Sequence<Path> = listSnapshots()
+    fun listPaths(parent: Path? = null): List<Path> = listSnapshots()
         .flatMap { it.listVersions() }
         .map { it.path }
         .distinct()

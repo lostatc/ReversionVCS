@@ -86,7 +86,7 @@ interface Snapshot {
     /**
      * Returns a sequence of the versions in this snapshot.
      */
-    fun listVersions(): Sequence<Version>
+    fun listVersions(): List<Version>
 
     /**
      * Adds a tag to this snapshot and returns it.
@@ -114,5 +114,5 @@ interface Snapshot {
     /**
      * Returns a sequence of the tags that are associated with this snapshot.
      */
-    fun listTags(): Sequence<Tag>
+    fun listTags(): List<Tag>
 }
