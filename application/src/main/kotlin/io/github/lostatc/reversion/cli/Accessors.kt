@@ -19,21 +19,28 @@
 
 package io.github.lostatc.reversion.cli
 
-import com.github.ajalt.clikt.core.CliktError
 import io.github.lostatc.reversion.api.*
 import io.github.lostatc.reversion.storage.InvalidWorkDirException
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 
 /**
+ * An exception that is thrown when a resource could not be found.
+ */
+class ResourceNotFoundException(
+    message: String,
+    cause: Throwable? = null
+) : RuntimeException(message, cause)
+
+/**
  * Get the repository with the given [path].
  *
- * @throw [CliktError] There is no repository at [path].
+ * @throw [ResourceNotFoundException] There is no repository at [path].
  */
 fun getRepository(path: Path): Repository = try {
     StorageProvider.openRepository(path)
 } catch (e: UnsupportedFormatException) {
-    throw CliktError("No repository at '$path'.", e)
+    throw ResourceNotFoundException("No repository at '$path'.", e)
 }
 
 /**
@@ -42,10 +49,10 @@ fun getRepository(path: Path): Repository = try {
  * @param [repo] The path of the repository.
  * @param [name] The name of the timeline.
  *
- * @throws [CliktError] There is no timeline with the given [name].
+ * @throws [ResourceNotFoundException] There is no timeline with the given [name].
  */
 fun getTimeline(repo: Path, name: String): Timeline =
-    getRepository(repo).getTimeline(name) ?: throw CliktError("No timeline named '$name'.")
+    getRepository(repo).getTimeline(name) ?: throw ResourceNotFoundException("No timeline named '$name'.")
 
 
 /**
@@ -55,10 +62,11 @@ fun getTimeline(repo: Path, name: String): Timeline =
  * @param [timeline] The name of the timeline.
  * @param [revision] The revision number of the snapshot.
  *
- * @throws [CliktError] There is no snapshot with the given [revision].
+ * @throws [ResourceNotFoundException] There is no snapshot with the given [revision].
  */
 fun getSnapshot(repo: Path, timeline: String, revision: Int): Snapshot =
-    getTimeline(repo, timeline).getSnapshot(revision) ?: throw CliktError("No snapshot with the revision '$revision'.")
+    getTimeline(repo, timeline).getSnapshot(revision)
+        ?: throw ResourceNotFoundException("No snapshot with the revision '$revision'.")
 
 /**
  * Get a version.
@@ -68,10 +76,11 @@ fun getSnapshot(repo: Path, timeline: String, revision: Int): Snapshot =
  * @param [revision] The revision number of the snapshot.
  * @param [path] The relative path of the version.
  *
- * @throws [CliktError] There is no version with the given [path].
+ * @throws [ResourceNotFoundException] There is no version with the given [path].
  */
 fun getVersion(repo: Path, timeline: String, revision: Int, path: Path): Version =
-    getSnapshot(repo, timeline, revision).getVersion(path) ?: throw CliktError("No version with the path '$path'.")
+    getSnapshot(repo, timeline, revision).getVersion(path)
+        ?: throw ResourceNotFoundException("No version with the path '$path'.")
 
 /**
  * Get a tag.
@@ -81,12 +90,12 @@ fun getVersion(repo: Path, timeline: String, revision: Int, path: Path): Version
  * @param [name] The name of the tag.
  */
 fun getTag(repo: Path, timeline: String, name: String): Tag =
-    getTimeline(repo, timeline).getTag(name) ?: throw CliktError("No tag named '$name'.")
+    getTimeline(repo, timeline).getTag(name) ?: throw ResourceNotFoundException("No tag named '$name'.")
 
 fun getWorkDirectory(path: Path): WorkDirectory = try {
     WorkDirectory.open(path)
 } catch (e: UnsupportedFormatException) {
-    throw CliktError("The repository associated with '$path' does not exist.", e)
+    throw ResourceNotFoundException("The repository associated with '$path' does not exist.", e)
 } catch (e: InvalidWorkDirException) {
-    throw CliktError("The timeline associated with '$path' does not exist.", e)
+    throw ResourceNotFoundException("The timeline associated with '$path' does not exist.", e)
 }
