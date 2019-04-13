@@ -39,6 +39,11 @@ private const val DEFAULT_REPO_ENV: String = "REVERSION_DEFAULT_REPO"
 val DATA_DIR: Path = Paths.get(appDirs.getUserDataDir("Reversion", null, "Wren Powell"))
 
 /**
+ * A pattern representing the path of the file that errors are logged to.
+ */
+val LOG_FILE_PATTERN: String = DATA_DIR.resolve("errors.log").toUri().path.toString()
+
+/**
  * The path of the default repository.
  */
 val DEFAULT_REPO: Path = System.getenv(DEFAULT_REPO_ENV)?.let { Paths.get(it) } ?: DATA_DIR.resolve("repository")

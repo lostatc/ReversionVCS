@@ -33,11 +33,15 @@ import io.github.lostatc.reversion.DEFAULT_REPO
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.logging.ConsoleHandler
 
 /**
  * The main command of the CLI.
  */
 class ReversionCommand : CliktCommand(name = "reversion") {
+    val debug by option("--debug", help = "Print detailed debug information when an error occurs.")
+        .flag()
+
     init {
         subcommands(
             RepoCommand(),
@@ -55,7 +59,13 @@ class ReversionCommand : CliktCommand(name = "reversion") {
         )
     }
 
-    override fun run() = Unit
+    override fun run() {
+        if (debug) {
+            logger.addHandler(ConsoleHandler())
+        }
+
+        Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler)
+    }
 }
 
 class InitCommand : CliktCommand(
