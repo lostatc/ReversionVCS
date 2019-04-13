@@ -19,10 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Blob
-import io.github.lostatc.reversion.api.Checksum
-import io.github.lostatc.reversion.api.PermissionSet
-import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.*
 import io.github.lostatc.reversion.schema.*
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -112,10 +109,8 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
             ?.let { DatabaseVersion(it, repository) }
     }
 
-    override fun listVersions(): Sequence<DatabaseVersion> = transaction {
-        entity.versions
-            .asSequence()
-            .map { DatabaseVersion(it, repository) }
+    override fun listVersions(): List<Version> = transaction {
+        entity.versions.map { DatabaseVersion(it, repository) }
     }
 
     override fun addTag(name: String, description: String, pinned: Boolean): DatabaseTag = transaction {
@@ -145,7 +140,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
             ?.let { DatabaseTag(it, repository) }
     }
 
-    override fun listTags(): Sequence<DatabaseTag> = transaction {
-        entity.tags.asSequence().map { DatabaseTag(it, repository) }
+    override fun listTags(): List<Tag> = transaction {
+        entity.tags.map { DatabaseTag(it, repository) }
     }
 }

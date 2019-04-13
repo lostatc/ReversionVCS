@@ -142,6 +142,7 @@ class InstantColumnType : ColumnType() {
     override fun notNullValueToDB(value: Any): Any = if (value is Instant) Timestamp(value.toEpochMilli()) else value
 
     override fun valueFromDB(value: Any): Any {
+        if (value is Instant) return value
         val dateTime = column.valueFromDB(value)
         return if (dateTime is DateTime) Instant.ofEpochMilli(dateTime.millis) else value
     }

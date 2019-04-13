@@ -91,9 +91,9 @@ interface Repository : Configurable {
     fun getTimeline(id: UUID): Timeline?
 
     /**
-     * Returns a sequence of timelines stored in the repository.
+     * Returns a list of timelines stored in the repository.
      */
-    fun listTimelines(): Sequence<Timeline>
+    fun listTimelines(): List<Timeline>
 
     /**
      * Verifies the integrity of the repository.

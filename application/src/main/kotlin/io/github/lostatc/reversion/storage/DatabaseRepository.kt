@@ -129,8 +129,8 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
     }
 
-    override fun listTimelines(): Sequence<DatabaseTimeline> = transaction {
-        TimelineEntity.all().asSequence().map { DatabaseTimeline(it, this@DatabaseRepository) }
+    override fun listTimelines(): List<Timeline> = transaction {
+        TimelineEntity.all().map { DatabaseTimeline(it, this@DatabaseRepository) }
     }
 
     override fun verify(): IntegrityReport {

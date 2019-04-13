@@ -26,7 +26,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
-import kotlin.streams.asSequence
+import kotlin.streams.toList
 
 /**
  * An exception that is thrown when a working directory is invalid.
@@ -57,7 +57,7 @@ data class DirectoryStatus(val modifiedFiles: Set<Path>) {
 /**
  * Filters out paths with are descendants of another path in the iterable.
  */
-private fun Iterable<Path>.flattenPaths(): Iterable<Path> = this
+private fun Iterable<Path>.flattenPaths(): List<Path> = this
     .filterNot { this.any { other -> it != other && it.startsWith(other) } }
 
 /**
@@ -74,11 +74,10 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      *
      * @return A sequence of distinct paths relative to the working directory.
      */
-    private fun walkDirectory(paths: Iterable<Path>): Sequence<Path> = paths
+    private fun walkDirectory(paths: Iterable<Path>): List<Path> = paths
         .map { path.relativize(it.toAbsolutePath()) }
         .flattenPaths()
-        .asSequence()
-        .flatMap { Files.walk(it).asSequence() }
+        .flatMap { Files.walk(it).toList() }
         .filter { Files.isRegularFile(it) }
 
     /**
@@ -89,10 +88,9 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      *
      * @return A sequence of distinct paths relative to the working directory.
      */
-    private fun walkTimeline(paths: Iterable<Path>): Sequence<Path> = paths
+    private fun walkTimeline(paths: Iterable<Path>): List<Path> = paths
         .map { path.relativize(it.toAbsolutePath()) }
         .flattenPaths()
-        .asSequence()
         .flatMap { timeline.listPaths(it) }
 
     /**
