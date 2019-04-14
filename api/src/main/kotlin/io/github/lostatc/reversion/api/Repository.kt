@@ -55,6 +55,8 @@ interface Repository : Configurable {
      *
      * @param [name] The name of the new timeline.
      * @param [policies] The rules which govern how old snapshots in this timeline are cleaned up.
+     *
+     * @throws [RecordAlreadyExistsException] A timeline with the given [name] already exists in this repository.
      */
     fun createTimeline(name: String, policies: Set<RetentionPolicy> = setOf()): Timeline
 

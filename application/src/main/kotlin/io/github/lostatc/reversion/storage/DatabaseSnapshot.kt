@@ -48,6 +48,10 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         }
 
     override fun createVersion(path: Path, workDirectory: Path): DatabaseVersion = transaction {
+        if (getVersion(path) != null) {
+            throw RecordAlreadyExistsException("A version with the path '$path' already exists in this snapshot.")
+        }
+
         // Record file metadata in the database.
         val versionEntity = VersionEntity.new {
             this.path = path
@@ -114,14 +118,18 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     }
 
     override fun addTag(name: String, description: String, pinned: Boolean): DatabaseTag = transaction {
-        val tag = TagEntity.new {
+        if (timeline.getTag(name) != null) {
+            throw RecordAlreadyExistsException("A tag with the name '$name' already exists in this timeline.")
+        }
+
+        val tagEntity = TagEntity.new {
             this.name = name
             this.description = description
             this.pinned = pinned
             this.snapshot = entity
         }
 
-        DatabaseTag(tag, repository)
+        DatabaseTag(tagEntity, repository)
     }
 
     override fun removeTag(name: String): Boolean = transaction {

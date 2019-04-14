@@ -24,13 +24,6 @@ import java.nio.file.Path
 import java.util.*
 
 /**
- * An exception which is thrown when the format of a repository isn't supported by the storage provider.
- *
- * @param [message] A message describing the exception
- */
-class UnsupportedFormatException(message: String? = null) : IllegalArgumentException(message)
-
-/**
  * An interface for service providers that provide mechanisms for storing file version history.
  */
 interface StorageProvider {
@@ -108,10 +101,10 @@ interface StorageProvider {
          * @see [StorageProvider.openRepository]
          */
         fun openRepository(path: Path): Repository {
-            val exception = UnsupportedFormatException("No installed provider can open the repository at '$path'.")
             return listProviders()
                 .find { it.checkRepository(path) }
-                ?.openRepository(path) ?: throw exception
+                ?.openRepository(path)
+                ?: throw UnsupportedFormatException("No installed provider can open the repository at '$path'.")
         }
 
         /**
@@ -123,10 +116,10 @@ interface StorageProvider {
          * @see [StorageProvider.importRepository]
          */
         fun importRepository(source: Path, target: Path): Repository {
-            val exception = UnsupportedFormatException("No installed provider can import the archive at '$source'.")
             return listProviders()
                 .find { it.checkArchive(source) }
-                ?.importRepository(source, target) ?: throw exception
+                ?.importRepository(source, target)
+                ?: throw UnsupportedFormatException("No installed provider can import the archive at '$source'.")
         }
     }
 }

@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.api
 
+import java.io.IOException
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
@@ -66,6 +67,9 @@ interface Timeline {
      *
      * @param [paths] The paths of the files relative to their working directory.
      * @param [workDirectory] The path of the working directory containing the files.
+     *
+     * @throws [NoSuchFileException] One of the files in [paths] doesn't exist.
+     * @throws [IOException] An I/O error occurred.
      */
     fun createSnapshot(paths: Iterable<Path>, workDirectory: Path): Snapshot
 
@@ -84,9 +88,9 @@ interface Timeline {
     fun getSnapshot(revision: Int): Snapshot?
 
     /**
-     * Returns a sequence of the snapshots in this timeline.
+     * Returns a list of the snapshots in this timeline.
      *
-     * @return A sequence of snapshots sorted from newest to oldest.
+     * @return A list of snapshots sorted from newest to oldest.
      */
     fun listSnapshots(): List<Snapshot>
 
@@ -105,23 +109,25 @@ interface Timeline {
     fun getTag(name: String): Tag? = listTags().find { it.name == name }
 
     /**
-     * Returns a sequence of the tags that are associated with this timeline.
+     * Returns a list of the tags that are associated with this timeline.
      */
     fun listTags(): List<Tag> = listSnapshots().flatMap { it.listTags() }
 
     /**
-     * Returns a sequence of the versions in this timeline of the file with the given [path].
+     * Returns a list of the versions in this timeline of the file with the given [path].
      *
      * @param [path] The path of the file relative to its working directory.
      *
-     * @return A sequence of versions sorted from newest to oldest.
+     * @return A list of versions sorted from newest to oldest.
      */
     fun listVersions(path: Path): List<Version> = listSnapshots().mapNotNull { it.getVersion(path) }
 
     /**
-     * Returns a sequence of all the distinct paths of files in this timeline.
+     * Returns a list of all the distinct paths of files in this timeline.
      *
-     * @param [parent] If not `null`, all returned paths will be a descendant of this path.
+     * If [parent] is not `null`, all returned paths will be a descendant of [parent].
+     *
+     * @param [parent] The path of the parent file relative to its working directory.
      */
     fun listPaths(parent: Path? = null): List<Path> = listSnapshots()
         .flatMap { it.listVersions() }
