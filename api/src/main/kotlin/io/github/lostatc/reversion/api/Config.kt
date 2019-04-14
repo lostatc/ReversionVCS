@@ -80,13 +80,6 @@ data class ConfigProperty<T>(
      */
     operator fun getValue(thisRef: Configurable, property: KProperty<*>): T = thisRef.config[this]
 
-    /**
-     * Associates the given [value] with this property in the [config][Configurable.config].
-     */
-    operator fun setValue(thisRef: Configurable, property: KProperty<*>, value: String) {
-        thisRef.config[this] = value
-    }
-
     companion object {
         /**
          * Constructs a [ConfigProperty] for a [String] value.

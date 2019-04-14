@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.api
 
 import org.apache.commons.io.input.BoundedInputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.SequenceInputStream
 import java.nio.channels.Channels
@@ -58,6 +59,8 @@ interface Blob {
          * Creates a [Blob] containing data from the file at the given [path].
          *
          * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
+         *
+         * @throws [IOException] An I/O error occurred.
          */
         fun fromFile(path: Path, algorithm: String): Blob = object : Blob {
             override fun newInputStream() = Files.newInputStream(path)
@@ -74,6 +77,8 @@ interface Blob {
          * @param [path] The path of the file.
          * @param [algorithm] The name of the algorithm to compute the checksum with.
          * @param [blockSize] The maximum number of bytes in each blob.
+         *
+         * @throws [IOException] An I/O error occurred.
          */
         fun chunkFile(path: Path, algorithm: String, blockSize: Long = Long.MAX_VALUE): List<Blob> {
             val fileSize = Files.size(path)
@@ -104,6 +109,8 @@ interface Blob {
          * Creates a [Blob] containing the concatenated data from all the given [blobs].
          *
          * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
+         *
+         * @throws [IOException] An I/O error occurred.
          */
         fun fromBlobs(blobs: Iterable<Blob>, algorithm: String): Blob = object : Blob {
             // Lazily evaluate the input streams to avoid having too many open at once.

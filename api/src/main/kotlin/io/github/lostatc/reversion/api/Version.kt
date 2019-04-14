@@ -78,6 +78,8 @@ interface Version {
      * Returns whether the given [file] has changed since this version.
      *
      * @param [file] The path of the current version of the file represented by this version.
+     *
+     * @throws [IOException] An I/O error occurred.
      */
     fun isChanged(file: Path): Boolean
 

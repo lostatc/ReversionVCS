@@ -89,15 +89,19 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     val blockSize: Long by blockSizeProperty
 
     override fun createTimeline(name: String, policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {
-        val timeline = DatabaseTimeline(
-            TimelineEntity.new {
-                this.name = name
-                this.uuid = UUID.randomUUID()
-                this.timeCreated = Instant.now()
-            },
-            this@DatabaseRepository
-        )
+        if (getTimeline(name) != null) {
+            throw RecordAlreadyExistsException("A timeline with the name '$name' already exists in this repository.")
+        }
+
+        val timelineEntity = TimelineEntity.new {
+            this.name = name
+            this.uuid = UUID.randomUUID()
+            this.timeCreated = Instant.now()
+        }
+
+        val timeline = DatabaseTimeline(timelineEntity, this@DatabaseRepository)
         timeline.retentionPolicies = policies
+
         timeline
     }
 
@@ -161,6 +165,8 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
     /**
      * Adds the given [blob] to this repository.
+     *
+     * @throws [IOException] An I/O error occurred.
      */
     fun addBlob(blob: Blob) {
         // Add the blob to the file system before adding the record to the database to avoid corruption in case this

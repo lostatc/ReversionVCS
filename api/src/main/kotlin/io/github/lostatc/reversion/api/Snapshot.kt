@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.api
 
+import java.io.IOException
 import java.nio.file.Path
 import java.time.Instant
 
@@ -62,6 +63,9 @@ interface Snapshot {
      * @param [workDirectory] The path of the file's working directory.
      *
      * @return The version that was added to the snapshot.
+     *
+     * @throws [RecordAlreadyExistsException] A version with the given [path] already exists in this snapshot.
+     * @throws [IOException] An I/O error occurred.
      */
     fun createVersion(path: Path, workDirectory: Path): Version
 
@@ -84,7 +88,7 @@ interface Snapshot {
     fun getVersion(path: Path): Version?
 
     /**
-     * Returns a sequence of the versions in this snapshot.
+     * Returns a list of the versions in this snapshot.
      */
     fun listVersions(): List<Version>
 
@@ -94,6 +98,8 @@ interface Snapshot {
      * @param [name] The name of the tag.
      * @param [description] The description of the tag.
      * @param [pinned] Whether the tag should be kept forever.
+     *
+     * @throws [RecordAlreadyExistsException] A tag with the given [name] already exists in this timeline.
      */
     fun addTag(name: String, description: String = "", pinned: Boolean = true): Tag
 
@@ -112,7 +118,7 @@ interface Snapshot {
     fun getTag(name: String): Tag?
 
     /**
-     * Returns a sequence of the tags that are associated with this snapshot.
+     * Returns a list of the tags that are associated with this snapshot.
      */
     fun listTags(): List<Tag>
 }
