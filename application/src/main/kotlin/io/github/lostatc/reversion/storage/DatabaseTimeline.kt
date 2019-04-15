@@ -54,7 +54,8 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
                 RetentionPolicy(
                     minInterval = it.minInterval,
                     timeFrame = it.timeFrame,
-                    maxVersions = it.maxVersions
+                    maxVersions = it.maxVersions,
+                    description = it.description
                 )
             }.toSet()
         }
@@ -65,6 +66,7 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
                         minInterval = it.minInterval
                         timeFrame = it.timeFrame
                         maxVersions = it.maxVersions
+                        description = it.description
                     }
                 }
 
