@@ -33,6 +33,8 @@ object RetentionPolicyTable : IntIdTable() {
     val timeFrame: Column<Duration> = duration("timeFrameSeconds")
 
     val maxVersions: Column<Int> = integer("maxVersions")
+
+    val description: Column<String> = text("description")
 }
 
 /**
@@ -56,6 +58,11 @@ class RetentionPolicyEntity(id: EntityID<Int>) : IntEntity(id) {
      * The maximum number of versions of each file to keep within each [minInterval] interval.
      */
     var maxVersions: Int by RetentionPolicyTable.maxVersions
+
+    /**
+     * The human-readable description of the policy.
+     */
+    var description: String by RetentionPolicyTable.description
 
     /**
      * The timelines that are associated with this retention policy.
