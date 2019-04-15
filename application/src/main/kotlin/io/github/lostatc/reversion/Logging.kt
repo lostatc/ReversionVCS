@@ -19,15 +19,23 @@
 
 package io.github.lostatc.reversion
 
-import io.github.lostatc.reversion.cli.ReversionCommand
+import ch.qos.logback.core.PropertyDefinerBase
+import ch.qos.logback.core.spi.PropertyDefiner
+import org.slf4j.LoggerFactory
 
 /**
- * Start the CLI.
+ * An exception handler that logs uncaught exceptions and prints them to stderr.
  */
-fun main(args: Array<String>) {
-    // Log any uncaught exceptions and print them to stderr.
-    Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
+val loggingExceptionHandler: Thread.UncaughtExceptionHandler =
+    Thread.UncaughtExceptionHandler { _, throwable ->
+        val logger = LoggerFactory.getLogger("io.github.lostatc.reversion")
+        logger.error(throwable.message, throwable)
+        System.err.println("Error: ${throwable.message}")
+    }
 
-    // Run the root command.
-    ReversionCommand().main(args)
+/**
+ * A [PropertyDefiner] for getting the path of the directory where log files are stored.
+ */
+class LogDirectoryPropertyDefiner : PropertyDefinerBase() {
+    override fun getPropertyValue(): String = DATA_DIR.toString()
 }
