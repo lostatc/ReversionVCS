@@ -173,7 +173,9 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         // operation is interrupted.
         val blobPath = getBlobPath(blob.checksum)
         Files.createDirectories(blobPath.parent)
-        blob.newInputStream().use { Files.copy(it, blobPath) }
+        if (Files.notExists(blobPath)) {
+            blob.newInputStream().use { Files.copy(it, blobPath) }
+        }
 
         transaction {
             BlobEntity.new {
