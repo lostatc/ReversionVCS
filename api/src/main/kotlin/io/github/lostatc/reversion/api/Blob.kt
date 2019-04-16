@@ -82,13 +82,12 @@ interface Blob {
          */
         fun chunkFile(path: Path, algorithm: String, blockSize: Long = Long.MAX_VALUE): List<Blob> {
             val fileSize = Files.size(path)
-            var position = 0L
             val blobs = mutableListOf<Blob>()
 
             // Iterate over each [blockSize] byte chunk of the file.
-            while (position < fileSize) {
+            for (position in 0 until fileSize step blockSize) {
                 val blob = object : Blob {
-                    override fun newInputStream(): InputStream = Files.newByteChannel(path).use {
+                    override fun newInputStream(): InputStream = Files.newByteChannel(path).let {
                         it.position(position)
                         BoundedInputStream(Channels.newInputStream(it), blockSize)
                     }
@@ -99,7 +98,6 @@ interface Blob {
                 }
 
                 blobs.add(blob)
-                position += blockSize
             }
 
             return blobs
