@@ -28,10 +28,14 @@ import org.joda.time.DateTime
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.FileTime
-import java.sql.Timestamp
+import java.sql.PreparedStatement
+import java.sql.ResultSet
 import java.time.Duration
 import java.time.Instant
 
+/**
+ * The string used to separate path segments in serialized [Path] objects.
+ */
 private const val PATH_SEPARATOR: String = "/"
 
 fun <T : Comparable<T>> Table.cascadeReference(name: String, foreign: IdTable<T>): Column<EntityID<T>> =
@@ -41,23 +45,58 @@ fun <T : Comparable<T>> Table.cascadeReference(name: String, refColumn: Column<T
     reference(name, refColumn, ReferenceOption.CASCADE, ReferenceOption.CASCADE)
 
 /**
+ * An [IColumnType] that delegates to another [IColumnType].
+ */
+interface DelegateColumnType : IColumnType {
+    /**
+     * The [IColumnType] to delegate to.
+     */
+    val column: IColumnType
+
+    override var nullable: Boolean
+        get() = column.nullable
+        set(value) {
+            column.nullable = value
+        }
+
+    override fun valueFromDB(value: Any): Any
+
+    override fun notNullValueToDB(value: Any): Any
+
+    override fun sqlType(): String = column.sqlType()
+
+    override fun valueToString(value: Any?): String = value?.let { nonNullValueToString(it) } ?: "NULL"
+
+    override fun readObject(rs: ResultSet, index: Int): Any? = column.readObject(rs, index)
+
+    override fun setParameter(stmt: PreparedStatement, index: Int, value: Any?) =
+        column.setParameter(stmt, index, value)
+}
+
+/**
  * A column type for storing [Path] objects.
  */
-class PathColumnType : VarCharColumnType(4096) {
-    override fun notNullValueToDB(value: Any): Any =
+class PathColumnType : DelegateColumnType {
+    override val column: IColumnType = VarCharColumnType(4096)
+
+    override fun notNullValueToDB(value: Any): Any = column.notNullValueToDB(
         if (value is Path) value.joinToString(separator = PATH_SEPARATOR) else value
+    )
 
-    override fun valueToString(value: Any?): String = value.toString()
+    override fun valueFromDB(value: Any): Any {
+        if (value is Path) return value
 
-    override fun valueFromDB(value: Any): Any =
-        if (value is String) {
-            val segments = value.split(PATH_SEPARATOR)
-            val firstSegment = segments.first()
-            val remainingSegments = segments.drop(1).toTypedArray()
-            Paths.get(firstSegment, *remainingSegments)
-        } else {
-            value
+        return column.valueFromDB(value).let {
+            if (it is String) {
+                val segments = it.split(PATH_SEPARATOR)
+                val firstSegment = segments.first()
+                val remainingSegments = segments.drop(1).toTypedArray()
+                Paths.get(firstSegment, *remainingSegments)
+            } else {
+                it
+            }
         }
+    }
 }
 
 /**
@@ -68,10 +107,19 @@ fun Table.path(name: String): Column<Path> = registerColumn(name, PathColumnType
 /**
  * A column type for storing [PermissionSet] objects.
  */
-class PosixPermissionsColumnType : VarCharColumnType(9) {
-    override fun notNullValueToDB(value: Any): Any = if (value is PermissionSet) value.toString() else value
+class PosixPermissionsColumnType : DelegateColumnType {
+    override val column: IColumnType = VarCharColumnType(9)
 
-    override fun valueFromDB(value: Any): Any = if (value is String) PermissionSet.fromString(value) else value
+    override fun notNullValueToDB(value: Any): Any = column.notNullValueToDB(
+        if (value is PermissionSet) value.toString() else value
+    )
+
+    override fun valueFromDB(value: Any): Any {
+        if (value is PermissionSet) return value
+        return column.valueFromDB(value).let {
+            if (it is String) PermissionSet.fromString(it) else it
+        }
+    }
 }
 
 /**
@@ -82,10 +130,19 @@ fun Table.filePermissions(name: String): Column<PermissionSet> = registerColumn(
 /**
  * A column type for storing [Checksum] objects.
  */
-class ChecksumColumnType : VarCharColumnType(128) {
-    override fun notNullValueToDB(value: Any): Any = if (value is Checksum) value.hex else value
+class ChecksumColumnType : DelegateColumnType {
+    override val column: IColumnType = VarCharColumnType(128)
 
-    override fun valueFromDB(value: Any): Any = if (value is String) Checksum.fromHex(value) else value
+    override fun notNullValueToDB(value: Any): Any = column.notNullValueToDB(
+        if (value is Checksum) value.hex else value
+    )
+
+    override fun valueFromDB(value: Any): Any {
+        if (value is Checksum) return value
+        return column.valueFromDB(value).let {
+            if (it is String) Checksum.fromHex(it) else it
+        }
+    }
 }
 
 /**
@@ -96,16 +153,18 @@ fun Table.checksum(name: String): Column<Checksum> = registerColumn(name, Checks
 /**
  * A column type for storing [FileTime] objects.
  */
-class FileTimeColumnType : ColumnType() {
-    private val column = DateColumnType(time = true)
+class FileTimeColumnType : DelegateColumnType {
+    override val column: IColumnType = DateColumnType(time = true)
 
-    override fun sqlType(): String = column.sqlType()
-
-    override fun notNullValueToDB(value: Any): Any = if (value is FileTime) Timestamp(value.toMillis()) else value
+    override fun notNullValueToDB(value: Any): Any = column.notNullValueToDB(
+        if (value is FileTime) DateTime(value.toMillis()) else value
+    )
 
     override fun valueFromDB(value: Any): Any {
-        val dateTime = column.valueFromDB(value)
-        return if (dateTime is DateTime) FileTime.fromMillis(dateTime.millis) else value
+        if (value is FileTime) return value
+        return column.valueFromDB(value).let {
+            if (it is DateTime) FileTime.fromMillis(it.millis) else it
+        }
     }
 }
 
@@ -117,12 +176,19 @@ fun Table.fileTime(name: String): Column<FileTime> = registerColumn(name, FileTi
 /**
  * A column type for storing [Duration] objects.
  */
-class DurationColumnType : ColumnType() {
-    override fun sqlType(): String = LongColumnType().sqlType()
+class DurationColumnType : DelegateColumnType {
+    override val column: IColumnType = LongColumnType()
 
-    override fun notNullValueToDB(value: Any): Any = if (value is Duration) value.seconds else value
+    override fun notNullValueToDB(value: Any): Any = column.notNullValueToDB(
+        if (value is Duration) value.toMillis() else value
+    )
 
-    override fun valueFromDB(value: Any): Any = if (value is Long) Duration.ofSeconds(value) else value
+    override fun valueFromDB(value: Any): Any {
+        if (value is Duration) return value
+        return column.valueFromDB(value).let {
+            if (it is Long) Duration.ofMillis(it) else it
+        }
+    }
 }
 
 /**
@@ -130,17 +196,21 @@ class DurationColumnType : ColumnType() {
  */
 fun Table.duration(name: String): Column<Duration> = registerColumn(name, DurationColumnType())
 
-class InstantColumnType : ColumnType() {
-    private val column = DateColumnType(time = true)
+/**
+ * A column type for storing [Instant] objects.
+ */
+class InstantColumnType : DelegateColumnType {
+    override val column: IColumnType = DateColumnType(time = true)
 
-    override fun sqlType(): String = column.sqlType()
-
-    override fun notNullValueToDB(value: Any): Any = if (value is Instant) Timestamp(value.toEpochMilli()) else value
+    override fun notNullValueToDB(value: Any): Any = column.notNullValueToDB(
+        if (value is Instant) DateTime(value.toEpochMilli()) else value
+    )
 
     override fun valueFromDB(value: Any): Any {
         if (value is Instant) return value
-        val dateTime = column.valueFromDB(value)
-        return if (dateTime is DateTime) Instant.ofEpochMilli(dateTime.millis) else value
+        return column.valueFromDB(value).let {
+            if (it is DateTime) Instant.ofEpochMilli(it.millis) else it
+        }
     }
 }
 
