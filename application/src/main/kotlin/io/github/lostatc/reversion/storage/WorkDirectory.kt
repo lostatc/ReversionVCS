@@ -34,27 +34,6 @@ import kotlin.streams.toList
 class InvalidWorkDirException(message: String) : Exception(message)
 
 /**
- * Information about a [Timeline].
- *
- * @param [repositoryPath] The path of the [Repository].
- * @param [timelineID] The ID of the [Timeline].
- */
-private data class TimelineInfo(val repositoryPath: Path, val timelineID: UUID)
-
-/**
- * The status of a working directory.
- *
- * @param [modifiedFiles] The set of relative paths of regular files which have uncommitted changes.
- */
-data class DirectoryStatus(val modifiedFiles: Set<Path>) {
-    /**
-     * Whether any files in the working directory have uncommitted changes.
-     */
-    val isModified: Boolean
-        get() = modifiedFiles.isNotEmpty()
-}
-
-/**
  * Filters out paths with are descendants of another path in the iterable.
  */
 private fun Iterable<Path>.flattenPaths(): List<Path> = this
@@ -103,7 +82,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * @param [force] If `true`, commit files that have no uncommitted changes. If `false`, don't commit them.
      */
     fun commit(paths: Iterable<Path>, force: Boolean = false): Snapshot = timeline.createSnapshot(
-        walkDirectory(paths).filter { force || isModified(it) }.asIterable(), path
+        walkDirectory(paths).filter { force || isModified(it) }, path
     )
 
     /**
@@ -156,9 +135,30 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     /**
      * Returns the status of the working directory.
      */
-    fun getStatus(): DirectoryStatus = DirectoryStatus(
+    fun getStatus(): Status = Status(
         walkDirectory(listOf(path)).filter { isModified(it) }.toSet()
     )
+
+    /**
+     * The status of the working directory.
+     *
+     * @param [modifiedFiles] The set of relative paths of regular files which have uncommitted changes.
+     */
+    data class Status(val modifiedFiles: Set<Path>) {
+        /**
+         * Whether any files in the working directory have uncommitted changes.
+         */
+        val isModified: Boolean
+            get() = modifiedFiles.isNotEmpty()
+    }
+
+    /**
+     * Information about the [WorkDirectory].
+     *
+     * @param [repositoryPath] The path of the [Repository] containing the [timeline].
+     * @param [timelineID] The ID of the [Timeline] this working directory is associated with.
+     */
+    private data class Info(val repositoryPath: Path, val timelineID: UUID)
 
     companion object {
         /**
@@ -167,9 +167,9 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         private val relativeHiddenPath: Path = Paths.get(".reversion")
 
         /**
-         * The relative path of the file containing information about the timeline.
+         * The relative path of the file containing information about the working directory.
          */
-        private val relativeTimelineInfoPath: Path = relativeHiddenPath.resolve("timeline.json")
+        private val relativeInfoPath: Path = relativeHiddenPath.resolve("info.json")
 
         /**
          * An object used for serializing data as JSON.
@@ -188,8 +188,10 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * repository.
          */
         fun open(path: Path): WorkDirectory {
-            val (repoPath, timelineID) = Files.newBufferedReader(path).use {
-                gson.fromJson(it, TimelineInfo::class.java)
+            val infoFile = path.resolve(relativeInfoPath)
+
+            val (repoPath, timelineID) = Files.newBufferedReader(infoFile).use {
+                gson.fromJson(it, Info::class.java)
             }
 
             val repository = StorageProvider.openRepository(repoPath)
@@ -208,18 +210,17 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * @throws [InvalidWorkDirException] This directory has already been initialized.
          */
         fun init(path: Path, timeline: Timeline): WorkDirectory {
-            val timelineInfo = TimelineInfo(timeline.repository.path, timeline.uuid)
-
             val hiddenDirectory = path.resolve(relativeHiddenPath)
-            val timelineInfoFile = path.resolve(relativeTimelineInfoPath)
+            val infoFile = path.resolve(relativeInfoPath)
 
             if (Files.exists(hiddenDirectory)) throw InvalidWorkDirException(
                 "This directory has already been initialized."
             )
             Files.createDirectories(hiddenDirectory)
 
-            Files.newBufferedWriter(timelineInfoFile).use {
-                gson.toJson(timelineInfo, it)
+            val info = Info(timeline.repository.path, timeline.uuid)
+            Files.newBufferedWriter(infoFile).use {
+                gson.toJson(info, it)
             }
 
             return open(path)

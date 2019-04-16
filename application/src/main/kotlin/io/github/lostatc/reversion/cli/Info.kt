@@ -104,6 +104,6 @@ private val Repository.isDefault: Boolean
  */
 val WorkDirectory.info: String
     get() = """
-        Repository: ${timeline.repository.path}  ${if (timeline.repository.isDefault) "(Default)" else ""}
+        Repository: ${timeline.repository.path} ${if (timeline.repository.isDefault) "(Default)" else ""}
         Timeline: ${timeline.name}
     """.trimIndent()

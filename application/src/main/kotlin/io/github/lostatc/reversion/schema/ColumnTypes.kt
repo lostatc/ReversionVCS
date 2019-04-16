@@ -43,11 +43,11 @@ fun <T : Comparable<T>> Table.cascadeReference(name: String, refColumn: Column<T
 /**
  * A column type for storing [Path] objects.
  */
-class PathColumnType : ColumnType() {
-    override fun sqlType(): String = VarCharColumnType(4096).sqlType()
-
+class PathColumnType : VarCharColumnType(4096) {
     override fun notNullValueToDB(value: Any): Any =
         if (value is Path) value.joinToString(separator = PATH_SEPARATOR) else value
+
+    override fun valueToString(value: Any?): String = value.toString()
 
     override fun valueFromDB(value: Any): Any =
         if (value is String) {
@@ -68,9 +68,7 @@ fun Table.path(name: String): Column<Path> = registerColumn(name, PathColumnType
 /**
  * A column type for storing [PermissionSet] objects.
  */
-class PosixPermissionsColumnType : ColumnType() {
-    override fun sqlType(): String = VarCharColumnType(9).sqlType()
-
+class PosixPermissionsColumnType : VarCharColumnType(9) {
     override fun notNullValueToDB(value: Any): Any = if (value is PermissionSet) value.toString() else value
 
     override fun valueFromDB(value: Any): Any = if (value is String) PermissionSet.fromString(value) else value
@@ -84,9 +82,7 @@ fun Table.filePermissions(name: String): Column<PermissionSet> = registerColumn(
 /**
  * A column type for storing [Checksum] objects.
  */
-class ChecksumColumnType : ColumnType() {
-    override fun sqlType(): String = VarCharColumnType(128).sqlType()
-
+class ChecksumColumnType : VarCharColumnType(128) {
     override fun notNullValueToDB(value: Any): Any = if (value is Checksum) value.hex else value
 
     override fun valueFromDB(value: Any): Any = if (value is String) Checksum.fromHex(value) else value
