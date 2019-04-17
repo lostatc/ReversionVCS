@@ -120,6 +120,14 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             .map { DatabaseSnapshot(it, repository) }
     }
 
+    override fun getLatestSnapshot(): Snapshot? = transaction {
+        entity.snapshots
+            .orderBy(SnapshotTable.revision to SortOrder.DESC)
+            .limit(1)
+            .map { DatabaseSnapshot(it, repository) }
+            .firstOrNull()
+    }
+
     override fun removeTag(name: String): Boolean = transaction {
         val tagEntity = TagEntity
             .find { (TagTable.timeline eq entity.id) and (TagTable.name eq name) }

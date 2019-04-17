@@ -80,7 +80,7 @@ class VersionListCommand(val parent: VersionCommand) : CliktCommand(
 
     val timelineName: String by argument("NAME", help = "The timeline of the snapshot.")
 
-    val revision: Int by argument(" REVISION", help = "The revision number of the snapshot.")
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot.")
         .int()
 
     override fun run() {

@@ -21,7 +21,7 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.*
 import io.github.lostatc.reversion.schema.*
-import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Files
 import java.nio.file.Path
@@ -150,5 +150,25 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
 
     override fun listTags(): List<Tag> = transaction {
         entity.tags.map { DatabaseTag(it, repository) }
+    }
+
+    override fun listCumulativeVersions(): List<Version> = transaction {
+        val innerQuery = VersionTable.innerJoin(SnapshotTable)
+            .slice(VersionTable.id, SnapshotTable.revision.max())
+            .select { SnapshotTable.revision lessEq revision }
+            .groupBy(VersionTable.path)
+            .alias("versionIDs")
+
+        val query = VersionTable.join(
+            innerQuery, JoinType.INNER,
+            onColumn = VersionTable.id,
+            otherColumn = innerQuery[VersionTable.id]
+        )
+            .slice(VersionTable.columns)
+            .selectAll()
+
+        VersionEntity
+            .wrapRows(query)
+            .map { DatabaseVersion(it, repository) }
     }
 }
