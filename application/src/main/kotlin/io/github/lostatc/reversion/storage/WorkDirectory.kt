@@ -81,9 +81,10 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * @param [paths] The paths of files to commit.
      * @param [force] If `true`, commit files that have no uncommitted changes. If `false`, don't commit them.
      */
-    fun commit(paths: Iterable<Path>, force: Boolean = false): Snapshot = timeline.createSnapshot(
-        walkDirectory(paths).filter { force || isModified(it) }, path
-    )
+    fun commit(paths: Iterable<Path>, force: Boolean = false): Snapshot =
+        timeline.createSnapshot(
+            if (force) paths else filterModified(paths), path
+        )
 
     /**
      * Updates the given [paths] in the working directory.
@@ -93,42 +94,49 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * [overwrite] is `true`. Passing the path of a directory updates all the files contained in it.
      *
      * @param [paths] The paths of files to update.
-     * @param [revision] The revision number.
+     * @param [revision] The revision number. If `null`, use the most recent revision.
      * @param [overwrite] Whether to overwrite uncommitted changes.
      */
-    fun update(paths: Iterable<Path>, revision: Int = Int.MAX_VALUE, overwrite: Boolean = false) {
-        for (relativePath in walkTimeline(paths)) {
-            val absolutePath = path.resolve(relativePath)
+    fun update(paths: Iterable<Path>, revision: Int? = null, overwrite: Boolean = false) {
+        val targetSnapshot = if (revision == null) {
+            timeline.getLatestSnapshot() ?: return
+        } else {
+            timeline.getSnapshot(revision)
+                ?: throw IllegalArgumentException("No snapshot with the revision '$revision'.")
+        }
 
-            // Iterate over the versions of this file from newest to oldest.
-            for (version in timeline.listVersions(relativePath)) {
-                // Get the version from the given [revision] or the newest version that comes before it.
-                if (version.snapshot.revision <= (revision)) {
-                    version.checkout(absolutePath, overwrite = overwrite || !isModified(path))
-                    break
-                }
-            }
+        val newestVersions = targetSnapshot.listCumulativeVersions().associateBy { it.path }
+        val modifiedFiles = filterModified(paths)
+
+        for (file in paths) {
+            val absolutePath = path.resolve(file)
+            val version = newestVersions[file] ?: continue
+            version.checkout(absolutePath, overwrite = overwrite || file !in modifiedFiles)
         }
     }
 
     /**
-     * Returns whether the given [file] has uncommitted changes.
+     * Returns only the [files] which have uncommitted changes.
      *
-     * - If the file exists and has no previous versions, this returns `true`.
-     * - If the file does not exist and has no previous versions, this returns `false`.
-     * - If the file does not exist but has previous versions, this returns `false`.
+     * - If the file does not exist, it is not returned.
+     * - If the file exists and has no previous versions, it is returned.
+     * - If the file exists and has different contents from the most recent version, it is returned.
      *
-     * @param [file] The path of a regular file relative to this working directory.
+     * @param [files] The paths of regular files relative to this working directory.
      */
-    fun isModified(file: Path): Boolean {
-        val absolutePath = path.resolve(file)
-        val newestVersion = timeline.listVersions(file).firstOrNull()
-        val fileExists = Files.exists(absolutePath)
+    fun filterModified(files: Iterable<Path>): Iterable<Path> {
+        val newestVersions = timeline
+            .getLatestSnapshot()
+            ?.listCumulativeVersions()
+            ?.associateBy { it.path }
+            ?: return files
 
-        return if (newestVersion == null) {
-            fileExists
-        } else {
-            if (fileExists) newestVersion.isChanged(file) else false
+        return files.filter {
+            val absolutePath = path.resolve(it)
+            val newestVersion = newestVersions[it]
+            val fileExists = Files.exists(absolutePath)
+
+            fileExists && (newestVersion == null || newestVersion.isChanged(it))
         }
     }
 
@@ -136,7 +144,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * Returns the status of the working directory.
      */
     fun getStatus(): Status = Status(
-        walkDirectory(listOf(path)).filter { isModified(it) }.toSet()
+        filterModified(walkDirectory(listOf(path))).toSet()
     )
 
     /**

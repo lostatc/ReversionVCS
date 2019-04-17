@@ -154,6 +154,13 @@ interface Timeline {
     fun listSnapshots(): List<Snapshot>
 
     /**
+     * Returns the newest snapshot in this timeline.
+     *
+     * @return The newest snapshot or `null` if there are no snapshots.
+     */
+    fun getLatestSnapshot(): Snapshot? = listSnapshots().firstOrNull()
+
+    /**
      * Removes the tag with the given [name] from this timeline.
      *
      * @return `true` if the tag was removed, `false` if it didn't exist.

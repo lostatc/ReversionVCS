@@ -121,4 +121,15 @@ interface Snapshot {
      * Returns a list of the tags that are associated with this snapshot.
      */
     fun listTags(): List<Tag>
+
+    /**
+     * Returns a list of the most recent version of each file as of this snapshot.
+     *
+     * This returns the newest version of each file that is not newer than this snapshot.
+     */
+    fun listCumulativeVersions(): List<Version> = timeline
+        .listSnapshots()
+        .filter { it.revision <= revision }
+        .flatMap { listVersions() }
+        .distinctBy { it.path }
 }
