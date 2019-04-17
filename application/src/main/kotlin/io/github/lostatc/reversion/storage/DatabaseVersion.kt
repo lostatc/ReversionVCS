@@ -65,5 +65,5 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
     }
 
     override fun isChanged(file: Path): Boolean =
-        Files.size(file) == size && Checksum.fromFile(file, repository.hashAlgorithm) == checksum
+        Files.size(file) != size || Checksum.fromFile(file, repository.hashAlgorithm) != checksum
 }
