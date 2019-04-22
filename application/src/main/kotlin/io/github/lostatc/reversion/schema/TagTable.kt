@@ -24,6 +24,7 @@ import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
+import java.util.UUID
 
 object TagTable : IntIdTable() {
     val name: Column<String> = varchar("name", 255)
@@ -34,7 +35,7 @@ object TagTable : IntIdTable() {
 
     val snapshot: Column<EntityID<Int>> = cascadeReference("snapshot", SnapshotTable)
 
-    val timeline: Column<EntityID<Int>> = cascadeReference("timeline", SnapshotTable.timeline)
+    val timeline: Column<EntityID<UUID>> = cascadeReference("timeline", SnapshotTable.timeline)
 
     init {
         uniqueIndex(name, timeline)
