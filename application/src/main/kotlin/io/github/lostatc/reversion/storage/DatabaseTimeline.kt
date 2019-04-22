@@ -19,13 +19,28 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.*
-import io.github.lostatc.reversion.schema.*
-import org.jetbrains.exposed.sql.*
+import io.github.lostatc.reversion.api.RetentionPolicy
+import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.Tag
+import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.schema.RetentionPolicyEntity
+import io.github.lostatc.reversion.schema.SnapshotEntity
+import io.github.lostatc.reversion.schema.SnapshotTable
+import io.github.lostatc.reversion.schema.TagEntity
+import io.github.lostatc.reversion.schema.TagTable
+import io.github.lostatc.reversion.schema.TimelineEntity
+import io.github.lostatc.reversion.schema.VersionEntity
+import io.github.lostatc.reversion.schema.VersionTable
+import org.jetbrains.exposed.sql.SizedCollection
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Path
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 
 /**
  * The revision number that snapshots start incrementing from.
@@ -43,7 +58,7 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
         }
 
     override val uuid: UUID
-        get() = transaction { entity.uuid }
+        get() = transaction { entity.id.value }
 
     override val timeCreated: Instant
         get() = transaction { entity.timeCreated }

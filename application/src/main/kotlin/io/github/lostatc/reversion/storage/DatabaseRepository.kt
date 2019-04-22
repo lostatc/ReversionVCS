@@ -21,8 +21,27 @@ package io.github.lostatc.reversion.storage
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import io.github.lostatc.reversion.api.*
-import io.github.lostatc.reversion.schema.*
+import io.github.lostatc.reversion.api.Blob
+import io.github.lostatc.reversion.api.Checksum
+import io.github.lostatc.reversion.api.Config
+import io.github.lostatc.reversion.api.ConfigProperty
+import io.github.lostatc.reversion.api.IntegrityReport
+import io.github.lostatc.reversion.api.RecordAlreadyExistsException
+import io.github.lostatc.reversion.api.Repository
+import io.github.lostatc.reversion.api.RetentionPolicy
+import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.UnsupportedFormatException
+import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.schema.BlobEntity
+import io.github.lostatc.reversion.schema.BlobTable
+import io.github.lostatc.reversion.schema.BlockTable
+import io.github.lostatc.reversion.schema.RetentionPolicyTable
+import io.github.lostatc.reversion.schema.SnapshotTable
+import io.github.lostatc.reversion.schema.TagTable
+import io.github.lostatc.reversion.schema.TimelineEntity
+import io.github.lostatc.reversion.schema.TimelineRetentionPolicyTable
+import io.github.lostatc.reversion.schema.TimelineTable
+import io.github.lostatc.reversion.schema.VersionTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -35,7 +54,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.sql.Connection
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 import kotlin.streams.asSequence
 
 /**
@@ -95,7 +114,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
         val timelineEntity = TimelineEntity.new {
             this.name = name
-            this.uuid = UUID.randomUUID()
             this.timeCreated = Instant.now()
         }
 
@@ -113,7 +131,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     }
 
     override fun removeTimeline(id: UUID): Boolean = transaction {
-        val timelineEntity = TimelineEntity.find { TimelineTable.uuid eq id }.singleOrNull()
+        val timelineEntity = TimelineEntity.findById(id)
 
         timelineEntity?.delete()
         timelineEntity != null
@@ -127,10 +145,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     }
 
     override fun getTimeline(id: UUID): DatabaseTimeline? = transaction {
-        TimelineEntity
-            .find { TimelineTable.uuid eq id }
-            .singleOrNull()
-            ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
+        TimelineEntity.findById(id)?.let { DatabaseTimeline(it, this@DatabaseRepository) }
     }
 
     override fun listTimelines(): List<Timeline> = transaction {

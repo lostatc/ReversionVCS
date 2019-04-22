@@ -26,11 +26,12 @@ import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 import java.time.Instant
+import java.util.UUID
 
 object SnapshotTable : IntIdTable() {
     val revision: Column<Int> = integer("revision")
 
-    val timeline: Column<EntityID<Int>> = cascadeReference("timeline", TimelineTable)
+    val timeline: Column<EntityID<UUID>> = cascadeReference("timeline", TimelineTable)
 
     val timeCreated: Column<Instant> = instant("timeCreated")
 
