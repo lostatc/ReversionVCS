@@ -24,8 +24,9 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAmount
 import java.time.temporal.TemporalUnit
-import java.util.*
+import java.util.UUID
 
 /**
  * A rule specifying how old versions of files are cleaned up.
@@ -89,6 +90,41 @@ data class RetentionPolicy(
             maxVersions = Int.MAX_VALUE,
             description = "Keep each version for $amount ${unit.name}."
         )
+    }
+}
+
+/**
+ * An interval of time.
+ *
+ * @param [start] The starting point in the interval
+ * @param [end] The ending point in the interval.
+ */
+private data class Interval(val start: Instant, val end: Instant) {
+    /**
+     * Returns whether the given [instant] is in the interval.
+     */
+    operator fun contains(instant: Instant): Boolean = instant.isAfter(start) && instant.isBefore(end)
+
+    /**
+     * Returns a new interval shifted forward in time by the given [amount].
+     */
+    operator fun plus(amount: TemporalAmount): Interval = Interval(start = start + amount, end = end + amount)
+
+    companion object {
+        /**
+         * Returns a list of intervals spanning from [start] to [end] with each interval having a length of [step].
+         */
+        fun step(start: Instant, end: Instant, step: TemporalAmount): List<Interval> {
+            val intervals = mutableListOf<Interval>()
+            var interval = Interval(start = start, end = start + step)
+
+            while (interval.end < end) {
+                intervals.add(interval)
+                interval += step
+            }
+
+            return intervals
+        }
     }
 }
 
@@ -211,7 +247,7 @@ interface Timeline {
      *
      * @return The number of versions that were removed.
      */
-    fun clean(paths: Iterable<Path> = listPaths().asIterable()): Int {
+    fun clean(paths: Iterable<Path> = listPaths()): Int {
         var totalDeleted = 0
 
         for (policy in retentionPolicies) {
@@ -219,27 +255,23 @@ interface Timeline {
                 // Get versions with this path sorted from newest to oldest. Skip versions that are pinned.
                 val sortedVersions = listVersions(path).filter { !it.snapshot.pinned }.toList()
 
-                val timeFrameEnd = sortedVersions.first().snapshot.timeCreated
-                val timeFrameStart = timeFrameEnd.minus(policy.timeFrame)
-                var intervalEnd = timeFrameEnd
-                var intervalStart = timeFrameEnd.minus(policy.minInterval)
+                val latestVersionCreated = sortedVersions.first().snapshot.timeCreated
+                val intervals = Interval.step(
+                    start = latestVersionCreated - policy.timeFrame,
+                    end = latestVersionCreated,
+                    step = policy.minInterval
+                )
 
                 // Iterate over each interval starting from the time the most recent version was created and going
                 // backwards.
-                while (intervalStart.isAfter(timeFrameStart)) {
-                    val versionsInThisInterval = sortedVersions.filter {
-                        val timeCreated = it.snapshot.timeCreated
-                        timeCreated.isAfter(intervalStart) && timeCreated.isBefore(intervalEnd)
-                    }
+                for (interval in intervals.reversed()) {
+                    val versionsInThisInterval = sortedVersions.filter { it.snapshot.timeCreated in interval }
 
                     // Drop the newest files to keep them and delete the rest.
                     for (versionToDelete in versionsInThisInterval.drop(policy.maxVersions)) {
                         versionToDelete.snapshot.removeVersion(versionToDelete.path)
                         totalDeleted++
                     }
-
-                    intervalStart = intervalStart.minus(policy.minInterval)
-                    intervalEnd = intervalEnd.minus(policy.minInterval)
                 }
             }
         }
