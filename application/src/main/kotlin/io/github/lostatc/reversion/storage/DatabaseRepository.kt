@@ -44,6 +44,7 @@ import io.github.lostatc.reversion.schema.TimelineTable
 import io.github.lostatc.reversion.schema.VersionTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.zeroturnaround.zip.ZipUtil
@@ -209,10 +210,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         // Remove the record from the database before removing the blob from the file system to avoid corruption in case
         // this operation is interrupted.
         transaction {
-            BlobEntity
-                .find { BlobTable.checksum eq checksum }
-                .singleOrNull()
-                ?.delete()
+            BlobTable.deleteWhere { BlobTable.checksum eq checksum }
         }
 
         return Files.deleteIfExists(getBlobPath(checksum))
