@@ -21,11 +21,16 @@ package io.github.lostatc.reversion.storage
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import io.github.lostatc.reversion.api.*
+import io.github.lostatc.reversion.api.Repository
+import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.StorageProvider
+import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.UnsupportedFormatException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.PathMatcher
 import java.nio.file.Paths
-import java.util.*
+import java.util.UUID
 import kotlin.streams.toList
 
 /**
@@ -40,6 +45,14 @@ private fun Iterable<Path>.flattenPaths(): List<Path> = this
     .filterNot { this.any { other -> it != other && it.startsWith(other) } }
 
 /**
+ * A [PathMatcher] that matches paths matched by any of the given [matchers].
+ */
+private data class MultiPathMatcher(val matchers: Iterable<PathMatcher>) : PathMatcher {
+    override fun matches(path: Path): Boolean = matchers.any { it.matches(path) }
+
+}
+
+/**
  * A working directory.
  *
  * @param [path] The absolute path of the working directory.
@@ -47,9 +60,28 @@ private fun Iterable<Path>.flattenPaths(): List<Path> = this
  */
 data class WorkDirectory(val path: Path, val timeline: Timeline) {
     /**
+     * The path of the directory containing metadata for the working directory.
+     */
+    private val hiddenPath: Path = path.resolve(relativeHiddenPath)
+
+    /**
+     * The path of the file containing ignore patterns.
+     */
+    private val ignorePath: Path = path.resolve(relativeIgnorePath)
+
+    /**
+     * The [PathMatcher] used to match paths to ignore.
+     */
+    private val ignoreMatcher: PathMatcher by lazy {
+        val patterns = Files.readAllLines(ignorePath)
+        val matchers = patterns.map { path.fileSystem.getPathMatcher(it) } + PathMatcher { it == hiddenPath }
+        MultiPathMatcher(matchers)
+    }
+
+    /**
      * Finds all the descendants of each of the given [paths] in the working directory.
      *
-     * This returns only the paths of regular files that exist in the working directory.
+     * This returns only the paths of regular files that exist in the working directory and are not being ignored.
      *
      * @return A sequence of distinct paths relative to the working directory.
      */
@@ -57,6 +89,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         .map { path.relativize(it.toAbsolutePath()) }
         .flattenPaths()
         .flatMap { Files.walk(it).toList() }
+        .filterNot { ignoreMatcher.matches(it) }
         .filter { Files.isRegularFile(it) }
 
     /**
@@ -71,6 +104,32 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         .map { path.relativize(it.toAbsolutePath()) }
         .flattenPaths()
         .flatMap { timeline.listPaths(it) }
+        .filterNot { ignoreMatcher.matches(it) }
+
+    /**
+     * Returns only the [files] which have uncommitted changes.
+     *
+     * - If the file does not exist, it is not returned.
+     * - If the file exists and has no previous versions, it is returned.
+     * - If the file exists and has different contents from the most recent version, it is returned.
+     *
+     * @param [files] The paths of regular files relative to this working directory.
+     */
+    private fun filterModified(files: Iterable<Path>): Iterable<Path> {
+        val newestVersions = timeline
+            .getLatestSnapshot()
+            ?.listCumulativeVersions()
+            ?.associateBy { it.path }
+            ?: return files
+
+        return files.filter {
+            val absolutePath = path.resolve(it)
+            val newestVersion = newestVersions[it]
+            val fileExists = Files.exists(absolutePath)
+
+            fileExists && (newestVersion == null || newestVersion.isChanged(it))
+        }
+    }
 
     /**
      * Creates a new snapshot containing the given [paths] and returns it.
@@ -106,37 +165,12 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         }
 
         val newestVersions = targetSnapshot.listCumulativeVersions().associateBy { it.path }
-        val modifiedFiles = filterModified(paths)
+        val modifiedFiles = filterModified(paths).toSet()
 
-        for (file in paths) {
+        for (file in walkTimeline(paths)) {
             val absolutePath = path.resolve(file)
             val version = newestVersions[file] ?: continue
             version.checkout(absolutePath, overwrite = overwrite || file !in modifiedFiles)
-        }
-    }
-
-    /**
-     * Returns only the [files] which have uncommitted changes.
-     *
-     * - If the file does not exist, it is not returned.
-     * - If the file exists and has no previous versions, it is returned.
-     * - If the file exists and has different contents from the most recent version, it is returned.
-     *
-     * @param [files] The paths of regular files relative to this working directory.
-     */
-    fun filterModified(files: Iterable<Path>): Iterable<Path> {
-        val newestVersions = timeline
-            .getLatestSnapshot()
-            ?.listCumulativeVersions()
-            ?.associateBy { it.path }
-            ?: return files
-
-        return files.filter {
-            val absolutePath = path.resolve(it)
-            val newestVersion = newestVersions[it]
-            val fileExists = Files.exists(absolutePath)
-
-            fileExists && (newestVersion == null || newestVersion.isChanged(it))
         }
     }
 
@@ -170,9 +204,14 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
 
     companion object {
         /**
-         * The relative path of the hidden directory containing metadata for the working directory.
+         * The relative path of the directory containing metadata for the working directory.
          */
         private val relativeHiddenPath: Path = Paths.get(".reversion")
+
+        /**
+         * The relative path of the file containing ignore patterns.
+         */
+        private val relativeIgnorePath: Path = Paths.get(".rvignore")
 
         /**
          * The relative path of the file containing information about the working directory.
