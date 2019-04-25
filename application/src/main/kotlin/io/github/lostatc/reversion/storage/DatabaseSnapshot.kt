@@ -19,9 +19,28 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.*
-import io.github.lostatc.reversion.schema.*
-import org.jetbrains.exposed.sql.*
+import io.github.lostatc.reversion.api.Blob
+import io.github.lostatc.reversion.api.Checksum
+import io.github.lostatc.reversion.api.PermissionSet
+import io.github.lostatc.reversion.api.RecordAlreadyExistsException
+import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.Tag
+import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.schema.BlobEntity
+import io.github.lostatc.reversion.schema.BlobTable
+import io.github.lostatc.reversion.schema.BlockEntity
+import io.github.lostatc.reversion.schema.SnapshotEntity
+import io.github.lostatc.reversion.schema.SnapshotTable
+import io.github.lostatc.reversion.schema.TagEntity
+import io.github.lostatc.reversion.schema.TagTable
+import io.github.lostatc.reversion.schema.VersionEntity
+import io.github.lostatc.reversion.schema.VersionTable
+import org.jetbrains.exposed.sql.JoinType
+import org.jetbrains.exposed.sql.alias
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.max
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Files
 import java.nio.file.Path
@@ -118,8 +137,8 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     }
 
     override fun addTag(name: String, description: String, pinned: Boolean): DatabaseTag = transaction {
-        if (timeline.getTag(name) != null) {
-            throw RecordAlreadyExistsException("A tag with the name '$name' already exists in this timeline.")
+        if (getTag(name) != null) {
+            throw RecordAlreadyExistsException("A tag with the name '$name' already exists in this snapshot.")
         }
 
         val tagEntity = TagEntity.new {
@@ -134,7 +153,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
 
     override fun removeTag(name: String): Boolean = transaction {
         val tagEntity = TagEntity
-            .find { (TagTable.timeline eq entity.timeline.id) and (TagTable.name eq name) }
+            .find { (TagTable.snapshot eq entity.id) and (TagTable.name eq name) }
             .singleOrNull()
 
         tagEntity?.delete()
@@ -143,7 +162,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
 
     override fun getTag(name: String): DatabaseTag? = transaction {
         TagEntity
-            .find { (TagTable.timeline eq entity.timeline.id) and (TagTable.name eq name) }
+            .find { (TagTable.snapshot eq entity.id) and (TagTable.name eq name) }
             .singleOrNull()
             ?.let { DatabaseTag(it, repository) }
     }

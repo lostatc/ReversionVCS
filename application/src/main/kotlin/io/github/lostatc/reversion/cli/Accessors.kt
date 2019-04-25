@@ -19,7 +19,13 @@
 
 package io.github.lostatc.reversion.cli
 
-import io.github.lostatc.reversion.api.*
+import io.github.lostatc.reversion.api.Repository
+import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.StorageProvider
+import io.github.lostatc.reversion.api.Tag
+import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.UnsupportedFormatException
+import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.storage.InvalidWorkDirException
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
@@ -89,8 +95,8 @@ fun getVersion(repo: Path, timeline: String, revision: Int, path: Path): Version
  * @param [timeline] The name of the timeline.
  * @param [name] The name of the tag.
  */
-fun getTag(repo: Path, timeline: String, name: String): Tag =
-    getTimeline(repo, timeline).getTag(name) ?: throw ResourceNotFoundException("No tag named '$name'.")
+fun getTag(repo: Path, timeline: String, revision: Int, name: String): Tag =
+    getSnapshot(repo, timeline, revision).getTag(name) ?: throw ResourceNotFoundException("No tag named '$name'.")
 
 fun getWorkDirectory(path: Path): WorkDirectory = try {
     WorkDirectory.open(path)

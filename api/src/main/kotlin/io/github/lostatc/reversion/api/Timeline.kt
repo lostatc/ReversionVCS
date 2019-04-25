@@ -197,25 +197,6 @@ interface Timeline {
     fun getLatestSnapshot(): Snapshot? = listSnapshots().firstOrNull()
 
     /**
-     * Removes the tag with the given [name] from this timeline.
-     *
-     * @return `true` if the tag was removed, `false` if it didn't exist.
-     */
-    fun removeTag(name: String): Boolean = listSnapshots().any { it.removeTag(name) }
-
-    /**
-     * Returns the tag in this timeline with the given [name].
-     *
-     * @return The tag or `null` if it doesn't exist.
-     */
-    fun getTag(name: String): Tag? = listTags().find { it.name == name }
-
-    /**
-     * Returns a list of the tags that are associated with this timeline.
-     */
-    fun listTags(): List<Tag> = listSnapshots().flatMap { it.listTags() }
-
-    /**
      * Returns a list of the versions in this timeline of the file with the given [path].
      *
      * @param [path] The path of the file relative to its working directory.

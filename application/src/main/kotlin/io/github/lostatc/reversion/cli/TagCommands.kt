@@ -24,7 +24,6 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
@@ -86,11 +85,14 @@ class TagRemoveCommand(val parent: TagCommand) : CliktCommand(
 ) {
     val timelineName: String by argument("TIMELINE", help = "The timeline the tag is in.")
 
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot the tag is in.")
+        .int()
+
     val tagName: String by argument("NAME", help = "The name of the tag.")
 
     override fun run() {
-        val tag = getTag(parent.repoPath, timelineName, tagName)
-        tag.timeline.removeTag(tagName)
+        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
+        snapshot.removeTag(tagName)
     }
 }
 
@@ -114,10 +116,13 @@ class TagModifyCommand(val parent: TagCommand) : CliktCommand(
 
     val timelineName: String by argument("TIMELINE", help = "The timeline the tag is in.")
 
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot the tag is in.")
+        .int()
+
     val tagName: String by argument("NAME", help = "The name of the tag.")
 
     override fun run() {
-        val tag = getTag(parent.repoPath, timelineName, tagName)
+        val tag = getTag(parent.repoPath, timelineName, revision, tagName)
 
         newName?.let { tag.name = it }
         description?.let { tag.description = it }
@@ -131,21 +136,14 @@ class TagListCommand(val parent: TagCommand) : CliktCommand(
     List the tags in a timeline.
 """
 ) {
-    val revisions: List<Int> by option(
-        "-r", "--revision",
-        help = "Only list tags on the snapshot with this revision number. This can be specified multiple times."
-    )
-        .int()
-        .multiple()
-
     val timelineName: String by argument("TIMELINE", help = "The timeline to list tags from.")
 
-    override fun run() {
-        val timeline = getTimeline(parent.repoPath, timelineName)
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot to list tags from.")
+        .int()
 
-        val tags = timeline.listTags().filter {
-            if (revisions.isEmpty()) true else it.snapshot.revision in revisions
-        }
+    override fun run() {
+        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
+        val tags = snapshot.listTags()
 
         echo(tags.joinToString(separator = "\n\n") { it.info })
     }
@@ -158,10 +156,13 @@ class TagInfoCommand(val parent: TagCommand) : CliktCommand(
 ) {
     val timelineName: String by argument("TIMELINE", help = "The timeline the tag is in.")
 
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot the tag is in.")
+        .int()
+
     val tagName: String by argument("NAME", help = "The name of the tag.")
 
     override fun run() {
-        val tag = getTag(parent.repoPath, timelineName, tagName)
+        val tag = getTag(parent.repoPath, timelineName, revision, tagName)
         echo(tag.info)
     }
 }

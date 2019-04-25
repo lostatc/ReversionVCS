@@ -99,7 +99,7 @@ interface Snapshot {
      * @param [description] The description of the tag.
      * @param [pinned] Whether the tag should be kept forever.
      *
-     * @throws [RecordAlreadyExistsException] A tag with the given [name] already exists in this timeline.
+     * @throws [RecordAlreadyExistsException] A tag with the given [name] already exists in this snapshot.
      */
     fun addTag(name: String, description: String = "", pinned: Boolean = true): Tag
 

@@ -58,10 +58,5 @@ class TimelineEntity(id: EntityID<UUID>) : UUIDEntity(id) {
      */
     val snapshots: SizedIterable<SnapshotEntity> by SnapshotEntity referrersOn SnapshotTable.timeline
 
-    /**
-     * The tags that are a part of this timeline.
-     */
-    val tags: SizedIterable<TagEntity> by TagEntity referrersOn TagTable.timeline
-
     companion object : UUIDEntityClass<TimelineEntity>(TimelineTable)
 }

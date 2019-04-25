@@ -21,14 +21,11 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.RetentionPolicy
 import io.github.lostatc.reversion.api.Snapshot
-import io.github.lostatc.reversion.api.Tag
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.RetentionPolicyEntity
 import io.github.lostatc.reversion.schema.SnapshotEntity
 import io.github.lostatc.reversion.schema.SnapshotTable
-import io.github.lostatc.reversion.schema.TagEntity
-import io.github.lostatc.reversion.schema.TagTable
 import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
@@ -143,26 +140,6 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             .firstOrNull()
     }
 
-    override fun removeTag(name: String): Boolean = transaction {
-        val tagEntity = TagEntity
-            .find { (TagTable.timeline eq entity.id) and (TagTable.name eq name) }
-            .singleOrNull()
-
-        tagEntity?.delete()
-        tagEntity != null
-    }
-
-    override fun getTag(name: String): DatabaseTag? = transaction {
-        TagEntity
-            .find { TagTable.name eq name }
-            .singleOrNull()
-            ?.let { DatabaseTag(it, repository) }
-    }
-
-    override fun listTags(): List<Tag> = transaction {
-        TagEntity.all().map { DatabaseTag(it, repository) }
-    }
-
     override fun listVersions(path: Path): List<Version> = transaction {
         val query = VersionTable.innerJoin(SnapshotTable)
             .slice(VersionTable.columns)
@@ -174,7 +151,6 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             .map { DatabaseVersion(it, repository) }
     }
 
-    // TODO: Optimize by storing the relationships between paths in the database.
     override fun listPaths(parent: Path?): List<Path> = transaction {
         VersionTable
             .slice(VersionTable.path)
