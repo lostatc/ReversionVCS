@@ -47,6 +47,7 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.sqlite.SQLiteConfig
 import org.zeroturnaround.zip.ZipUtil
 import java.io.IOException
 import java.nio.file.FileAlreadyExistsException
@@ -70,10 +71,24 @@ private object DatabaseFactory {
     private val databases: MutableMap<Path, Database> = mutableMapOf()
 
     /**
+     * Configure the connection.
+     */
+    private fun configure(connection: Connection) {
+        SQLiteConfig().apply {
+            enforceForeignKeys(true)
+            apply(connection)
+        }
+    }
+
+    /**
      * Connect to the database at the given [path].
      */
     fun connect(path: Path): Database = databases.getOrPut(path) {
-        val connection = Database.connect("jdbc:sqlite:${path.toUri().path}", driver = "org.sqlite.JDBC")
+        val connection = Database.connect(
+            "jdbc:sqlite:${path.toUri().path}",
+            driver = "org.sqlite.JDBC",
+            setupConnection = ::configure
+        )
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
         connection
     }
