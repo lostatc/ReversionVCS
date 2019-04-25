@@ -27,6 +27,7 @@ import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.Paths
@@ -73,7 +74,12 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * The [PathMatcher] used to match paths to ignore.
      */
     private val ignoreMatcher: PathMatcher by lazy {
-        val patterns = Files.readAllLines(ignorePath)
+        val patterns = try {
+            Files.readAllLines(ignorePath)
+        } catch (e: NoSuchFileException) {
+            emptyList<String>()
+        }
+
         val matchers = patterns.map { path.fileSystem.getPathMatcher(it) } + PathMatcher { it == hiddenPath }
         MultiPathMatcher(matchers)
     }
@@ -140,10 +146,9 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * @param [paths] The paths of files to commit.
      * @param [force] If `true`, commit files that have no uncommitted changes. If `false`, don't commit them.
      */
-    fun commit(paths: Iterable<Path>, force: Boolean = false): Snapshot =
-        timeline.createSnapshot(
-            if (force) paths else filterModified(paths), path
-        )
+    fun commit(paths: Iterable<Path>, force: Boolean = false): Snapshot = walkDirectory(paths).let {
+        timeline.createSnapshot(if (force) it else filterModified(it), path)
+    }
 
     /**
      * Updates the given [paths] in the working directory.
