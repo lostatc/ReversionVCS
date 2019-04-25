@@ -26,7 +26,7 @@ interface Tag {
     /**
      * The name of the tag.
      *
-     * This must be unique with respect to other tags in the same timeline.
+     * This must be unique with respect to other tags in the same snapshot.
      */
     var name: String
 
