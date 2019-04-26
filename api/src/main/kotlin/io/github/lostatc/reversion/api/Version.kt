@@ -72,6 +72,7 @@ interface Version {
     /**
      * Returns the contents of this file.
      */
+    // TODO: Replace with a lazy property.
     fun getData(): Blob
 
     /**

@@ -105,22 +105,17 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     }
 
     override fun removeVersion(path: Path): Boolean {
-        // Delete the version from the database before deleting the blobs from the file system to avoid corruption in
-        // case the operation is interrupted.
-        val checksums = transaction {
-            val versionEntity = VersionEntity
-                .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq path) }
-                .singleOrNull()
+        // Remove the version from the database before modifying the file system to avoid corruption in case this
+        // operation is interrupted.
+        val version = getVersion(path) ?: return false
 
-            val checksums = versionEntity?.blocks?.map { it.blob.checksum }
-            versionEntity?.delete()
-
-            checksums
-        } ?: return false
-
-        for (checksum in checksums) {
-            repository.removeBlob(checksum)
+        // Remove the version from the database.
+        transaction {
+            version.entity.delete()
         }
+
+        // Remove any blobs associated with the version which aren't referenced by any other version.
+        repository.clean()
 
         return true
     }
@@ -151,13 +146,14 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         DatabaseTag(tagEntity, repository)
     }
 
-    override fun removeTag(name: String): Boolean = transaction {
-        val tagEntity = TagEntity
-            .find { (TagTable.snapshot eq entity.id) and (TagTable.name eq name) }
-            .singleOrNull()
+    override fun removeTag(name: String): Boolean {
+        val tag = getTag(name) ?: return false
 
-        tagEntity?.delete()
-        tagEntity != null
+        transaction {
+            tag.entity.delete()
+        }
+
+        return true
     }
 
     override fun getTag(name: String): DatabaseTag? = transaction {

@@ -110,13 +110,20 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
         snapshot
     }
 
-    override fun removeSnapshot(revision: Int): Boolean = transaction {
-        val snapshotEntity = SnapshotEntity
-            .find { (SnapshotTable.timeline eq entity.id) and (SnapshotTable.revision eq revision) }
-            .singleOrNull()
+    override fun removeSnapshot(revision: Int): Boolean {
+        // Remove the snapshot from the database before modifying the file system to avoid corruption in case this
+        // operation is interrupted.
+        val snapshot = getSnapshot(revision) ?: return false
 
-        snapshotEntity?.delete()
-        snapshotEntity != null
+        // Remove the snapshot and all its versions and tags from the database.
+        transaction {
+            snapshot.entity.delete()
+        }
+
+        // Remove any blobs associated with the snapshot which aren't referenced by any other snapshot.
+        repository.clean()
+
+        return true
     }
 
     override fun getSnapshot(revision: Int): DatabaseSnapshot? = transaction {
@@ -137,7 +144,7 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             .orderBy(SnapshotTable.revision to SortOrder.DESC)
             .limit(1)
             .map { DatabaseSnapshot(it, repository) }
-            .firstOrNull()
+            .singleOrNull()
     }
 
     override fun listVersions(path: Path): List<Version> = transaction {
