@@ -51,9 +51,11 @@ interface Tag {
      * The timeline this tag is a part of.
      */
     val timeline: Timeline
+        get() = snapshot.timeline
 
     /**
      * The repository that this tag is a part og.
      */
     val repository: Repository
+        get() = timeline.repository
 }

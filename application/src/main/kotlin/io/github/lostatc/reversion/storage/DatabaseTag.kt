@@ -47,7 +47,4 @@ data class DatabaseTag(val entity: TagEntity, override val repository: DatabaseR
 
     override val snapshot: DatabaseSnapshot
         get() = transaction { DatabaseSnapshot(entity.snapshot, repository) }
-
-    override val timeline: DatabaseTimeline
-        get() = snapshot.timeline
 }

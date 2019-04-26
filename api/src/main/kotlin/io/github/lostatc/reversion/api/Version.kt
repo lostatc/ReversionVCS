@@ -63,11 +63,13 @@ interface Version {
      * The timeline that this file is a part of.
      */
     val timeline: Timeline
+        get() = snapshot.timeline
 
     /**
      * The repository that this file is a part of.
      */
     val repository: Repository
+        get() = timeline.repository
 
     /**
      * The contents of this file.
