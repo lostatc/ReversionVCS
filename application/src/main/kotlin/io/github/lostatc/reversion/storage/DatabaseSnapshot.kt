@@ -71,17 +71,17 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
             throw RecordAlreadyExistsException("A version with the path '$path' already exists in this snapshot.")
         }
 
+        val absolutePath = workDirectory.resolve(path)
+
         // Record file metadata in the database.
         val versionEntity = VersionEntity.new {
             this.path = path
             snapshot = entity
-            lastModifiedTime = Files.getLastModifiedTime(path)
-            permissions = PermissionSet.fromPath(path)
-            size = Files.size(path)
-            checksum = Checksum.fromFile(path, repository.hashAlgorithm)
+            lastModifiedTime = Files.getLastModifiedTime(absolutePath)
+            permissions = PermissionSet.fromPath(absolutePath)
+            size = Files.size(absolutePath)
+            checksum = Checksum.fromFile(absolutePath, repository.hashAlgorithm)
         }
-
-        val absolutePath = workDirectory.resolve(path)
 
         // Create a list of blobs from the file.
         val blobs = Blob.chunkFile(absolutePath, repository.hashAlgorithm, repository.blockSize)
