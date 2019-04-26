@@ -34,6 +34,7 @@ import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
+import io.github.lostatc.reversion.schema.BlockEntity
 import io.github.lostatc.reversion.schema.BlockTable
 import io.github.lostatc.reversion.schema.RetentionPolicyTable
 import io.github.lostatc.reversion.schema.SnapshotTable
@@ -45,6 +46,7 @@ import io.github.lostatc.reversion.schema.VersionTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.sqlite.SQLiteConfig
@@ -139,18 +141,36 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         timeline
     }
 
-    override fun removeTimeline(name: String): Boolean = transaction {
-        val timelineEntity = TimelineEntity.find { TimelineTable.name eq name }.singleOrNull()
+    override fun removeTimeline(name: String): Boolean {
+        // Remove the timeline from the database before modifying the file system to avoid corruption in case this
+        // operation is interrupted.
+        val timeline = getTimeline(name) ?: return false
 
-        timelineEntity?.delete()
-        timelineEntity != null
+        // Remove the timeline and all its snapshots, versions and tags from the database.
+        transaction {
+            timeline.entity.delete()
+        }
+
+        // Remove any blobs associated with the timeline which aren't referenced by any other timeline.
+        clean()
+
+        return true
     }
 
-    override fun removeTimeline(id: UUID): Boolean = transaction {
-        val timelineEntity = TimelineEntity.findById(id)
+    override fun removeTimeline(id: UUID): Boolean {
+        // Remove the timeline from the database before modifying the file system to avoid corruption in case this
+        // operation is interrupted.
+        val timeline = getTimeline(id) ?: return false
 
-        timelineEntity?.delete()
-        timelineEntity != null
+        // Remove the timeline and all its snapshots, versions and tags from the database.
+        transaction {
+            timeline.entity.delete()
+        }
+
+        // Remove any blobs associated with the timeline which aren't referenced by any other timeline.
+        clean()
+
+        return true
     }
 
     override fun getTimeline(name: String): DatabaseTimeline? = transaction {
@@ -209,9 +229,12 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         }
 
         transaction {
-            BlobEntity.new {
-                checksum = blob.checksum
-                size = Files.size(blobPath)
+            // Add the blob to the database if it doesn't already exist.
+            if (BlobTable.select { BlobTable.checksum eq blob.checksum }.empty()) {
+                BlobEntity.new {
+                    checksum = blob.checksum
+                    size = Files.size(blobPath)
+                }
             }
         }
     }
@@ -257,8 +280,9 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      * Removes any unused blobs from the repository.
      */
     fun clean() {
+        // Get the checksums of blobs which are being referenced by at least one version.
         val usedChecksums = transaction {
-            BlobEntity.all().map { it.checksum }.toSet()
+            BlockEntity.all().map { it.blob.checksum }.toSet()
         }
 
         for (checksum in listBlobs()) {
