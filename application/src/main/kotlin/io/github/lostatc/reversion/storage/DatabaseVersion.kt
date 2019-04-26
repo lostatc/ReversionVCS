@@ -53,9 +53,6 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
     override val snapshot: DatabaseSnapshot
         get() = transaction { DatabaseSnapshot(entity.snapshot, repository) }
 
-    override val timeline: DatabaseTimeline
-        get() = transaction { DatabaseTimeline(entity.snapshot.timeline, repository) }
-
     override val data: Blob by lazy {
         transaction {
             // If a blob is missing, skip over it. It is the responsibility of the caller to check for corruption.

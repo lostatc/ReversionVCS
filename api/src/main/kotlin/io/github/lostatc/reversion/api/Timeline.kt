@@ -138,7 +138,7 @@ interface Timeline {
     var name: String
 
     /**
-     * The UUID of the timeline which does not change.
+     * The UUID of the timeline.
      */
     val uuid: UUID
 

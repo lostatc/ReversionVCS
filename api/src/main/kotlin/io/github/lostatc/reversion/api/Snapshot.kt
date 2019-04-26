@@ -49,6 +49,7 @@ interface Snapshot {
      * The repository that this snapshot is a part of.
      */
     val repository: Repository
+        get() = timeline.repository
 
     /**
      * Whether this snapshot is pinned by at least one tag.
