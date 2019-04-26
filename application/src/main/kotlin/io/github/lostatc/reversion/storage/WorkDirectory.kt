@@ -92,11 +92,12 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * @return A sequence of distinct paths relative to the working directory.
      */
     private fun walkDirectory(paths: Iterable<Path>): List<Path> = paths
-        .map { path.relativize(it.toAbsolutePath()) }
+        .map { it.toAbsolutePath() }
         .flattenPaths()
         .flatMap { Files.walk(it).toList() }
         .filterNot { ignoreMatcher.matches(it) }
         .filter { Files.isRegularFile(it) }
+        .map { path.relativize(it) }
 
     /**
      * Finds all the descendants of each of the given [paths] in the timeline.
