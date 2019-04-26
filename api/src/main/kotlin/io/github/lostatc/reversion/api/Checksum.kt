@@ -27,7 +27,6 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.security.MessageDigest
-import java.util.*
 
 /**
  * A checksum of a file.
@@ -53,7 +52,7 @@ class Checksum(private val bytes: ByteArray) {
 
     override fun equals(other: Any?): Boolean = if (other is Checksum) bytes contentEquals other.bytes else false
 
-    override fun hashCode(): Int = Objects.hash(bytes)
+    override fun hashCode(): Int = bytes.contentHashCode()
 
     override fun toString(): String = hex
 
