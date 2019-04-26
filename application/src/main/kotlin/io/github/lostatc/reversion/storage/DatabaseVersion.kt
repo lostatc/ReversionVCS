@@ -56,12 +56,14 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
     override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.snapshot.timeline, repository) }
 
-    override fun getData(): Blob = transaction {
-        // If a blob is missing, skip over it. It is the responsibility of the caller to check for corruption.
-        entity.blocks
-            .orderBy(BlockTable.index to SortOrder.ASC)
-            .mapNotNull { repository.getBlob(it.blob.checksum) }
-            .let { Blob.fromBlobs(it, repository.hashAlgorithm) }
+    override val data: Blob by lazy {
+        transaction {
+            // If a blob is missing, skip over it. It is the responsibility of the caller to check for corruption.
+            entity.blocks
+                .orderBy(BlockTable.index to SortOrder.ASC)
+                .mapNotNull { repository.getBlob(it.blob.checksum) }
+                .let { Blob.fromBlobs(it, repository.hashAlgorithm) }
+        }
     }
 
     override fun isChanged(file: Path): Boolean =

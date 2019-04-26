@@ -70,10 +70,12 @@ interface Version {
     val repository: Repository
 
     /**
-     * Returns the contents of this file.
+     * The contents of this file.
+     *
+     * The [checksum][Blob.checksum] of the returned [Blob] represents the actual hash of the data stored in the
+     * repository, which may be different from the expected [checksum].
      */
-    // TODO: Replace with a lazy property.
-    fun getData(): Blob
+    val data: Blob
 
     /**
      * Returns whether the given [file] has changed since this version.
@@ -89,7 +91,7 @@ interface Version {
      *
      * @return `true` if the data is valid, `false` if it is corrupt.
      */
-    fun isValid(): Boolean = getData().checksum == checksum
+    fun isValid(): Boolean = data.checksum == checksum
 
     /**
      * Writes the file represented by this object to the file system.
@@ -111,11 +113,14 @@ interface Version {
 
         // Write the file contents to a temporary file.
         val tempFile = Files.createTempFile("reversion-", "")
-        getData().newInputStream().use { Files.copy(it, tempFile) }
+        data.newInputStream().use { Files.copy(it, tempFile) }
 
         // Move the temporary file to the target to safely handle the case of an existing file.
-        val copyOptions = if (overwrite) arrayOf(StandardCopyOption.REPLACE_EXISTING) else emptyArray()
-        Files.move(tempFile, target, *copyOptions)
+        if (overwrite) {
+            Files.move(tempFile, target, StandardCopyOption.REPLACE_EXISTING)
+        } else {
+            Files.move(tempFile, target)
+        }
 
         // Set metadata.
         Files.setLastModifiedTime(target, lastModifiedTime)
