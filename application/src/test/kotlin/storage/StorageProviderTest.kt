@@ -25,8 +25,14 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Files
+import java.nio.file.Path
 
-interface StorageProviderTest : FileSystemTest {
+interface StorageProviderTest {
+    /**
+     * A temporary directory to be created before each test.
+     */
+    val tempPath: Path
+
     /**
      * The storage provider to test.
      */

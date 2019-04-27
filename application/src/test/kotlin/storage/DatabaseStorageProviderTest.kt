@@ -21,9 +21,13 @@ package storage
 
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.storage.DatabaseStorageProvider
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DatabaseStorageProviderTest : StorageProviderTest {
+    @TempDir
     override lateinit var tempPath: Path
 
     override val provider: StorageProvider = DatabaseStorageProvider()
