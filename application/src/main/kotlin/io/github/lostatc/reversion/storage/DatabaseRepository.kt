@@ -191,14 +191,18 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     override fun verify(): IntegrityReport {
         val affectedVersions = mutableSetOf<Version>()
 
-        for (blobEntity in BlobEntity.all()) {
-            val blob = getBlob(blobEntity.checksum)
+        transaction {
+            for (blobEntity in BlobEntity.all()) {
+                val blob = getBlob(blobEntity.checksum)
 
-            // Skip the blob if it is valid.
-            if (blob != null && blob.checksum == blobEntity.checksum) continue
+                // Skip the blob if it is valid.
+                if (blob != null && blob.checksum == blobEntity.checksum) continue
 
-            // The blob is either missing or corrupt. Find all versions that contain the blob.
-            affectedVersions.addAll(blobEntity.blocks.map { DatabaseVersion(it.version, this) })
+                // The blob is either missing or corrupt. Find all versions that contain the blob.
+                affectedVersions.addAll(
+                    blobEntity.blocks.map { DatabaseVersion(it.version, this@DatabaseRepository) }
+                )
+            }
         }
 
         return IntegrityReport(affectedVersions)

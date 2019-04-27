@@ -190,12 +190,12 @@ class UpdateCommand : CliktCommand(
         .flag()
 
     val paths: List<Path> by argument("PATH", help = "The paths of files to commit.")
-        .path(exists = true)
+        .path()
         .multiple(required = true)
 
     override fun run() {
         val workDirectory = getWorkDirectory(workPath)
-        workDirectory.update(paths = paths, revision = revision ?: Int.MAX_VALUE, overwrite = overwrite)
+        workDirectory.update(paths = paths, revision = revision, overwrite = overwrite)
     }
 }
 
