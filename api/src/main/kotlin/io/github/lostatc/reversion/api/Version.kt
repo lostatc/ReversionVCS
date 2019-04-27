@@ -115,9 +115,10 @@ interface Version {
 
         // Write the file contents to a temporary file.
         val tempFile = Files.createTempFile("reversion-", "")
-        data.newInputStream().use { Files.copy(it, tempFile) }
+        data.newInputStream().use { Files.copy(it, tempFile, StandardCopyOption.REPLACE_EXISTING) }
 
         // Move the temporary file to the target to safely handle the case of an existing file.
+        Files.createDirectories(target.parent)
         if (overwrite) {
             Files.move(tempFile, target, StandardCopyOption.REPLACE_EXISTING)
         } else {
