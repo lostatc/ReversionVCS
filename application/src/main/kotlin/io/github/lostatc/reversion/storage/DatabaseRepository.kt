@@ -50,8 +50,10 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.sqlite.SQLiteConfig
+import org.zeroturnaround.zip.ZipException
 import org.zeroturnaround.zip.ZipUtil
 import java.io.IOException
+import java.nio.charset.Charset
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -438,15 +440,19 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          * @throws [IOException] An I/O error occurred.
          */
         fun import(source: Path, target: Path): DatabaseRepository {
+            if (!checkArchive(source))
+                throw UnsupportedFormatException("There is no compatible archive at '$source'.")
+
             ZipUtil.unpack(source.toFile(), target.toFile())
             return open(target)
         }
 
         /**
-         * Returns whether the version file at [path] represents a compatible repository.
+         * Returns whether there is a compatible repository at [path].
          */
-        private fun checkVersionFile(path: Path): Boolean = try {
-            val version = UUID.fromString(Files.readString(path))
+        fun checkRepository(path: Path): Boolean = try {
+            val versionPath = path.resolve(relativeVersionPath)
+            val version = UUID.fromString(Files.readString(versionPath))
             version in supportedVersions
         } catch (e: IOException) {
             false
@@ -455,22 +461,16 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         }
 
         /**
-         * Returns whether there is a compatible repository at [path].
-         */
-        fun checkRepository(path: Path): Boolean = checkVersionFile(path.resolve(relativeVersionPath))
-
-        /**
          * Returns whether the file at [path] can be imported as a repository.
          */
-        fun checkArchive(path: Path): Boolean {
-            val tempFile = Files.createTempFile("reversion-", "")
-
-            try {
-                ZipUtil.unpackEntry(path.toFile(), relativeVersionPath.toString(), tempFile.toFile())
-                return checkVersionFile(tempFile)
-            } finally {
-                Files.deleteIfExists(tempFile)
-            }
+        fun checkArchive(path: Path): Boolean = try {
+            val versionBytes = ZipUtil.unpackEntry(path.toFile(), relativeVersionPath.toString())
+            val version = UUID.fromString(versionBytes.toString(Charset.defaultCharset()))
+            version in supportedVersions
+        } catch (e: ZipException) {
+            false
+        } catch (e: IllegalArgumentException) {
+            false
         }
     }
 }
