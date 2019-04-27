@@ -19,33 +19,20 @@
 
 package storage
 
-import org.junit.jupiter.api.AfterEach
+import io.github.lostatc.reversion.api.Repository
+import io.github.lostatc.reversion.storage.DatabaseStorageProvider
 import org.junit.jupiter.api.BeforeEach
-import java.nio.file.Files
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
-import kotlin.streams.asSequence
 
-/**
- * An interface for classes that need to test access to the file system.
- *
- * This interface creates a temporary directory before each test and deletes it after each test.
- */
-interface FileSystemTest {
-    /**
-     * The path of the temporary directory.
-     */
-    var tempPath: Path
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class DatabaseRepositoryTest : RepositoryTest {
+    override lateinit var repository: Repository
 
     @BeforeEach
-    fun createTempDirectory() {
-        tempPath = Files.createTempDirectory("reversion-")
-    }
-
-    @AfterEach
-    fun deleteTempDirectory() {
-        Files.walk(tempPath)
-            .asSequence()
-            .sortedDescending()
-            .forEach { Files.deleteIfExists(it) }
+    fun createRepository(@TempDir tempPath: Path) {
+        val repoPath = tempPath.resolve("repository")
+        repository = DatabaseStorageProvider().createRepository(repoPath)
     }
 }
