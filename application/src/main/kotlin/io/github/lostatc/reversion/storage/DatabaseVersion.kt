@@ -30,11 +30,12 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
+import java.util.Objects
 
 /**
  * An implementation of [Version] which is backed by a relational database.
  */
-data class DatabaseVersion(val entity: VersionEntity, override val repository: DatabaseRepository) : Version {
+class DatabaseVersion(val entity: VersionEntity, override val repository: DatabaseRepository) : Version {
     override val path: Path
         get() = transaction { entity.path }
 
@@ -65,4 +66,14 @@ data class DatabaseVersion(val entity: VersionEntity, override val repository: D
 
     override fun isChanged(file: Path): Boolean =
         Files.size(file) != size || Checksum.fromFile(file, repository.hashAlgorithm) != checksum
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatabaseVersion) return false
+        return entity.id == other.entity.id && repository == other.repository
+    }
+
+    override fun hashCode(): Int = Objects.hash(entity.id, repository)
+
+    override fun toString(): String = "Version(path=$path)"
 }

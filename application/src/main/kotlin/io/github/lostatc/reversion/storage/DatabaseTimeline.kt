@@ -37,6 +37,7 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Path
 import java.time.Instant
+import java.util.Objects
 import java.util.UUID
 
 /**
@@ -47,7 +48,7 @@ private const val STARTING_REVISION: Int = 1
 /**
  * An implementation of [Timeline] which is backed by a relational database.
  */
-data class DatabaseTimeline(val entity: TimelineEntity, override val repository: DatabaseRepository) : Timeline {
+class DatabaseTimeline(val entity: TimelineEntity, override val repository: DatabaseRepository) : Timeline {
     override var name: String
         get() = transaction { entity.name }
         set(value) {
@@ -166,4 +167,14 @@ data class DatabaseTimeline(val entity: TimelineEntity, override val repository:
             .map { it[VersionTable.path] }
             .filter { if (parent == null) true else it.startsWith(parent) }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatabaseTimeline) return false
+        return entity.id == other.entity.id && repository == other.repository
+    }
+
+    override fun hashCode(): Int = Objects.hash(entity.id, repository)
+
+    override fun toString(): String = "Timeline(name=$name)"
 }
