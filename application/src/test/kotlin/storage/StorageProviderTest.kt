@@ -39,7 +39,7 @@ interface StorageProviderTest {
     val provider: StorageProvider
 
     @Test
-    fun `cannot open incompatible repository`() {
+    fun `incompatible repository is not opened`() {
         val repoPath = tempPath.resolve("repository")
         Files.createDirectories(repoPath)
 
@@ -49,7 +49,7 @@ interface StorageProviderTest {
     }
 
     @Test
-    fun `cannot create repository that already exists`() {
+    fun `already existing repository is not created`() {
         val repoPath = tempPath.resolve("repository")
         Files.createFile(repoPath)
 
@@ -59,7 +59,7 @@ interface StorageProviderTest {
     }
 
     @Test
-    fun `cannot import incompatible archive`() {
+    fun `incompatible archive is not imported`() {
         val archivePath = tempPath.resolve("archive")
         val targetPath = tempPath.resolve("repository")
         Files.createFile(archivePath)
