@@ -83,7 +83,7 @@ class TimelineRemoveCommand(val parent: TimelineCommand) : CliktCommand(
     override fun run() {
         val timeline = getTimeline(parent.repoPath, timelineName)
 
-        if (!force && timeline.listSnapshots().any()) {
+        if (!force && timeline.snapshots.isNotEmpty()) {
             throw CliktError("Will not remove a timeline with snapshots. Use --force to override.")
         }
         timeline.repository.removeTimeline(timelineName)
@@ -112,7 +112,7 @@ class TimelineListCommand(val parent: TimelineCommand) : CliktCommand(
 ) {
     override fun run() {
         val repository = getRepository(parent.repoPath)
-        echo(repository.listTimelines().joinToString(separator = "\n\n") { it.info })
+        echo(repository.timelinesByName.values.joinToString(separator = "\n\n") { it.info })
     }
 }
 

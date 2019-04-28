@@ -110,7 +110,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     private fun walkTimeline(paths: Iterable<Path>): List<Path> = paths
         .map { path.relativize(it.toAbsolutePath()) }
         .flattenPaths()
-        .flatMap { timeline.listPaths(it) }
+        .flatMap { parent -> timeline.paths.filter { it.startsWith(parent) } }
         .filterNot { ignoreMatcher.matches(it) }
 
     /**
@@ -124,9 +124,8 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      */
     private fun filterModified(files: Iterable<Path>): Iterable<Path> {
         val newestVersions = timeline
-            .getLatestSnapshot()
-            ?.listCumulativeVersions()
-            ?.associateBy { it.path }
+            .latestSnapshot
+            ?.cumulativeVersions
             ?: return files
 
         return files.filter {
@@ -164,18 +163,17 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      */
     fun update(paths: Iterable<Path>, revision: Int? = null, overwrite: Boolean = false) {
         val targetSnapshot = if (revision == null) {
-            timeline.getLatestSnapshot() ?: return
+            timeline.latestSnapshot ?: return
         } else {
-            timeline.getSnapshot(revision)
+            timeline.snapshots[revision]
                 ?: throw IllegalArgumentException("No snapshot with the revision '$revision'.")
         }
 
-        val newestVersions = targetSnapshot.listCumulativeVersions().associateBy { it.path }
         val modifiedFiles = filterModified(paths).toSet()
 
         for (file in walkTimeline(paths)) {
             val absolutePath = path.resolve(file)
-            val version = newestVersions[file] ?: continue
+            val version = targetSnapshot.cumulativeVersions[file] ?: continue
             version.checkout(absolutePath, overwrite = overwrite || file !in modifiedFiles)
         }
     }
@@ -248,7 +246,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
             }
 
             val repository = StorageProvider.openRepository(repoPath)
-            val timeline = repository.getTimeline(timelineID) ?: throw InvalidWorkDirException(
+            val timeline = repository.timelinesById[timelineID] ?: throw InvalidWorkDirException(
                 "The timeline associated with this working directory is not in the repository."
             )
 

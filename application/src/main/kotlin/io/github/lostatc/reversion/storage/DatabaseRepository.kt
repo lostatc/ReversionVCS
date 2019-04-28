@@ -29,7 +29,6 @@ import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.RetentionPolicy
-import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.BlobEntity
@@ -102,6 +101,16 @@ private object DatabaseFactory {
  * An implementation of [Repository] which is backed by a relational database.
  */
 data class DatabaseRepository(override val path: Path, override val config: Config) : Repository {
+    override val timelinesByName: Map<String, DatabaseTimeline>
+        get() = transaction {
+            TimelineEntity.all().associate { it.name to DatabaseTimeline(it, this@DatabaseRepository) }
+        }
+
+    override val timelinesById: Map<UUID, DatabaseTimeline>
+        get() = transaction {
+            TimelineEntity.all().associate { it.uuid to DatabaseTimeline(it, this@DatabaseRepository) }
+        }
+
     /**
      * The path of the repository's database.
      */
@@ -128,12 +137,13 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     val blockSize: Long by blockSizeProperty
 
     override fun createTimeline(name: String, policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {
-        if (getTimeline(name) != null) {
+        if (name in timelinesByName) {
             throw RecordAlreadyExistsException("A timeline with the name '$name' already exists in this repository.")
         }
 
         val timelineEntity = TimelineEntity.new {
             this.name = name
+            this.uuid = UUID.randomUUID()
             this.timeCreated = Instant.now()
         }
 
@@ -146,7 +156,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     override fun removeTimeline(name: String): Boolean {
         // Remove the timeline from the database before modifying the file system to avoid corruption in case this
         // operation is interrupted.
-        val timeline = getTimeline(name) ?: return false
+        val timeline = timelinesByName[name] ?: return false
 
         // Remove the timeline and all its snapshots, versions and tags from the database.
         transaction {
@@ -162,7 +172,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     override fun removeTimeline(id: UUID): Boolean {
         // Remove the timeline from the database before modifying the file system to avoid corruption in case this
         // operation is interrupted.
-        val timeline = getTimeline(id) ?: return false
+        val timeline = timelinesById[id] ?: return false
 
         // Remove the timeline and all its snapshots, versions and tags from the database.
         transaction {
@@ -173,21 +183,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         clean()
 
         return true
-    }
-
-    override fun getTimeline(name: String): DatabaseTimeline? = transaction {
-        TimelineEntity
-            .find { TimelineTable.name eq name }
-            .singleOrNull()
-            ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
-    }
-
-    override fun getTimeline(id: UUID): DatabaseTimeline? = transaction {
-        TimelineEntity.findById(id)?.let { DatabaseTimeline(it, this@DatabaseRepository) }
-    }
-
-    override fun listTimelines(): List<Timeline> = transaction {
-        TimelineEntity.all().map { DatabaseTimeline(it, this@DatabaseRepository) }
     }
 
     override fun verify(): IntegrityReport {

@@ -86,8 +86,8 @@ class SnapshotListCommand(val parent: SnapshotCommand) : CliktCommand(
     override fun run() {
         val timeline = getTimeline(parent.repoPath, timelineName)
 
-        val snapshots = timeline.listSnapshots().filter { snapshot ->
-            if (paths.isEmpty()) true else snapshot.listVersions().any { it.path in paths }
+        val snapshots = timeline.snapshots.values.filter { snapshot ->
+            if (paths.isEmpty()) true else paths.any { it in snapshot.versions }
         }
 
         echo(snapshots.joinToString(separator = "\n\n") { it.info })

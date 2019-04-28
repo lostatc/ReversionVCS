@@ -143,7 +143,7 @@ class TagListCommand(val parent: TagCommand) : CliktCommand(
 
     override fun run() {
         val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
-        val tags = snapshot.listTags()
+        val tags = snapshot.tags.values
 
         echo(tags.joinToString(separator = "\n\n") { it.info })
     }

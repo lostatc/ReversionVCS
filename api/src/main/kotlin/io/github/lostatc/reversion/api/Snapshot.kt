@@ -41,6 +41,30 @@ interface Snapshot {
     val timeCreated: Instant
 
     /**
+     * The versions in this snapshot indexed by their [path][Version.path].
+     */
+    val versions: Map<Path, Version>
+
+    /**
+     * Returns the most recent version of each file as of this snapshot indexed by their [path][Version.path].
+     *
+     * This returns the newest version of each file that is not newer than this snapshot.
+     */
+    val cumulativeVersions: Map<Path, Version>
+        get() = timeline
+            .snapshots
+            .values
+            .sortedBy { it.revision }
+            .filter { it.revision <= revision }
+            .flatMap { versions.values }
+            .associateBy { it.path }
+
+    /**
+     * The tags in this snapshot indexed by their [name][Tag.name].
+     */
+    val tags: Map<String, Tag>
+
+    /**
      * The timeline this snapshot is a part of.
      */
     val timeline: Timeline
@@ -55,7 +79,7 @@ interface Snapshot {
      * Whether this snapshot is pinned by at least one tag.
      */
     val pinned: Boolean
-        get() = listTags().any { it.pinned }
+        get() = tags.values.any { it.pinned }
 
     /**
      * Creates a [Version] from the given file with the given [path] and adds it to this snapshot.
@@ -80,20 +104,6 @@ interface Snapshot {
     fun removeVersion(path: Path): Boolean
 
     /**
-     * Returns the version in this snapshot with the given [path].
-     *
-     * @param [path] The path of the file relative to its working directory.
-     *
-     * @return The version or `null` if it doesn't exist.
-     */
-    fun getVersion(path: Path): Version?
-
-    /**
-     * Returns a list of the versions in this snapshot.
-     */
-    fun listVersions(): List<Version>
-
-    /**
      * Adds a tag to this snapshot and returns it.
      *
      * @param [name] The name of the tag.
@@ -110,27 +120,4 @@ interface Snapshot {
      * @return `true` if the tag was removed, `false` if it didn't exist.
      */
     fun removeTag(name: String): Boolean
-
-    /**
-     * Returns the tag in this snapshot with the given [name].
-     *
-     * @return The tag or `null` if it doesn't exist.
-     */
-    fun getTag(name: String): Tag?
-
-    /**
-     * Returns a list of the tags that are associated with this snapshot.
-     */
-    fun listTags(): List<Tag>
-
-    /**
-     * Returns a list of the most recent version of each file as of this snapshot.
-     *
-     * This returns the newest version of each file that is not newer than this snapshot.
-     */
-    fun listCumulativeVersions(): List<Version> = timeline
-        .listSnapshots()
-        .filter { it.revision <= revision }
-        .flatMap { listVersions() }
-        .distinctBy { it.path }
 }

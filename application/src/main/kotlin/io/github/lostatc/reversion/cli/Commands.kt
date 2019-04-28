@@ -157,10 +157,10 @@ class CheckoutCommand : CliktCommand(
 
     override fun run() {
         val snapshot = revision?.let { getSnapshot(repoPath, timelineName, it) }
-            ?: getTimeline(repoPath, timelineName).listSnapshots().firstOrNull()
+            ?: getTimeline(repoPath, timelineName).latestSnapshot
             ?: throw CliktError("The timeline '$timelineName' has no snapshots.")
 
-        val version = snapshot.getVersion(sourcePath)
+        val version = snapshot.versions[sourcePath]
             ?: throw CliktError("No version with the path '$sourcePath'.")
 
         version.checkout(destPath)

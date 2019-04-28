@@ -85,7 +85,7 @@ class VersionListCommand(val parent: VersionCommand) : CliktCommand(
 
     override fun run() {
         val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
-        val versions = snapshot.listVersions().sortedBy { it.path }
+        val versions = snapshot.versions.values.sortedBy { it.path }
 
         if (info) {
             echo(versions.joinToString(separator = "\n\n") { it.info })

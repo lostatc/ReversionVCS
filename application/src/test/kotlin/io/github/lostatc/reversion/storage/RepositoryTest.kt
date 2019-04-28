@@ -55,16 +55,16 @@ interface RepositoryTest {
     fun `get timeline by name`() {
         val timeline = repository.createTimeline("test")
 
-        assertEquals(timeline, repository.getTimeline(timeline.name))
-        assertNull(repository.getTimeline("nonexistent"))
+        assertEquals(timeline, repository.timelinesByName[timeline.name])
+        assertNull(repository.timelinesByName["nonexistent"])
     }
 
     @Test
     fun `get timeline by ID`() {
         val timeline = repository.createTimeline("test")
 
-        assertEquals(timeline, repository.getTimeline(timeline.uuid))
-        assertNull(repository.getTimeline(UUID.randomUUID()))
+        assertEquals(timeline, repository.timelinesById[timeline.uuid])
+        assertNull(repository.timelinesById[UUID.randomUUID()])
     }
 
     @Test
@@ -73,7 +73,7 @@ interface RepositoryTest {
 
         assertFalse(repository.removeTimeline("nonexistent"))
         assertTrue(repository.removeTimeline(timeline.name))
-        assertNull(repository.getTimeline(timeline.name))
+        assertNull(repository.timelinesByName[timeline.name])
     }
 
     @Test
@@ -82,7 +82,7 @@ interface RepositoryTest {
 
         assertFalse(repository.removeTimeline(UUID.randomUUID()))
         assertTrue(repository.removeTimeline(timeline.uuid))
-        assertNull(repository.getTimeline(timeline.uuid))
+        assertNull(repository.timelinesById[timeline.uuid])
     }
 
     @Test
@@ -91,6 +91,6 @@ interface RepositoryTest {
         val second = repository.createTimeline("second")
         val third = repository.createTimeline("third")
 
-        assertEquals(setOf(first, second, third), repository.listTimelines().toSet())
+        assertEquals(setOf(first, second, third), repository.timelinesByName.values.toSet())
     }
 }

@@ -24,8 +24,6 @@ import io.github.lostatc.reversion.api.Checksum
 import io.github.lostatc.reversion.api.PermissionSet
 import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Snapshot
-import io.github.lostatc.reversion.api.Tag
-import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
 import io.github.lostatc.reversion.schema.BlockEntity
@@ -35,7 +33,6 @@ import io.github.lostatc.reversion.schema.TagEntity
 import io.github.lostatc.reversion.schema.TagTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
-import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.max
@@ -57,6 +54,37 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     override val timeCreated: Instant
         get() = transaction { entity.timeCreated }
 
+    override val versions: Map<Path, DatabaseVersion>
+        get() = transaction {
+            VersionEntity
+                .find { VersionTable.snapshot eq entity.id }
+                .associate { it.path to DatabaseVersion(it, repository) }
+        }
+
+    override val cumulativeVersions: Map<Path, DatabaseVersion>
+        get() = transaction {
+            val innerQuery = VersionTable.innerJoin(SnapshotTable)
+                .slice(VersionTable.id, SnapshotTable.revision.max())
+                .select { SnapshotTable.revision lessEq revision }
+                .groupBy(VersionTable.path)
+                .alias("versionIDs")
+
+            val query = VersionTable.innerJoin(innerQuery)
+                .slice(VersionTable.columns)
+                .selectAll()
+
+            VersionEntity
+                .wrapRows(query)
+                .associate { it.path to DatabaseVersion(it, repository) }
+        }
+
+    override val tags: Map<String, DatabaseTag>
+        get() = transaction {
+            TagEntity
+                .find { (TagTable.snapshot eq entity.id) }
+                .associate { it.name to DatabaseTag(it, repository) }
+        }
+
     override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.timeline, repository) }
 
@@ -68,7 +96,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         }
 
     override fun createVersion(path: Path, workDirectory: Path): DatabaseVersion = transaction {
-        if (getVersion(path) != null) {
+        if (path in versions) {
             throw RecordAlreadyExistsException("A version with the path '$path' already exists in this snapshot.")
         }
 
@@ -108,7 +136,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     override fun removeVersion(path: Path): Boolean {
         // Remove the version from the database before modifying the file system to avoid corruption in case this
         // operation is interrupted.
-        val version = getVersion(path) ?: return false
+        val version = versions[path] ?: return false
 
         // Remove the version from the database.
         transaction {
@@ -121,19 +149,9 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         return true
     }
 
-    override fun getVersion(path: Path): DatabaseVersion? = transaction {
-        VersionEntity
-            .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq path) }
-            .singleOrNull()
-            ?.let { DatabaseVersion(it, repository) }
-    }
-
-    override fun listVersions(): List<Version> = transaction {
-        entity.versions.map { DatabaseVersion(it, repository) }
-    }
-
     override fun addTag(name: String, description: String, pinned: Boolean): DatabaseTag = transaction {
-        if (getTag(name) != null) {
+        // if (getTag(name) != null) {
+        if (name in tags) {
             throw RecordAlreadyExistsException("A tag with the name '$name' already exists in this snapshot.")
         }
 
@@ -148,44 +166,13 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     }
 
     override fun removeTag(name: String): Boolean {
-        val tag = getTag(name) ?: return false
+        val tag = tags[name] ?: return false
 
         transaction {
             tag.entity.delete()
         }
 
         return true
-    }
-
-    override fun getTag(name: String): DatabaseTag? = transaction {
-        TagEntity
-            .find { (TagTable.snapshot eq entity.id) and (TagTable.name eq name) }
-            .singleOrNull()
-            ?.let { DatabaseTag(it, repository) }
-    }
-
-    override fun listTags(): List<Tag> = transaction {
-        entity.tags.map { DatabaseTag(it, repository) }
-    }
-
-    override fun listCumulativeVersions(): List<Version> = transaction {
-        val innerQuery = VersionTable.innerJoin(SnapshotTable)
-            .slice(VersionTable.id, SnapshotTable.revision.max())
-            .select { SnapshotTable.revision lessEq revision }
-            .groupBy(VersionTable.path)
-            .alias("versionIDs")
-
-        val query = VersionTable.join(
-            innerQuery, JoinType.INNER,
-            onColumn = VersionTable.id,
-            otherColumn = innerQuery[VersionTable.id]
-        )
-            .slice(VersionTable.columns)
-            .selectAll()
-
-        VersionEntity
-            .wrapRows(query)
-            .map { DatabaseVersion(it, repository) }
     }
 
     override fun equals(other: Any?): Boolean {
