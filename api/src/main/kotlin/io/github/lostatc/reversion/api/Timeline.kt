@@ -153,6 +153,29 @@ interface Timeline {
     var retentionPolicies: Set<RetentionPolicy>
 
     /**
+     * The snapshots in this timeline indexed by their [revision number][Snapshot.revision].
+     */
+    val snapshots: Map<Int, Snapshot>
+
+    /**
+     * The newest snapshot in this timeline.
+     *
+     * @return The newest snapshot or `null` if there are no snapshots.
+     */
+    val latestSnapshot: Snapshot?
+        get() = snapshots.values.maxBy { it.revision }
+
+    /**
+     * A set of all the paths in this timeline.
+     */
+    val paths: Set<Path>
+        get() = snapshots
+            .values
+            .flatMap { it.versions.keys }
+            .toSet()
+
+
+    /**
      * The repository that this timeline is a part of.
      */
     val repository: Repository
@@ -176,47 +199,13 @@ interface Timeline {
     fun removeSnapshot(revision: Int): Boolean
 
     /**
-     * Returns the snapshot in this timeline with the given [revision] number.
-     *
-     * @return The snapshot or `null` if it doesn't exist.
-     */
-    fun getSnapshot(revision: Int): Snapshot?
-
-    /**
-     * Returns a list of the snapshots in this timeline.
-     *
-     * @return A list of snapshots sorted from newest to oldest.
-     */
-    fun listSnapshots(): List<Snapshot>
-
-    /**
-     * Returns the newest snapshot in this timeline.
-     *
-     * @return The newest snapshot or `null` if there are no snapshots.
-     */
-    fun getLatestSnapshot(): Snapshot? = listSnapshots().firstOrNull()
-
-    /**
      * Returns a list of the versions in this timeline of the file with the given [path].
      *
      * @param [path] The path of the file relative to its working directory.
      *
      * @return A list of versions sorted from newest to oldest.
      */
-    fun listVersions(path: Path): List<Version> = listSnapshots().mapNotNull { it.getVersion(path) }
-
-    /**
-     * Returns a list of all the distinct paths of files in this timeline.
-     *
-     * If [parent] is not `null`, all returned paths will be a descendant of [parent].
-     *
-     * @param [parent] The path of the parent file relative to its working directory.
-     */
-    fun listPaths(parent: Path? = null): List<Path> = listSnapshots()
-        .flatMap { it.listVersions() }
-        .map { it.path }
-        .distinct()
-        .filter { if (parent == null) true else it.startsWith(parent) }
+    fun listVersions(path: Path): List<Version> = snapshots.values.mapNotNull { it.versions[path] }
 
     /**
      * Removes old versions of files with the given [paths].
@@ -228,7 +217,7 @@ interface Timeline {
      *
      * @return The number of versions that were removed.
      */
-    fun clean(paths: Iterable<Path> = listPaths()): Int {
+    fun clean(paths: Iterable<Path> = this.paths): Int {
         var totalDeleted = 0
 
         for (policy in retentionPolicies) {

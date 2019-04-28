@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.RetentionPolicy
-import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.RetentionPolicyEntity
@@ -56,7 +55,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
         }
 
     override val uuid: UUID
-        get() = transaction { entity.id.value }
+        get() = transaction { entity.uuid }
 
     override val timeCreated: Instant
         get() = transaction { entity.timeCreated }
@@ -87,6 +86,33 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
             }
         }
 
+    override val snapshots: Map<Int, DatabaseSnapshot>
+        get() = transaction {
+            SnapshotEntity
+                .find { SnapshotTable.timeline eq entity.id }
+                .associate { it.revision to DatabaseSnapshot(it, repository) }
+        }
+
+    override val latestSnapshot: DatabaseSnapshot?
+        get() = transaction {
+            entity.snapshots
+                .orderBy(SnapshotTable.revision to SortOrder.DESC)
+                .limit(1)
+                .map { DatabaseSnapshot(it, repository) }
+                .singleOrNull()
+        }
+
+
+    override val paths: Set<Path>
+        get() = transaction {
+            VersionTable
+                .slice(VersionTable.path)
+                .selectAll()
+                .withDistinct()
+                .map { it[VersionTable.path] }
+                .toSet()
+        }
+
     override fun createSnapshot(paths: Iterable<Path>, workDirectory: Path): DatabaseSnapshot = transaction {
         // Because this is wrapped in a transaction, the snapshot won't be committed to the database until all the
         // versions have been added to it.
@@ -114,7 +140,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
     override fun removeSnapshot(revision: Int): Boolean {
         // Remove the snapshot from the database before modifying the file system to avoid corruption in case this
         // operation is interrupted.
-        val snapshot = getSnapshot(revision) ?: return false
+        val snapshot = snapshots[revision] ?: return false
 
         // Remove the snapshot and all its versions and tags from the database.
         transaction {
@@ -127,27 +153,6 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
         return true
     }
 
-    override fun getSnapshot(revision: Int): DatabaseSnapshot? = transaction {
-        SnapshotEntity
-            .find { (SnapshotTable.timeline eq entity.id) and (SnapshotTable.revision eq revision) }
-            .singleOrNull()
-            ?.let { DatabaseSnapshot(it, repository) }
-    }
-
-    override fun listSnapshots(): List<Snapshot> = transaction {
-        entity.snapshots
-            .orderBy(SnapshotTable.revision to SortOrder.DESC)
-            .map { DatabaseSnapshot(it, repository) }
-    }
-
-    override fun getLatestSnapshot(): Snapshot? = transaction {
-        entity.snapshots
-            .orderBy(SnapshotTable.revision to SortOrder.DESC)
-            .limit(1)
-            .map { DatabaseSnapshot(it, repository) }
-            .singleOrNull()
-    }
-
     override fun listVersions(path: Path): List<Version> = transaction {
         val query = VersionTable.innerJoin(SnapshotTable)
             .slice(VersionTable.columns)
@@ -157,15 +162,6 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
         VersionEntity
             .wrapRows(query)
             .map { DatabaseVersion(it, repository) }
-    }
-
-    override fun listPaths(parent: Path?): List<Path> = transaction {
-        VersionTable
-            .slice(VersionTable.path)
-            .selectAll()
-            .withDistinct()
-            .map { it[VersionTable.path] }
-            .filter { if (parent == null) true else it.startsWith(parent) }
     }
 
     override fun equals(other: Any?): Boolean {

@@ -22,13 +22,12 @@ package io.github.lostatc.reversion.schema
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table
-import java.util.UUID
 
 /**
  * A table for storing the relationships between timelines and retention policies.
  */
 object TimelineRetentionPolicyTable : Table() {
-    val timeline: Column<EntityID<UUID>> = cascadeReference("timeline", TimelineTable).primaryKey(0)
+    val timeline: Column<EntityID<Int>> = cascadeReference("timeline", TimelineTable).primaryKey(0)
 
     val retentionPolicy: Column<EntityID<Int>> = cascadeReference("retentionPolicy", RetentionPolicyTable).primaryKey(1)
 }

@@ -21,7 +21,7 @@ package io.github.lostatc.reversion.api
 
 import java.io.IOException
 import java.nio.file.Path
-import java.util.*
+import java.util.UUID
 
 /**
  * Information about the integrity of a repository.
@@ -51,6 +51,16 @@ interface Repository : Configurable {
     override val config: Config
 
     /**
+     * The timelines in this repository indexed by their [name][Timeline.name].
+     */
+    val timelinesByName: Map<String, Timeline>
+
+    /**
+     * The timelines in this repository indexed by their [ID][Timeline.uuid].
+     */
+    val timelinesById: Map<UUID, Timeline>
+
+    /**
      * Creates a new timeline in this repository and returns it.
      *
      * @param [name] The name of the new timeline.
@@ -77,25 +87,6 @@ interface Repository : Configurable {
      * @return `true` if the timeline was deleted, `false` if it didn't exist.
      */
     fun removeTimeline(id: UUID): Boolean
-
-    /**
-     * Returns the timeline with the given [name].
-     *
-     * @return The timeline or `null` if it doesn't exist.
-     */
-    fun getTimeline(name: String): Timeline?
-
-    /**
-     * Returns the timeline with the given [id].
-     *
-     * @return The timeline or `null` if it doesn't exist.
-     */
-    fun getTimeline(id: UUID): Timeline?
-
-    /**
-     * Returns a list of timelines stored in the repository.
-     */
-    fun listTimelines(): List<Timeline>
 
     /**
      * Verifies the integrity of the repository.

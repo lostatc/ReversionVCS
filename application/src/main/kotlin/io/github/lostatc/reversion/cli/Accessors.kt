@@ -58,7 +58,7 @@ fun getRepository(path: Path): Repository = try {
  * @throws [ResourceNotFoundException] There is no timeline with the given [name].
  */
 fun getTimeline(repo: Path, name: String): Timeline =
-    getRepository(repo).getTimeline(name) ?: throw ResourceNotFoundException("No timeline named '$name'.")
+    getRepository(repo).timelinesByName[name] ?: throw ResourceNotFoundException("No timeline named '$name'.")
 
 
 /**
@@ -71,7 +71,7 @@ fun getTimeline(repo: Path, name: String): Timeline =
  * @throws [ResourceNotFoundException] There is no snapshot with the given [revision].
  */
 fun getSnapshot(repo: Path, timeline: String, revision: Int): Snapshot =
-    getTimeline(repo, timeline).getSnapshot(revision)
+    getTimeline(repo, timeline).snapshots[revision]
         ?: throw ResourceNotFoundException("No snapshot with the revision '$revision'.")
 
 /**
@@ -85,7 +85,7 @@ fun getSnapshot(repo: Path, timeline: String, revision: Int): Snapshot =
  * @throws [ResourceNotFoundException] There is no version with the given [path].
  */
 fun getVersion(repo: Path, timeline: String, revision: Int, path: Path): Version =
-    getSnapshot(repo, timeline, revision).getVersion(path)
+    getSnapshot(repo, timeline, revision).versions[path]
         ?: throw ResourceNotFoundException("No version with the path '$path'.")
 
 /**
@@ -96,7 +96,7 @@ fun getVersion(repo: Path, timeline: String, revision: Int, path: Path): Version
  * @param [name] The name of the tag.
  */
 fun getTag(repo: Path, timeline: String, revision: Int, name: String): Tag =
-    getSnapshot(repo, timeline, revision).getTag(name) ?: throw ResourceNotFoundException("No tag named '$name'.")
+    getSnapshot(repo, timeline, revision).tags[name] ?: throw ResourceNotFoundException("No tag named '$name'.")
 
 fun getWorkDirectory(path: Path): WorkDirectory = try {
     WorkDirectory.open(path)

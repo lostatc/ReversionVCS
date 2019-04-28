@@ -49,10 +49,10 @@ interface TimelineTest {
 
     @Test
     fun `created snapshot contains paths`() {
-        val paths = listOf(Paths.get("a"), Paths.get("b", "c"))
+        val paths = setOf(Paths.get("a"), Paths.get("b", "c"))
         val snapshot = timeline.createSnapshot(paths, workPath)
 
-        assertEquals(paths, snapshot.listVersions().map { it.path })
+        assertEquals(paths, snapshot.versions.keys)
     }
 
     @Test
@@ -68,8 +68,8 @@ interface TimelineTest {
     fun `get snapshot`() {
         val snapshot = timeline.createSnapshot(emptyList(), workPath)
 
-        assertEquals(snapshot, timeline.getSnapshot(snapshot.revision))
-        assertNull(timeline.getSnapshot(Int.MAX_VALUE))
+        assertEquals(snapshot, timeline.snapshots[snapshot.revision])
+        assertNull(timeline.snapshots[Int.MAX_VALUE])
     }
 
     @Test
@@ -78,7 +78,7 @@ interface TimelineTest {
 
         assertFalse(timeline.removeSnapshot(Int.MAX_VALUE))
         assertTrue(timeline.removeSnapshot(snapshot.revision))
-        assertNull(timeline.getSnapshot(snapshot.revision))
+        assertNull(timeline.snapshots[snapshot.revision])
     }
 
     @Test
@@ -87,7 +87,7 @@ interface TimelineTest {
         val second = timeline.createSnapshot(emptyList(), workPath)
         val third = timeline.createSnapshot(emptyList(), workPath)
 
-        assertEquals(listOf(third, second, first), timeline.listSnapshots())
+        assertEquals(setOf(first, second, third), timeline.snapshots.values.toSet())
     }
 
     @Test
@@ -96,7 +96,7 @@ interface TimelineTest {
         timeline.createSnapshot(emptyList(), workPath)
         val third = timeline.createSnapshot(emptyList(), workPath)
 
-        assertEquals(third, timeline.getLatestSnapshot())
+        assertEquals(third, timeline.latestSnapshot)
     }
 
     @Test
@@ -105,7 +105,7 @@ interface TimelineTest {
         timeline.createSnapshot(listOf(Paths.get("b", "c")), workPath)
         val third = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
 
-        val expectedVersions = listOf(third.getVersion(Paths.get("a")), first.getVersion(Paths.get("a")))
+        val expectedVersions = listOf(third.versions[Paths.get("a")], first.versions[Paths.get("a")])
 
         assertEquals(expectedVersions, timeline.listVersions(Paths.get("a")))
     }
@@ -118,6 +118,6 @@ interface TimelineTest {
 
         val expectedPaths = setOf(Paths.get("a"), Paths.get("b", "c"))
 
-        assertEquals(expectedPaths, timeline.listPaths().toSet())
+        assertEquals(expectedPaths, timeline.paths)
     }
 }
