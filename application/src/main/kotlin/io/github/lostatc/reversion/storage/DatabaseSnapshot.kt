@@ -45,6 +45,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
+import java.util.Objects
 
 /**
  * An implementation of [Snapshot] which is backed by a relational database.
@@ -186,4 +187,14 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
             .wrapRows(query)
             .map { DatabaseVersion(it, repository) }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatabaseSnapshot) return false
+        return entity.id == other.entity.id && repository == other.repository
+    }
+
+    override fun hashCode(): Int = Objects.hash(entity.id, repository)
+
+    override fun toString(): String = "Snapshot(revision=$revision)"
 }

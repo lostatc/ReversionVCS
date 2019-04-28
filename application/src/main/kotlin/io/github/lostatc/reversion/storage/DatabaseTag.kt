@@ -22,11 +22,12 @@ package io.github.lostatc.reversion.storage
 import io.github.lostatc.reversion.api.Tag
 import io.github.lostatc.reversion.schema.TagEntity
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.Objects
 
 /**
  * An implementation of [Tag] which is backed by a relational database.
  */
-data class DatabaseTag(val entity: TagEntity, override val repository: DatabaseRepository) : Tag {
+class DatabaseTag(val entity: TagEntity, override val repository: DatabaseRepository) : Tag {
     override var name: String
         get() = transaction { entity.name }
         set(value) {
@@ -47,4 +48,14 @@ data class DatabaseTag(val entity: TagEntity, override val repository: DatabaseR
 
     override val snapshot: DatabaseSnapshot
         get() = transaction { DatabaseSnapshot(entity.snapshot, repository) }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatabaseTag) return false
+        return entity.id == other.entity.id && repository == other.repository
+    }
+
+    override fun hashCode(): Int = Objects.hash(entity.id, repository)
+
+    override fun toString(): String = "Tag(name=$name)"
 }
