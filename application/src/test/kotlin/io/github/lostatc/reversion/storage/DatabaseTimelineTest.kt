@@ -17,18 +17,24 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package storage
+package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.storage.DatabaseStorageProvider
+import io.github.lostatc.reversion.api.Timeline
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class DatabaseStorageProviderTest : StorageProviderTest {
-    @TempDir
-    override lateinit var tempPath: Path
+class DatabaseTimelineTest : TimelineTest {
+    override lateinit var workPath: Path
 
-    override val provider: StorageProvider = DatabaseStorageProvider()
+    override lateinit var timeline: Timeline
+
+    @BeforeEach
+    fun createTimeline(@TempDir tempPath: Path) {
+        val repoPath = tempPath.resolve("repository")
+        val repository = DatabaseStorageProvider().createRepository(repoPath)
+        timeline = repository.createTimeline("test")
+    }
 }
