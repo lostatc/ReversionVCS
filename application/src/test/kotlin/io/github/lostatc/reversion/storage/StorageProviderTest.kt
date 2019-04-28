@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package storage
+package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.UnsupportedFormatException

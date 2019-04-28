@@ -17,10 +17,9 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package storage
+package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.storage.DatabaseStorageProvider
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path

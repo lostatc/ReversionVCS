@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package storage
+package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Repository
@@ -55,7 +55,7 @@ interface RepositoryTest {
     fun `get timeline by name`() {
         val timeline = repository.createTimeline("test")
 
-        assertEquals(timeline.uuid, repository.getTimeline(timeline.name)?.uuid)
+        assertEquals(timeline, repository.getTimeline(timeline.name))
         assertNull(repository.getTimeline("nonexistent"))
     }
 
@@ -63,7 +63,7 @@ interface RepositoryTest {
     fun `get timeline by ID`() {
         val timeline = repository.createTimeline("test")
 
-        assertEquals(timeline.name, repository.getTimeline(timeline.uuid)?.name)
+        assertEquals(timeline, repository.getTimeline(timeline.uuid))
         assertNull(repository.getTimeline(UUID.randomUUID()))
     }
 
@@ -87,13 +87,10 @@ interface RepositoryTest {
 
     @Test
     fun `list timelines`() {
-        repository.createTimeline("test1")
-        repository.createTimeline("test2")
-        repository.createTimeline("test3")
+        val first = repository.createTimeline("first")
+        val second = repository.createTimeline("second")
+        val third = repository.createTimeline("third")
 
-        assertEquals(
-            setOf("test1", "test2", "test3"),
-            repository.listTimelines().map { it.name }.toSet()
-        )
+        assertEquals(setOf(first, second, third), repository.listTimelines().toSet())
     }
 }
