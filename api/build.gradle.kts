@@ -12,7 +12,6 @@ dependencies {
     implementation(group = "commons-io", name = "commons-io", version = "2.6")
 
     testImplementation(group = "org.junit.jupiter", name = "junit-jupiter", version = "5.4.2")
-    testImplementation(group = "com.google.jimfs", name = "jimfs", version = "1.1")
 }
 
 tasks.withType<Test> {

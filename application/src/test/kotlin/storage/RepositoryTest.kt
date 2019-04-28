@@ -43,7 +43,7 @@ interface RepositoryTest {
     }
 
     @Test
-    fun `do not create existing timeline`() {
+    fun `already existing timeline is not created`() {
         repository.createTimeline("test")
 
         assertThrows<RecordAlreadyExistsException> {

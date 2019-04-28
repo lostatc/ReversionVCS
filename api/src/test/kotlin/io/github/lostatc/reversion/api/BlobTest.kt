@@ -19,13 +19,12 @@
 
 package io.github.lostatc.reversion.api
 
-import com.google.common.jimfs.Jimfs
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.io.InputStream
-import java.nio.file.FileSystem
 import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * Returns the data in the blob as a string.
@@ -43,16 +42,12 @@ private fun Blob.Companion.fromString(text: String): Blob = object : Blob {
 
 class BlobTest {
 
-    lateinit var fs: FileSystem
-
-    @BeforeEach
-    fun `create file system`() {
-        fs = Jimfs.newFileSystem()
-    }
+    @TempDir
+    lateinit var tempPath: Path
 
     @Test
     fun `create blob from file`() {
-        val filePath = fs.getPath("file")
+        val filePath = tempPath.resolve("file")
         Files.writeString(filePath, "abc")
         val blob = Blob.fromFile(filePath, "SHA-256")
 
@@ -66,7 +61,7 @@ class BlobTest {
 
     @Test
     fun `create blobs from file`() {
-        val filePath = fs.getPath("file")
+        val filePath = tempPath.resolve("file")
         Files.writeString(filePath, "abcdefg")
         val blobs = Blob.chunkFile(filePath, "SHA-256", 2)
 
