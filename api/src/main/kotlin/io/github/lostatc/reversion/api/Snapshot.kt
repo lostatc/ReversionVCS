@@ -46,7 +46,7 @@ interface Snapshot {
     val versions: Map<Path, Version>
 
     /**
-     * Returns the most recent version of each file as of this snapshot indexed by their [path][Version.path].
+     * The most recent version of each file as of this snapshot indexed by their [path][Version.path].
      *
      * This returns the newest version of each file that is not newer than this snapshot.
      */

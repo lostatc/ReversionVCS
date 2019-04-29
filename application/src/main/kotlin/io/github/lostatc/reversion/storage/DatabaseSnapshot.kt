@@ -33,11 +33,8 @@ import io.github.lostatc.reversion.schema.TagEntity
 import io.github.lostatc.reversion.schema.TagTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
-import org.jetbrains.exposed.sql.alias
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.max
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Files
 import java.nio.file.Path
@@ -75,18 +72,10 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
 
     override val cumulativeVersions: Map<Path, DatabaseVersion>
         get() = transaction {
-            val innerQuery = VersionTable.innerJoin(SnapshotTable)
-                .slice(VersionTable.id, SnapshotTable.revision.max())
-                .select { SnapshotTable.revision lessEq revision }
-                .groupBy(VersionTable.path)
-                .alias("versionIDs")
-
-            val query = VersionTable.innerJoin(innerQuery)
-                .slice(VersionTable.columns)
-                .selectAll()
-
-            VersionEntity
-                .wrapRows(query)
+            SnapshotEntity
+                .find { (SnapshotTable.timeline eq timeline.entity.id) and (SnapshotTable.revision lessEq revision) }
+                .orderBy(SnapshotTable.revision to SortOrder.ASC)
+                .flatMap { it.versions }
                 .associate { it.path to DatabaseVersion(it, repository) }
         }
 
@@ -116,6 +105,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         get() = transaction {
             TagEntity
                 .find { (TagTable.snapshot eq entity.id) and (TagTable.pinned eq true) }
+                .limit(1)
                 .any()
         }
 
