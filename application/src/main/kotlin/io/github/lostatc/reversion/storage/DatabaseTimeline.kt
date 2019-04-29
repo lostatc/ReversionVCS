@@ -86,12 +86,24 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
             }
         }
 
-    override val snapshots: Map<Int, DatabaseSnapshot>
-        get() = transaction {
+    override val snapshots: Map<Int, DatabaseSnapshot> = object : AbstractMap<Int, DatabaseSnapshot>() {
+        override val entries: Set<Map.Entry<Int, DatabaseSnapshot>>
+            get() = transaction {
             SnapshotEntity
                 .find { SnapshotTable.timeline eq entity.id }
-                .associate { it.revision to DatabaseSnapshot(it, repository) }
+                .map { SimpleEntry(it.revision, DatabaseSnapshot(it, repository)) }
+                .toSet()
+            }
+
+        override fun containsKey(key: Int): Boolean = get(key) != null
+
+        override fun get(key: Int): DatabaseSnapshot? = transaction {
+            SnapshotEntity
+                .find { (SnapshotTable.timeline eq entity.id) and (SnapshotTable.revision eq key) }
+                .firstOrNull()
+                ?.let { DatabaseSnapshot(it, repository) }
         }
+    }
 
     override val latestSnapshot: DatabaseSnapshot?
         get() = transaction {

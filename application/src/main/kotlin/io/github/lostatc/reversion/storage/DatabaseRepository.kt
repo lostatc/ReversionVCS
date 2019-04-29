@@ -62,6 +62,8 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.streams.asSequence
 
+data class SimpleEntry<out K, out V>(override val key: K, override val value: V) : Map.Entry<K, V>
+
 /**
  * A factory for [Database] instances.
  */
@@ -101,15 +103,43 @@ private object DatabaseFactory {
  * An implementation of [Repository] which is backed by a relational database.
  */
 data class DatabaseRepository(override val path: Path, override val config: Config) : Repository {
-    override val timelinesByName: Map<String, DatabaseTimeline>
-        get() = transaction {
-            TimelineEntity.all().associate { it.name to DatabaseTimeline(it, this@DatabaseRepository) }
+    override val timelinesByName: Map<String, DatabaseTimeline> = object : AbstractMap<String, DatabaseTimeline>() {
+        override val entries: Set<Map.Entry<String, DatabaseTimeline>>
+            get() = transaction {
+                TimelineEntity
+                    .all()
+                    .map { SimpleEntry(it.name, DatabaseTimeline(it, this@DatabaseRepository)) }
+                    .toSet()
         }
 
-    override val timelinesById: Map<UUID, DatabaseTimeline>
-        get() = transaction {
-            TimelineEntity.all().associate { it.uuid to DatabaseTimeline(it, this@DatabaseRepository) }
+        override fun containsKey(key: String): Boolean = get(key) != null
+
+        override fun get(key: String): DatabaseTimeline? = transaction {
+            TimelineEntity
+                .find { TimelineTable.name eq key }
+                .firstOrNull()
+                ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
         }
+    }
+
+    override val timelinesById: Map<UUID, DatabaseTimeline> = object : AbstractMap<UUID, DatabaseTimeline>() {
+        override val entries: Set<Map.Entry<UUID, DatabaseTimeline>>
+            get() = transaction {
+                TimelineEntity
+                    .all()
+                    .map { SimpleEntry(it.uuid, DatabaseTimeline(it, this@DatabaseRepository)) }
+                    .toSet()
+            }
+
+        override fun containsKey(key: UUID): Boolean = get(key) != null
+
+        override fun get(key: UUID): DatabaseTimeline? = transaction {
+            TimelineEntity
+                .find { TimelineTable.uuid eq key }
+                .firstOrNull()
+                ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
+        }
+    }
 
     /**
      * The path of the repository's database.

@@ -54,12 +54,24 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     override val timeCreated: Instant
         get() = transaction { entity.timeCreated }
 
-    override val versions: Map<Path, DatabaseVersion>
-        get() = transaction {
+    override val versions: Map<Path, DatabaseVersion> = object : AbstractMap<Path, DatabaseVersion>() {
+        override val entries: Set<Map.Entry<Path, DatabaseVersion>>
+            get() = transaction {
             VersionEntity
                 .find { VersionTable.snapshot eq entity.id }
-                .associate { it.path to DatabaseVersion(it, repository) }
+                .map { SimpleEntry(it.path, DatabaseVersion(it, repository)) }
+                .toSet()
+            }
+
+        override fun containsKey(key: Path): Boolean = get(key) != null
+
+        override fun get(key: Path): DatabaseVersion? = transaction {
+            VersionEntity
+                .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq key) }
+                .firstOrNull()
+                ?.let { DatabaseVersion(it, repository) }
         }
+    }
 
     override val cumulativeVersions: Map<Path, DatabaseVersion>
         get() = transaction {
@@ -78,12 +90,24 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
                 .associate { it.path to DatabaseVersion(it, repository) }
         }
 
-    override val tags: Map<String, DatabaseTag>
-        get() = transaction {
+    override val tags: Map<String, DatabaseTag> = object : AbstractMap<String, DatabaseTag>() {
+        override val entries: Set<Map.Entry<String, DatabaseTag>>
+            get() = transaction {
             TagEntity
-                .find { (TagTable.snapshot eq entity.id) }
-                .associate { it.name to DatabaseTag(it, repository) }
+                .find { TagTable.snapshot eq entity.id }
+                .map { SimpleEntry(it.name, DatabaseTag(it, repository)) }
+                .toSet()
         }
+
+        override fun containsKey(key: String): Boolean = get(key) != null
+
+        override fun get(key: String): DatabaseTag? = transaction {
+            TagEntity
+                .find { (TagTable.snapshot eq entity.id) and (TagTable.name eq key) }
+                .firstOrNull()
+                ?.let { DatabaseTag(it, repository) }
+        }
+    }
 
     override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.timeline, repository) }
