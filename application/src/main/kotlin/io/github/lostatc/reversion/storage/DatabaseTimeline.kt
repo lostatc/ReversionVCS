@@ -32,7 +32,6 @@ import org.jetbrains.exposed.sql.SizedCollection
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Path
 import java.time.Instant
@@ -117,31 +116,23 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
 
     override val paths: Set<Path>
         get() = transaction {
-            VersionTable
-                .slice(VersionTable.path)
-                .selectAll()
-                .withDistinct()
-                .map { it[VersionTable.path] }
+            entity
+                .snapshots
+                .flatMap { it.versions }
+                .map { it.path }
                 .toSet()
         }
 
     override fun createSnapshot(paths: Iterable<Path>, workDirectory: Path): DatabaseSnapshot = transaction {
-        // Because this is wrapped in a transaction, the snapshot won't be committed to the database until all the
-        // versions have been added to it.
         val snapshotEntity = SnapshotEntity.new {
-            // Set the revision to the current highest revision plus one.
-            revision = SnapshotEntity
-                .find { SnapshotTable.timeline eq entity.id }
-                .orderBy(SnapshotTable.revision to SortOrder.DESC)
-                .firstOrNull()
-                ?.revision
-                ?.let { it + 1 } ?: STARTING_REVISION
+            revision = snapshots.keys.max()?.let { it + 1 } ?: STARTING_REVISION
             timeCreated = Instant.now()
             timeline = entity
         }
 
         val snapshot = DatabaseSnapshot(snapshotEntity, repository)
 
+        // To avoid corruption, don't commit the snapshot until all versions have been added to it.
         for (path in paths) {
             snapshot.createVersion(path, workDirectory)
         }
