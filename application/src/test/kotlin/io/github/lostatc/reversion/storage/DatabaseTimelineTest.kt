@@ -19,7 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.Repository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
@@ -29,12 +29,11 @@ import java.nio.file.Path
 class DatabaseTimelineTest : TimelineTest {
     override lateinit var workPath: Path
 
-    override lateinit var timeline: Timeline
+    override lateinit var repository: Repository
 
     @BeforeEach
-    fun createTimeline(@TempDir tempPath: Path) {
+    fun createRepository(@TempDir tempPath: Path) {
         val repoPath = tempPath.resolve("repository")
-        val repository = DatabaseStorageProvider().createRepository(repoPath)
-        timeline = repository.createTimeline("test")
+        repository = DatabaseStorageProvider().createRepository(repoPath)
     }
 }
