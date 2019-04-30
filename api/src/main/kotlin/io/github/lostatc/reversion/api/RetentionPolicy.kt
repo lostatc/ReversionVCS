@@ -24,21 +24,6 @@ import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalUnit
 
 /**
- * Returns a new [Duration] truncated to the given [unit].
- *
- * This also reduces the duration to the longest duration which can be stored in a [Long] in terms of the given [unit].
- */
-private fun Duration.inTermsOf(unit: TemporalUnit): Duration {
-    val quotient = try {
-        dividedBy(unit.duration)
-    } catch (e: ArithmeticException) {
-        Long.MAX_VALUE
-    }
-
-    return unit.duration.multipliedBy(quotient)
-}
-
-/**
  * A rule specifying how old versions of files are cleaned up.
  *
  * For the first [timeFrame] after a new version of a file is created, this policy will only keep [maxVersions] versions
@@ -60,19 +45,8 @@ data class RetentionPolicy(
 
 /**
  * A factory for creating [RetentionPolicy] objects.
- *
- * This factory helps with serializing [RetentionPolicy] instances as a [Long].
- *
- * The [minInterval][RetentionPolicy.minInterval] and [timeFrame][RetentionPolicy.timeFrame] of the created
- * [RetentionPolicy] are truncated to the nearest [unit]. This allows them to remain equal after they are serialized and
- * deserialized.
- *
- * If the durations are too long to be stored in a [Long] in terms of [unit], they are shortened to the longest duration
- * which can. This prevents integer overflow when serializing long durations.
- *
- * @param [unit] The unit of time to serializing durations as.
  */
-data class RetentionPolicyFactory(val unit: TemporalUnit = ChronoUnit.MILLIS) {
+interface RetentionPolicyFactory {
     /**
      * The lower-case name of the unit.
      */
@@ -89,8 +63,8 @@ data class RetentionPolicyFactory(val unit: TemporalUnit = ChronoUnit.MILLIS) {
      */
     fun of(minInterval: Duration, timeFrame: Duration, maxVersions: Int, description: String): RetentionPolicy =
         RetentionPolicy(
-            minInterval = minInterval.inTermsOf(unit),
-            timeFrame = timeFrame.inTermsOf(unit),
+            minInterval = minInterval,
+            timeFrame = timeFrame,
             maxVersions = maxVersions,
             description = description
         )

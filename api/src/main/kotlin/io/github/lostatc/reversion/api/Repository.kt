@@ -51,6 +51,11 @@ interface Repository : Configurable {
     override val config: Config
 
     /**
+     * A factory for creating [RetentionPolicy] instances.
+     */
+    val policyFactory: RetentionPolicyFactory
+
+    /**
      * The timelines in this repository indexed by their [name][Timeline.name].
      */
     val timelinesByName: Map<String, Timeline>
