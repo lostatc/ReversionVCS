@@ -21,7 +21,6 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.api.RetentionPolicyFactory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -40,11 +39,10 @@ interface RepositoryTest {
 
     @Test
     fun `create timeline`() {
-        val policyFactory = RetentionPolicyFactory()
         val policies = setOf(
-            policyFactory.ofUnit(1, ChronoUnit.WEEKS, 7),
-            policyFactory.ofVersions(100),
-            policyFactory.ofDuration(30, ChronoUnit.DAYS)
+            repository.policyFactory.ofUnit(1, ChronoUnit.WEEKS, 7),
+            repository.policyFactory.ofVersions(100),
+            repository.policyFactory.ofDuration(30, ChronoUnit.DAYS)
         )
         val timeline = repository.createTimeline("test", policies)
 
