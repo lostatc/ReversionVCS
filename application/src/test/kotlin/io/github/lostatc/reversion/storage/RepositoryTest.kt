@@ -21,12 +21,15 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Repository
+import io.github.lostatc.reversion.api.RetentionPolicyFactory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 interface RepositoryTest {
@@ -37,9 +40,18 @@ interface RepositoryTest {
 
     @Test
     fun `create timeline`() {
-        val timeline = repository.createTimeline("test")
+        val policyFactory = RetentionPolicyFactory()
+        val policies = setOf(
+            policyFactory.ofUnit(1, ChronoUnit.WEEKS, 7),
+            policyFactory.ofVersions(100),
+            policyFactory.ofDuration(30, ChronoUnit.DAYS)
+        )
+        val timeline = repository.createTimeline("test", policies)
 
         assertEquals("test", timeline.name)
+        assertEquals(policies, timeline.retentionPolicies)
+        assertTrue(Instant.now() >= timeline.timeCreated)
+        assertTrue(timeline.snapshots.isEmpty())
     }
 
     @Test
@@ -91,6 +103,8 @@ interface RepositoryTest {
         val second = repository.createTimeline("second")
         val third = repository.createTimeline("third")
 
+        assertEquals(setOf(first.name, second.name, third.name), repository.timelinesByName.keys.toSet())
+        assertEquals(setOf(first.uuid, second.uuid, third.uuid), repository.timelinesById.keys.toSet())
         assertEquals(setOf(first, second, third), repository.timelinesByName.values.toSet())
     }
 }

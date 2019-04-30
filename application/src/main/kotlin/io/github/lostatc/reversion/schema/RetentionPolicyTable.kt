@@ -28,9 +28,9 @@ import org.jetbrains.exposed.sql.SizedIterable
 import java.time.Duration
 
 object RetentionPolicyTable : IntIdTable() {
-    val minInterval: Column<Duration> = duration("minIntervalSeconds")
+    val minInterval: Column<Duration> = duration("minIntervalMilliseconds")
 
-    val timeFrame: Column<Duration> = duration("timeFrameSeconds")
+    val timeFrame: Column<Duration> = duration("timeFrameMilliseconds")
 
     val maxVersions: Column<Int> = integer("maxVersions")
 
