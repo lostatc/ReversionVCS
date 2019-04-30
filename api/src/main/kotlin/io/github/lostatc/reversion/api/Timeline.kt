@@ -21,77 +21,9 @@ package io.github.lostatc.reversion.api
 
 import java.io.IOException
 import java.nio.file.Path
-import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAmount
-import java.time.temporal.TemporalUnit
 import java.util.UUID
-
-/**
- * A rule specifying how old versions of files are cleaned up.
- *
- * For the first [timeFrame] after a new version of a file is created, this policy will only keep [maxVersions] versions
- * of that file for every [minInterval] interval.
- *
- * Each [RetentionPolicy] has a [description] that is shown in the UI.
- *
- * @param [minInterval] The interval of time.
- * @param [timeFrame] The maximum amount of time to keep files for.
- * @param [maxVersions] The maximum number of versions to keep for each interval.
- * @param [description] A human-readable description of the policy.
- */
-data class RetentionPolicy(
-    val minInterval: Duration,
-    val timeFrame: Duration,
-    val maxVersions: Int,
-    val description: String
-) {
-    companion object {
-        /**
-         * The lower-case name of the unit.
-         */
-        private val TemporalUnit.name: String
-            get() = toString().toLowerCase()
-
-        /**
-         * Creates a retention policy based on a unit of time.
-         *
-         * @param [amount] The maximum amount of time to keep files for in terms of [unit].
-         * @param [unit] The interval of time.
-         * @param [versions] The maximum number of versions to keep for each interval.
-         */
-        fun of(amount: Long, unit: TemporalUnit, versions: Int): RetentionPolicy = RetentionPolicy(
-            minInterval = unit.duration,
-            timeFrame = Duration.of(amount, unit),
-            maxVersions = versions,
-            description = "For the first $amount ${unit.name}, keep $versions versions every 1 ${unit.name}."
-        )
-
-        /**
-         * Creates a retention policy that keeps a given number of [versions] of each file.
-         */
-        fun ofVersions(versions: Int): RetentionPolicy = RetentionPolicy(
-            minInterval = ChronoUnit.FOREVER.duration,
-            timeFrame = ChronoUnit.FOREVER.duration,
-            maxVersions = versions,
-            description = "Keep $versions versions of each file."
-        )
-
-        /**
-         * Creates a retention policy that keeps each version for a given amount of time.
-         *
-         * @param [amount] The amount of time in terms of [unit].
-         * @param [unit] The unit to measure the duration in.
-         */
-        fun ofDuration(amount: Long, unit: TemporalUnit): RetentionPolicy = RetentionPolicy(
-            minInterval = Duration.of(amount, unit),
-            timeFrame = Duration.of(amount, unit),
-            maxVersions = Int.MAX_VALUE,
-            description = "Keep each version for $amount ${unit.name}."
-        )
-    }
-}
 
 /**
  * An interval of time.
