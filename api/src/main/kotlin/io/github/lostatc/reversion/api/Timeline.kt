@@ -137,7 +137,9 @@ interface Timeline {
      *
      * @return A list of versions sorted from newest to oldest.
      */
-    fun listVersions(path: Path): List<Version> = snapshots.values.mapNotNull { it.versions[path] }
+    fun listVersions(path: Path): List<Version> = snapshots.values
+        .sortedByDescending { it.revision }
+        .mapNotNull { it.versions[path] }
 
     /**
      * Removes old versions of files with the given [paths].
