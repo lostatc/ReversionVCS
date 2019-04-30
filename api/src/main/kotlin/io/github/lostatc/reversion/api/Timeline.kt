@@ -35,7 +35,7 @@ private data class Interval(val start: Instant, val end: Instant) {
     /**
      * Returns whether the given [instant] is in the interval.
      */
-    operator fun contains(instant: Instant): Boolean = instant.isAfter(start) && instant.isBefore(end)
+    operator fun contains(instant: Instant): Boolean = instant in start..end
 
     /**
      * Returns a new interval shifted forward in time by the given [amount].
@@ -50,7 +50,7 @@ private data class Interval(val start: Instant, val end: Instant) {
             val intervals = mutableListOf<Interval>()
             var interval = Interval(start = start, end = start + step)
 
-            while (interval.end < end) {
+            while (interval.end <= end) {
                 intervals.add(interval)
                 interval += step
             }
@@ -147,6 +147,8 @@ interface Timeline {
      * The timeline's [retentionPolicies] govern which versions are removed. By default, old versions of all files are
      * removed.
      *
+     * This also removes any snapshots which do not have any versions.
+     *
      * @param [paths] The paths of the files relative to their working directory.
      *
      * @return The number of versions that were removed.
@@ -177,6 +179,13 @@ interface Timeline {
                         totalDeleted++
                     }
                 }
+            }
+        }
+
+        // Remove empty snapshots.
+        for (snapshot in snapshots.values) {
+            if (snapshot.versions.isEmpty()) {
+                removeSnapshot(snapshot.revision)
             }
         }
 
