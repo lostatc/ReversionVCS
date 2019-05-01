@@ -19,7 +19,6 @@
 
 package io.github.lostatc.reversion.api
 
-import java.io.IOException
 import java.nio.file.Path
 import java.time.Instant
 
@@ -80,20 +79,6 @@ interface Snapshot {
      */
     val pinned: Boolean
         get() = tags.values.any { it.pinned }
-
-    /**
-     * Creates a [Version] from the given file with the given [path] and adds it to this snapshot.
-     *
-     * @param [path] The path of the file relative to its working directory.
-     * @param [workDirectory] The path of the file's working directory.
-     *
-     * @return The version that was added to the snapshot.
-     *
-     * @throws [RecordAlreadyExistsException] A version with the given [path] already exists in this snapshot.
-     * @throws [NoSuchFileException] There is no file with the given [path].
-     * @throws [IOException] An I/O error occurred.
-     */
-    fun createVersion(path: Path, workDirectory: Path): Version
 
     /**
      * Removes the version with the given [path] from this snapshot.

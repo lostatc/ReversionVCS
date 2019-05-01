@@ -133,7 +133,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
         val snapshot = DatabaseSnapshot(snapshotEntity, repository)
 
         // To avoid corruption, don't commit the snapshot until all versions have been added to it.
-        for (path in paths) {
+        for (path in paths.distinct()) {
             snapshot.createVersion(path, workDirectory)
         }
 

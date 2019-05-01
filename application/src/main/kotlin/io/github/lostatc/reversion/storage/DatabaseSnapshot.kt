@@ -109,7 +109,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
                 .any()
         }
 
-    override fun createVersion(path: Path, workDirectory: Path): DatabaseVersion = transaction {
+    fun createVersion(path: Path, workDirectory: Path): DatabaseVersion = transaction {
         if (path in versions) {
             throw RecordAlreadyExistsException("A version with the path '$path' already exists in this snapshot.")
         }

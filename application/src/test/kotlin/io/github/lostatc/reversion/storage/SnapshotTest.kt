@@ -23,6 +23,7 @@ import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Timeline
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -52,8 +53,8 @@ interface SnapshotTest {
 
     @Test
     fun `get version`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath)
-        val version = snapshot.createVersion(Paths.get("a"), workPath)
+        val snapshot = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
+        val version = snapshot.versions.getValue(Paths.get("a"))
 
         assertEquals(version, snapshot.versions[version.path])
         assertNull(snapshot.versions[Paths.get("nonexistent")])
@@ -61,26 +62,21 @@ interface SnapshotTest {
 
     @Test
     fun `list versions`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath)
-        val versions = setOf(
-            snapshot.createVersion(Paths.get("a"), workPath),
-            snapshot.createVersion(Paths.get("b"), workPath),
-            snapshot.createVersion(Paths.get("c", "a"), workPath)
-        )
+        val paths = setOf(Paths.get("a"), Paths.get("b"), Paths.get("c", "a"))
+        val snapshot = timeline.createSnapshot(paths, workPath)
 
-        assertEquals(versions, snapshot.versions.values.toSet())
+        assertEquals(paths, snapshot.versions.keys)
     }
 
     @Test
     fun `list versions with multiple snapshots`() {
-        val snapshot1 = timeline.createSnapshot(emptyList(), workPath)
-        val version1 = snapshot1.createVersion(Paths.get("a"), workPath)
+        val paths = setOf(Paths.get("a"))
+        val snapshot1 = timeline.createSnapshot(paths, workPath)
+        val snapshot2 = timeline.createSnapshot(paths, workPath)
 
-        val snapshot2 = timeline.createSnapshot(emptyList(), workPath)
-        val version2 = snapshot2.createVersion(Paths.get("a"), workPath)
-
-        assertEquals(setOf(version1), snapshot1.versions.values.toSet())
-        assertEquals(setOf(version2), snapshot2.versions.values.toSet())
+        assertEquals(paths, snapshot1.versions.keys)
+        assertEquals(paths, snapshot2.versions.keys)
+        assertNotEquals(snapshot1.versions, snapshot2.versions)
     }
 
     @Test
@@ -119,28 +115,9 @@ interface SnapshotTest {
     }
 
     @Test
-    fun `creating a nonexistent version throws`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath)
-
-        assertThrows<java.nio.file.NoSuchFileException> {
-            snapshot.createVersion(Paths.get("nonexistent"), workPath)
-        }
-    }
-
-    @Test
-    fun `creating a version that already exists throws`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath)
-        snapshot.createVersion(Paths.get("a"), workPath)
-
-        assertThrows<RecordAlreadyExistsException> {
-            snapshot.createVersion(Paths.get("a"), workPath)
-        }
-    }
-
-    @Test
     fun `remove version`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath)
-        val version = snapshot.createVersion(Paths.get("a"), workPath)
+        val snapshot = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
+        val version = snapshot.versions.getValue(Paths.get("a"))
 
         assertFalse(snapshot.removeVersion(Paths.get("nonexistent")))
         assertTrue(snapshot.removeVersion(version.path))
