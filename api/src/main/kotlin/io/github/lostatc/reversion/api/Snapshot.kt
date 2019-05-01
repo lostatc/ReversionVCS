@@ -90,6 +90,7 @@ interface Snapshot {
      * @return The version that was added to the snapshot.
      *
      * @throws [RecordAlreadyExistsException] A version with the given [path] already exists in this snapshot.
+     * @throws [NoSuchFileException] There is no file with the given [path].
      * @throws [IOException] An I/O error occurred.
      */
     fun createVersion(path: Path, workDirectory: Path): Version
