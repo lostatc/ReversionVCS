@@ -117,7 +117,7 @@ interface TimelineTest {
     @Test
     fun `creating snapshot of nonexistent paths throws`() {
         val paths = setOf(Paths.get("a"), Paths.get("z"))
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline("nonexistent")
 
         assertThrows<java.nio.file.NoSuchFileException> {
             timeline.createSnapshot(paths, workPath)
