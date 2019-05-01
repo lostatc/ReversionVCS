@@ -61,15 +61,17 @@ interface TimelineTest {
     @Test
     fun `list snapshots`() {
         val timeline = repository.createTimeline("test")
-        val first = timeline.createSnapshot(emptyList(), workPath)
-        val second = timeline.createSnapshot(emptyList(), workPath)
-        val third = timeline.createSnapshot(emptyList(), workPath)
+        val snapshots = setOf(
+            timeline.createSnapshot(emptyList(), workPath),
+            timeline.createSnapshot(emptyList(), workPath),
+            timeline.createSnapshot(emptyList(), workPath)
+        )
 
-        assertEquals(setOf(first, second, third), timeline.snapshots.values.toSet())
+        assertEquals(snapshots, timeline.snapshots.values.toSet())
     }
 
     @Test
-    fun `list snapshot with multiple timelines`() {
+    fun `list snapshots with multiple timelines`() {
         val timeline1 = repository.createTimeline("test1")
         val snapshot1 = timeline1.createSnapshot(emptyList(), workPath)
 
