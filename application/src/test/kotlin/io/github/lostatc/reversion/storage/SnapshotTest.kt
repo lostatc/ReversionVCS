@@ -115,6 +115,27 @@ interface SnapshotTest {
     }
 
     @Test
+    fun `snapshot is pinned if any tags are pinned`() {
+        val snapshot = timeline.createSnapshot(emptyList(), workPath).apply {
+            addTag("test1", pinned = false)
+            addTag("test2", pinned = true)
+            addTag("test3", pinned = false)
+        }
+
+        assertTrue(snapshot.pinned)
+    }
+
+    @Test
+    fun `snapshot is not pinned if no tags are pinned`() {
+        val snapshot = timeline.createSnapshot(emptyList(), workPath).apply {
+            addTag("test1", pinned = false)
+            addTag("test2", pinned = false)
+        }
+
+        assertFalse(snapshot.pinned)
+    }
+
+    @Test
     fun `remove version`() {
         val snapshot = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
         val version = snapshot.versions.getValue(Paths.get("a"))

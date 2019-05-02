@@ -36,6 +36,8 @@ interface Version {
 
     /**
      * The time the file was last modified.
+     *
+     * This may be rounded to the nearest millisecond.
      */
     val lastModifiedTime: FileTime
 
