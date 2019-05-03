@@ -32,13 +32,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 interface TimelineTest {
-    var workPath: Path
-
     val repository: Repository
+
+    var workPath: Path
 
     @BeforeEach
     fun createFiles(@TempDir tempPath: Path) {
-        workPath = tempPath
+        workPath = tempPath.resolve("work")
 
         FileCreateContext(workPath) {
             file("a")

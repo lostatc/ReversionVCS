@@ -100,14 +100,18 @@ interface Version {
     /**
      * Writes the file represented by this object to the file system.
      *
+     * If a file already exists at [target] and [overwrite] is `false`, this method returns `false`.
+     *
      * @param [target] The path to write the file to.
      * @param [overwrite] If a file already exists at [target], overwrite it.
      * @param [verify] Check the data for corruption before writing it.
      *
+     * @return `true` if the file was written, `false` if it was not.
+     *
      * @throws [IOException] An I/O error occurred.
      */
-    fun checkout(target: Path, overwrite: Boolean = false, verify: Boolean = true) {
-        if (!overwrite && Files.exists(target)) throw FileAlreadyExistsException(target.toFile())
+    fun checkout(target: Path, overwrite: Boolean = false, verify: Boolean = true): Boolean {
+        if (!overwrite && Files.exists(target)) return false
 
         // Check the data for corruption.
         if (verify && !isValid()) {
@@ -130,5 +134,7 @@ interface Version {
         // Set metadata.
         Files.setLastModifiedTime(target, lastModifiedTime)
         if (permissions != null) Files.setPosixFilePermissions(target, permissions)
+
+        return true
     }
 }

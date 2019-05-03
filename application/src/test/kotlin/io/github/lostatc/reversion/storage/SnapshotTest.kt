@@ -34,13 +34,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 interface SnapshotTest {
-    var workPath: Path
-
     val timeline: Timeline
+
+    var workPath: Path
 
     @BeforeEach
     fun createFiles(@TempDir tempPath: Path) {
-        workPath = tempPath
+        workPath = tempPath.resolve("work")
 
         FileCreateContext(workPath) {
             file("a")
