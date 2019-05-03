@@ -30,6 +30,7 @@ import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.RetentionPolicy
 import io.github.lostatc.reversion.api.RetentionPolicyFactory
+import io.github.lostatc.reversion.api.TruncatingRetentionPolicyFactory
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.BlobEntity
@@ -59,29 +60,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.sql.Connection
-import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalUnit
 import java.util.UUID
 import kotlin.streams.asSequence
 
 data class SimpleEntry<out K, out V>(override val key: K, override val value: V) : Map.Entry<K, V>
-
-/**
- * Returns a new [Duration] truncated to the given [unit].
- *
- * This also reduces the duration to the longest duration which can be stored in a [Long] in terms of the given [unit].
- */
-private fun Duration.inTermsOf(unit: TemporalUnit): Duration {
-    val quotient = try {
-        dividedBy(unit.duration)
-    } catch (e: ArithmeticException) {
-        Long.MAX_VALUE
-    }
-
-    return unit.duration.multipliedBy(quotient)
-}
 
 /**
  * A factory for [Database] instances.
@@ -123,21 +107,7 @@ private object DatabaseFactory {
  */
 data class DatabaseRepository(override val path: Path, override val config: Config) : Repository {
 
-    override val policyFactory: RetentionPolicyFactory = object : RetentionPolicyFactory {
-        override fun of(
-            minInterval: Duration,
-            timeFrame: Duration,
-            maxVersions: Int,
-            description: String
-        ): RetentionPolicy {
-            return RetentionPolicy(
-                minInterval = minInterval.inTermsOf(ChronoUnit.MILLIS),
-                timeFrame = timeFrame.inTermsOf(ChronoUnit.MILLIS),
-                maxVersions = maxVersions,
-                description = description
-            )
-        }
-    }
+    override val policyFactory: RetentionPolicyFactory = TruncatingRetentionPolicyFactory(ChronoUnit.MILLIS)
 
     override val timelinesByName: Map<String, DatabaseTimeline> = object : AbstractMap<String, DatabaseTimeline>() {
         override val entries: Set<Map.Entry<String, DatabaseTimeline>>

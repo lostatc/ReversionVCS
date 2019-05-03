@@ -61,13 +61,7 @@ interface RetentionPolicyFactory {
      * @param [maxVersions] The maximum number of versions to keep for each interval.
      * @param [description] A human-readable description of the policy.
      */
-    fun of(minInterval: Duration, timeFrame: Duration, maxVersions: Int, description: String): RetentionPolicy =
-        RetentionPolicy(
-            minInterval = minInterval,
-            timeFrame = timeFrame,
-            maxVersions = maxVersions,
-            description = description
-        )
+    fun of(minInterval: Duration, timeFrame: Duration, maxVersions: Int, description: String): RetentionPolicy
 
     /**
      * Creates a [RetentionPolicy] based on a unit of time.
@@ -111,4 +105,45 @@ interface RetentionPolicyFactory {
         maxVersions = Int.MAX_VALUE,
         description = "Keep each version for $amount ${unit.name}."
     )
+}
+
+/**
+ * Returns a new [Duration] truncated to the given [unit].
+ *
+ * This also reduces the duration to the longest duration which can be stored in a [Long] in terms of the given [unit].
+ */
+private fun Duration.inTermsOf(unit: TemporalUnit): Duration {
+    val quotient = try {
+        dividedBy(unit.duration)
+    } catch (e: ArithmeticException) {
+        Long.MAX_VALUE
+    }
+
+    return unit.duration.multipliedBy(quotient)
+}
+
+
+/**
+ * A [RetentionPolicyFactory] that allows for serializing durations.
+ *
+ * This truncates durations in the [RetentionPolicy] to the given [unit] so that the [RetentionPolicy] is equal to
+ * itself after being serialized and deserialized. If a duration is too long to be stored in a [Long] in terms of
+ * [unit], it is shortened to the longest duration which can.
+ *
+ * @param [unit] The unit to serialize [Duration] objects as.
+ */
+data class TruncatingRetentionPolicyFactory(val unit: TemporalUnit) : RetentionPolicyFactory {
+    override fun of(
+        minInterval: Duration,
+        timeFrame: Duration,
+        maxVersions: Int,
+        description: String
+    ): RetentionPolicy {
+        return RetentionPolicy(
+            minInterval = minInterval.inTermsOf(unit),
+            timeFrame = timeFrame.inTermsOf(unit),
+            maxVersions = maxVersions,
+            description = description
+        )
+    }
 }
