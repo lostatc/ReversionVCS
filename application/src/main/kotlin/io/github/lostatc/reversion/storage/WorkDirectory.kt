@@ -73,23 +73,24 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     /**
      * The [PathMatcher] used to match paths to ignore.
      */
-    private val ignoreMatcher: PathMatcher by lazy {
-        val patterns = try {
-            Files.readAllLines(ignorePath)
-        } catch (e: NoSuchFileException) {
-            emptyList<String>()
-        }
+    private val ignoreMatcher: PathMatcher
+        get() {
+            val patterns = try {
+                Files.readAllLines(ignorePath)
+            } catch (e: NoSuchFileException) {
+                emptyList<String>()
+            }
 
-        val matchers = patterns.map { path.fileSystem.getPathMatcher(it) } + PathMatcher { it == hiddenPath }
-        MultiPathMatcher(matchers)
-    }
+            val matchers = patterns.map { path.fileSystem.getPathMatcher("glob:$it") }
+            return MultiPathMatcher(matchers + PathMatcher { it.startsWith(hiddenPath) })
+        }
 
     /**
      * Finds all the descendants of each of the given [paths] in the working directory.
      *
      * This returns only the paths of regular files that exist in the working directory and are not being ignored.
      *
-     * @return A sequence of distinct paths relative to the working directory.
+     * @return A list of distinct paths relative to the working directory.
      */
     private fun walkDirectory(paths: Iterable<Path>): List<Path> = paths
         .map { it.toAbsolutePath() }
@@ -105,13 +106,15 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * This returns only the paths of regular files that exist in the timeline. They may or may not exist in the working
      * directory.
      *
-     * @return A sequence of distinct paths relative to the working directory.
+     * @return A list of distinct paths relative to the working directory.
      */
     private fun walkTimeline(paths: Iterable<Path>): List<Path> = paths
-        .map { path.relativize(it.toAbsolutePath()) }
+        .map { it.toAbsolutePath() }
         .flattenPaths()
-        .flatMap { parent -> timeline.paths.filter { it.startsWith(parent) } }
+        .flatMap { parent -> timeline.paths.filter { path.resolve(it).startsWith(parent) } }
+        .map { path.resolve(it) }
         .filterNot { ignoreMatcher.matches(it) }
+        .map { path.relativize(it) }
 
     /**
      * Returns only the [files] which have uncommitted changes.
@@ -122,18 +125,18 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      *
      * @param [files] The paths of regular files relative to this working directory.
      */
-    private fun filterModified(files: Iterable<Path>): Iterable<Path> {
+    private fun filterModified(files: Iterable<Path>): List<Path> {
         val newestVersions = timeline
             .latestSnapshot
             ?.cumulativeVersions
-            ?: return files
+            ?: return files.toList()
 
         return files.filter {
             val absolutePath = path.resolve(it)
             val newestVersion = newestVersions[it]
             val fileExists = Files.exists(absolutePath)
 
-            fileExists && (newestVersion == null || newestVersion.isChanged(it))
+            fileExists && (newestVersion == null || newestVersion.isChanged(absolutePath))
         }
     }
 
@@ -169,7 +172,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
                 ?: throw IllegalArgumentException("No snapshot with the revision '$revision'.")
         }
 
-        val modifiedFiles = filterModified(paths).toSet()
+        val modifiedFiles = filterModified(walkTimeline(paths)).toSet()
 
         for (file in walkTimeline(paths)) {
             val absolutePath = path.resolve(file)
@@ -180,6 +183,11 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
 
     /**
      * Returns the status of the working directory.
+     *
+     * This shows which files have been modified since the last commit:
+     * - If the file does not exist, it is not considered modified.
+     * - If the file exists and has no previous versions, it is considered modified.
+     * - If the file exists and has different contents from the most recent version, it is considered modified.
      */
     fun getStatus(): Status = Status(
         filterModified(walkDirectory(listOf(path))).toSet()

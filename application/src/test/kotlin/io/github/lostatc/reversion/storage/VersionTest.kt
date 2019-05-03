@@ -26,21 +26,19 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
 interface VersionTest {
-    var workPath: Path
-
     val timeline: Timeline
+
+    var workPath: Path
 
     @BeforeEach
     fun createFiles(@TempDir tempPath: Path) {
-        workPath = tempPath
+        workPath = tempPath.resolve("work")
 
         FileCreateContext(workPath) {
             file("a", content = "apple")
@@ -106,9 +104,7 @@ interface VersionTest {
         val version = snapshot.versions.getValue(Paths.get("a"))
         val targetPath = workPath.resolve("b")
 
-        assertThrows<IOException> {
-            version.checkout(targetPath, overwrite = false)
-        }
+        assertEquals(false, version.checkout(targetPath, overwrite = false))
         assertEquals("banana", Files.readString(targetPath))
     }
 
@@ -117,8 +113,8 @@ interface VersionTest {
         val snapshot = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
         val version = snapshot.versions.getValue(Paths.get("a"))
         val targetPath = workPath.resolve("b")
-        version.checkout(targetPath, overwrite = true)
 
+        assertEquals(true, version.checkout(targetPath, overwrite = true))
         assertEquals("apple", Files.readString(targetPath))
     }
 }
