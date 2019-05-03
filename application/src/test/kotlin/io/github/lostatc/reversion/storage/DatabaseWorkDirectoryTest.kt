@@ -21,9 +21,11 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Timeline
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DatabaseWorkDirectoryTest : WorkDirectoryTest {
     override lateinit var workPath: Path
 
