@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Config
-import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.StorageProvider
 import java.nio.file.Path
 
@@ -41,7 +40,7 @@ class DatabaseStorageProvider : StorageProvider {
     override fun openRepository(path: Path): DatabaseRepository =
         DatabaseRepository.open(path)
 
-    override fun createRepository(path: Path, config: Config): Repository =
+    override fun createRepository(path: Path, config: Config): DatabaseRepository =
         DatabaseRepository.create(path, config)
 
     override fun importRepository(source: Path, target: Path): DatabaseRepository =

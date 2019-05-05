@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
@@ -48,7 +49,14 @@ interface WorkDirectoryTest {
             }
         }
 
-        workDirectory = WorkDirectory(workPath, timeline)
+        workDirectory = WorkDirectory.init(workPath, timeline)
+    }
+
+    @Test
+    fun `initializing an initialized directory throws`() {
+        assertThrows<InvalidWorkDirException> {
+            WorkDirectory.init(workPath, timeline)
+        }
     }
 
     @Test

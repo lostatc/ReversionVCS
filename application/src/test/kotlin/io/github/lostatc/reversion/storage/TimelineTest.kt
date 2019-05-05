@@ -158,7 +158,10 @@ interface TimelineTest {
 
     @Test
     fun `clean up versions by total number`() {
-        val policies = setOf(repository.policyFactory.ofVersions(2))
+        val policies = setOf(
+            repository.policyFactory.ofVersions(2),
+            repository.policyFactory.ofVersions(3)
+        )
         val timeline = repository.createTimeline("test", policies)
 
         val snapshot1 = timeline.createSnapshot(listOf(Paths.get("a")), workPath)

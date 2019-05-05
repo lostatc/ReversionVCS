@@ -19,19 +19,61 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Repository
+import io.github.lostatc.reversion.api.Checksum
+import io.github.lostatc.reversion.api.IntegrityReport
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DatabaseRepositoryTest : RepositoryTest {
-    override lateinit var repository: Repository
+    override lateinit var repository: DatabaseRepository
+
+    lateinit var workPath: Path
 
     @BeforeEach
     fun createRepository(@TempDir tempPath: Path) {
         val repoPath = tempPath.resolve("repository")
         repository = DatabaseStorageProvider().createRepository(repoPath)
+    }
+
+    @BeforeEach
+    fun createFiles(@TempDir tempPath: Path) {
+        workPath = tempPath.resolve("work")
+
+        FileCreateContext(workPath) {
+            file("a", content = "apple")
+            file("b", content = "banana")
+            directory("c") {
+                file("a", content = "orange")
+            }
+        }
+    }
+
+    @Test
+    fun `verify the integrity of the repository`() {
+        val timeline = repository.createTimeline("test")
+        val snapshot = timeline.createSnapshot(listOf(Paths.get("a"), Paths.get("b"), Paths.get("c", "a")), workPath)
+
+        assertTrue(repository.verify().isValid)
+
+        Files.delete(repository.getBlobPath((Checksum.fromFile(workPath.resolve("a"), repository.hashAlgorithm))))
+        Files.writeString(
+            repository.getBlobPath(Checksum.fromFile(workPath.resolve("c", "a"), repository.hashAlgorithm)),
+            "corrupt data"
+        )
+
+        val expectedReport = IntegrityReport(
+            setOf(snapshot.versions.getValue(Paths.get("a")), snapshot.versions.getValue(Paths.get("c", "a")))
+        )
+
+        assertEquals(expectedReport, repository.verify())
+
     }
 }
