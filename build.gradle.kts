@@ -11,6 +11,10 @@ allprojects {
         jcenter()
     }
 
+    tasks.withType<Test> {
+        useJUnitPlatform()
+    }
+
     tasks.withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
     }

@@ -17,7 +17,6 @@ dependencies {
     implementation(group = "commons-io", name = "commons-io", version = "2.6")
     implementation(group = "ch.qos.logback", name = "logback-core", version = "1.2.3")
     implementation(group = "ch.qos.logback", name = "logback-classic", version = "1.2.3")
-
     testImplementation(group = "org.junit.jupiter", name = "junit-jupiter", version = "5.4.2")
 }
 
@@ -25,6 +24,3 @@ application {
     mainClassName = "io.github.lostatc.reversion.MainKt"
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
-}

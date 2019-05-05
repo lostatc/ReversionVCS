@@ -19,7 +19,7 @@
 
 package io.github.lostatc.reversion.api
 
-import java.util.*
+import java.util.Objects
 import kotlin.reflect.KProperty
 
 /**
@@ -150,8 +150,8 @@ data class ConfigProperty<T>(
                 default = default.toString(),
                 converter = {
                     when (it.toLowerCase()) {
-                        "yes", "true" -> true
-                        "no", "false" -> false
+                        "y", "yes", "t", "true" -> true
+                        "n", "no", "f", "false" -> false
                         else -> fail("The value '$it' must be boolean.")
                     }
                 },
@@ -180,8 +180,11 @@ class Config(vararg properties: ConfigProperty<*>) {
 
     /**
      * Sets the [value] of the given [property] in this config.
+     *
+     * @throws [ValueConvertException] The given [value] could not be converted to the type of the property.
      */
     operator fun set(property: ConfigProperty<*>, value: String) {
+        property.convert(value)
         valueByProperty[property] = value
     }
 

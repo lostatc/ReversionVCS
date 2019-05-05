@@ -54,10 +54,10 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     override val versions: Map<Path, DatabaseVersion> = object : AbstractMap<Path, DatabaseVersion>() {
         override val entries: Set<Map.Entry<Path, DatabaseVersion>>
             get() = transaction {
-            VersionEntity
-                .find { VersionTable.snapshot eq entity.id }
-                .map { SimpleEntry(it.path, DatabaseVersion(it, repository)) }
-                .toSet()
+                VersionEntity
+                    .find { VersionTable.snapshot eq entity.id }
+                    .map { SimpleEntry(it.path, DatabaseVersion(it, repository)) }
+                    .toSet()
             }
 
         override fun containsKey(key: Path): Boolean = get(key) != null
