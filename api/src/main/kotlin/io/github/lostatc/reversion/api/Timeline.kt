@@ -65,14 +65,9 @@ private data class Interval(val start: Instant, val end: Instant) {
  */
 interface Timeline {
     /**
-     * The unique name of the timeline.
-     */
-    var name: String
-
-    /**
      * The UUID of the timeline.
      */
-    val uuid: UUID
+    val id: UUID
 
     /**
      * The time the timeline was created.

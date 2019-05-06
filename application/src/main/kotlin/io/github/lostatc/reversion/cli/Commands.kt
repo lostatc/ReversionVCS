@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
@@ -29,7 +28,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
-import io.github.lostatc.reversion.DEFAULT_REPO
+import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -38,100 +37,80 @@ import java.nio.file.Paths
  * The main command of the CLI.
  */
 class ReversionCommand : CliktCommand(name = "reversion") {
+    val workPath: Path by option(
+        "-w", "--work-dir", help = "Use this directory instead of the current working directory."
+    )
+        .path()
+        .default(Paths.get("").toAbsolutePath())
+
     init {
         subcommands(
-            RepoCommand(),
-            TimelineCommand(),
-            SnapshotCommand(),
-            TagCommand(),
-            VersionCommand(),
-            InitCommand(),
-            StatusCommand(),
-            CommitCommand(),
-            CheckoutCommand(),
-            UpdateCommand(),
-            CleanCommand(),
-            VerifyCommand()
+            SnapshotCommand(this),
+            TagCommand(this),
+            VersionCommand(this),
+            InitCommand(this),
+            StatusCommand(this),
+            CommitCommand(this),
+            CheckoutCommand(this),
+            UpdateCommand(this),
+            CleanCommand(this),
+            VerifyCommand(this)
         )
     }
+
 
     override fun run() = Unit
 }
 
-class InitCommand : CliktCommand(
+class InitCommand(val parent: ReversionCommand) : CliktCommand(
     name = "init", help = """
     Begin tracking changes in an existing directory.
-
-    This associates the directory with a timeline, making it a working directory. The contents of the directory and the
-    timeline are not modified.
 """
 ) {
-    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
-        .path()
-        .default(DEFAULT_REPO)
-
-    val workPath: Path by option(
-        "-w", "--work-dir", help = "Use this directory instead of the current working directory."
-    )
-        .path()
-        .default(Paths.get("").toAbsolutePath())
-
-    val timelineName: String by argument("TIMELINE", help = "The timeline to associate the directory with.")
+    // TODO: Not implemented.
+    val configure by option("-c", "--configure", help = "Interactively configure the repository.")
+        .flag()
 
     override fun run() {
-        val timeline = getTimeline(repoPath, timelineName)
-        WorkDirectory.init(workPath, timeline)
+        WorkDirectory.init(parent.workPath, DEFAULT_PROVIDER)
     }
 }
 
-class StatusCommand : CliktCommand(
+class StatusCommand(val parent: ReversionCommand) : CliktCommand(
     name = "status", help = """
     Show changes that have occurred since the most recent snapshot.
 """
 ) {
-    val workPath: Path by option(
-        "-w", "--work-dir", help = "Use this directory instead of the current working directory."
-    )
-        .path()
-        .default(Paths.get("").toAbsolutePath())
-
     override fun run() {
-        val workDirectory = getWorkDirectory(workPath)
+        val workDirectory = WorkDirectory.open(parent.workPath)
         val modifiedFiles = workDirectory.getStatus().modifiedFiles
 
-        echo(workDirectory.info)
         echo("\nFiles with uncommitted changes:")
         echo(modifiedFiles.joinToString(separator = "\n").prependIndent("    "))
     }
 }
 
-class CommitCommand : CliktCommand(
+class CommitCommand(val parent: ReversionCommand) : CliktCommand(
     name = "commit", help = """
     Commit changes to the directory, creating a new snapshot.
 
     By default, files are only committed if they have uncommitted changes.
 """
 ) {
-    val workPath: Path by option(
-        "-w", "--work-dir", help = "Use this directory instead of the current working directory."
-    )
-        .path()
-        .default(Paths.get("").toAbsolutePath())
-
     val force: Boolean by option("--force", help = "Commit files even if they don't have uncommitted changes.")
         .flag()
 
-    val paths: List<Path> by argument("PATH", help = "The paths of files to commit.")
+    val paths: List<Path> by argument("PATH", help = "The paths of files and directories to commit.")
         .path(exists = true)
         .multiple(required = true)
 
     override fun run() {
-        val workDir = getWorkDirectory(workPath)
+        val workDir = WorkDirectory.open(parent.workPath)
         workDir.commit(paths, force = force)
     }
 }
 
-class CheckoutCommand : CliktCommand(
+class CheckoutCommand(val parent: ReversionCommand) : CliktCommand(
     name = "checkout", help = """
     Get versions of files from a timeline.
 
@@ -140,14 +119,8 @@ class CheckoutCommand : CliktCommand(
 """
 ) {
 
-    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
-        .path()
-        .default(DEFAULT_REPO)
-
     val revision: Int? by option("-r", "--revision", help = "The revision number of the snapshot to get the file from.")
         .int()
-
-    val timelineName: String by argument("TIMELINE", help = "The name of the timeline.")
 
     val sourcePath: Path by argument("SOURCE", help = "The relative path of the file to retrieve from the timeline.")
         .path()
@@ -156,18 +129,19 @@ class CheckoutCommand : CliktCommand(
         .path()
 
     override fun run() {
-        val snapshot = revision?.let { getSnapshot(repoPath, timelineName, it) }
-            ?: getTimeline(repoPath, timelineName).latestSnapshot
-            ?: throw CliktError("The timeline '$timelineName' has no snapshots.")
+        val workDirectory = WorkDirectory.open(parent.workPath)
 
-        val version = snapshot.versions[sourcePath]
-            ?: throw CliktError("No version with the path '$sourcePath'.")
+        val snapshot = revision?.let { getSnapshot(workDirectory, it) }
+            ?: workDirectory.timeline.latestSnapshot
+            ?: throw NoSuchElementException("This working directory has no snapshots.")
+
+        val version = getVersion(workDirectory, snapshot.revision, sourcePath)
 
         version.checkout(destPath)
     }
 }
 
-class UpdateCommand : CliktCommand(
+class UpdateCommand(val parent: ReversionCommand) : CliktCommand(
     name = "update", help = """
     Update the working directory with data from the timeline.
 
@@ -176,13 +150,6 @@ class UpdateCommand : CliktCommand(
     is possible to update files that don't currently exist in the working directory.
 """
 ) {
-    val workPath: Path by option(
-        "-w", "--work-dir",
-        help = "Use this directory instead of the current working directory."
-    )
-        .path()
-        .default(Paths.get("").toAbsolutePath())
-
     val revision: Int? by option("-r", "--revision", help = "The revision number of the snapshot to update files to.")
         .int()
 
@@ -194,42 +161,32 @@ class UpdateCommand : CliktCommand(
         .multiple(required = true)
 
     override fun run() {
-        val workDirectory = getWorkDirectory(workPath)
+        val workDirectory = WorkDirectory.open(parent.workPath)
         workDirectory.update(paths = paths, revision = revision, overwrite = overwrite)
     }
 }
 
-class CleanCommand : CliktCommand(
+class CleanCommand(val parent: ReversionCommand) : CliktCommand(
     name = "clean", help = """
     Clean up old versions of files in a timeline.
 
     Old versions are deleted according to the rules set for the timeline.
 """
 ) {
-    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
-        .path()
-        .default(DEFAULT_REPO)
-
-    val timelineName: String by argument("TIMELINE", help = "The name of the timeline.")
-
     override fun run() {
-        val timeline = getTimeline(repoPath, timelineName)
-        timeline.clean()
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        workDirectory.timeline.clean()
     }
 }
 
-class VerifyCommand : CliktCommand(
+class VerifyCommand(val parent: ReversionCommand) : CliktCommand(
     name = "verify", help = """
     Verify the integrity of a repository.
 """
 ) {
-    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
-        .path()
-        .default(DEFAULT_REPO)
-
     override fun run() {
-        val repository = getRepository(repoPath)
-        val report = repository.verify()
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val report = workDirectory.repository.verify()
 
         if (report.isValid) {
             echo("No corruption detected.")

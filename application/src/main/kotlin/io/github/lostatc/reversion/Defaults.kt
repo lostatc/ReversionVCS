@@ -27,11 +27,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
- * The environment variable which stores the path of the default repository.
- */
-private const val DEFAULT_REPO_ENV: String = "REVERSION_DEFAULT_REPO"
-
-/**
  * The path of the user's home directory.
  */
 private val HOME_DIRECTORY: Path = Paths.get(System.getProperty("user.home"))
@@ -94,11 +89,6 @@ private enum class OperatingSystem(val dataDirectory: Path, val configDirectory:
  * The path of the program's data directory.
  */
 val DATA_DIR: Path = OperatingSystem.current().getDataDirectory("Reversion")
-
-/**
- * The path of the default repository.
- */
-val DEFAULT_REPO: Path = pathFromEnv(DEFAULT_REPO_ENV) ?: DATA_DIR.resolve("repository")
 
 /**
  * The default storage provider.

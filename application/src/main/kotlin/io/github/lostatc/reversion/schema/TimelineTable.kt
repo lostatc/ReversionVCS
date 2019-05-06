@@ -20,36 +20,22 @@
 package io.github.lostatc.reversion.schema
 
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.dao.IntEntityClass
-import org.jetbrains.exposed.dao.IntIdTable
+import org.jetbrains.exposed.dao.UUIDEntity
+import org.jetbrains.exposed.dao.UUIDEntityClass
+import org.jetbrains.exposed.dao.UUIDTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 import java.time.Instant
 import java.util.UUID
 
-object TimelineTable : IntIdTable() {
-    val name: Column<String> = varchar("name", 255).uniqueIndex()
-
-    val uuid: Column<UUID> = uuid("uuid").uniqueIndex()
-
+object TimelineTable : UUIDTable() {
     val timeCreated: Column<Instant> = instant("timeCreated")
 }
 
 /**
  * Metadata associated with a timeline.
  */
-class TimelineEntity(id: EntityID<Int>) : IntEntity(id) {
-    /**
-     * The unique name of the timeline.
-     */
-    var name: String by TimelineTable.name
-
-    /**
-     * The UUID of the table.
-     */
-    var uuid: UUID by TimelineTable.uuid
-
+class TimelineEntity(id: EntityID<UUID>) : UUIDEntity(id) {
     /**
      * The time the timeline was created.
      */
@@ -65,5 +51,5 @@ class TimelineEntity(id: EntityID<Int>) : IntEntity(id) {
      */
     val snapshots: SizedIterable<SnapshotEntity> by SnapshotEntity referrersOn SnapshotTable.timeline
 
-    companion object : IntEntityClass<TimelineEntity>(TimelineTable)
+    companion object : UUIDEntityClass<TimelineEntity>(TimelineTable)
 }

@@ -19,7 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.StorageProvider
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -31,7 +31,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 interface WorkDirectoryTest {
-    val timeline: Timeline
+    val provider: StorageProvider
 
     var workPath: Path
 
@@ -49,13 +49,13 @@ interface WorkDirectoryTest {
             }
         }
 
-        workDirectory = WorkDirectory.init(workPath, timeline)
+        workDirectory = WorkDirectory.init(workPath, provider)
     }
 
     @Test
     fun `initializing an initialized directory throws`() {
         assertThrows<InvalidWorkDirException> {
-            WorkDirectory.init(workPath, timeline)
+            WorkDirectory.init(workPath, provider)
         }
     }
 

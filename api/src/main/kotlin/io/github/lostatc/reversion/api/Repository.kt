@@ -56,33 +56,16 @@ interface Repository : Configurable {
     val policyFactory: RetentionPolicyFactory
 
     /**
-     * The timelines in this repository indexed by their [name][Timeline.name].
+     * The timelines in this repository indexed by their [ID][Timeline.id].
      */
-    val timelinesByName: Map<String, Timeline>
-
-    /**
-     * The timelines in this repository indexed by their [ID][Timeline.uuid].
-     */
-    val timelinesById: Map<UUID, Timeline>
+    val timelines: Map<UUID, Timeline>
 
     /**
      * Creates a new timeline in this repository and returns it.
      *
-     * @param [name] The name of the new timeline.
      * @param [policies] The rules which govern how old snapshots in this timeline are cleaned up.
-     *
-     * @throws [RecordAlreadyExistsException] A timeline with the given [name] already exists in this repository.
      */
-    fun createTimeline(name: String, policies: Set<RetentionPolicy> = setOf()): Timeline
-
-    /**
-     * Removes the timeline with the given [name] from the repository.
-     *
-     * This deletes the timeline and all its snapshots, files and tags.
-     *
-     * @return `true` if the timeline was deleted, `false` if it didn't exist.
-     */
-    fun removeTimeline(name: String): Boolean
+    fun createTimeline(policies: Set<RetentionPolicy> = setOf()): Timeline
 
     /**
      * Removes the timeline with the given [id] from the repository.

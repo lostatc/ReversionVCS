@@ -58,7 +58,7 @@ class DatabaseRepositoryTest : RepositoryTest {
 
     @Test
     fun `verify the integrity of the repository`() {
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline()
         val snapshot = timeline.createSnapshot(listOf(Paths.get("a"), Paths.get("b"), Paths.get("c", "a")), workPath)
 
         assertTrue(repository.verify().isValid)

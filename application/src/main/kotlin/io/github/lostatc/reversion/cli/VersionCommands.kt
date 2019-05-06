@@ -22,23 +22,20 @@ package io.github.lostatc.reversion.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
-import io.github.lostatc.reversion.DEFAULT_REPO
+import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 
-class VersionCommand : CliktCommand(
+class VersionCommand(parent: ReversionCommand) : CliktCommand(
     name = "version", help = """
     Manage versions of files.
 """
 ) {
 
-    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
-        .path()
-        .default(DEFAULT_REPO)
+    val workPath: Path = parent.workPath
 
     init {
         subcommands(
@@ -56,8 +53,6 @@ class VersionRemoveCommand(val parent: VersionCommand) : CliktCommand(
     Remove a version of a file from the timeline.
 """
 ) {
-    val timelineName: String by argument("TIMELINE", help = "The timeline the snapshot is in.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot.")
         .int()
 
@@ -65,8 +60,9 @@ class VersionRemoveCommand(val parent: VersionCommand) : CliktCommand(
         .path()
 
     override fun run() {
-        val version = getVersion(parent.repoPath, timelineName, revision, versionPath)
-        version.snapshot.removeVersion(versionPath)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val snapshot = getSnapshot(workDirectory, revision)
+        snapshot.removeVersion(versionPath)
     }
 }
 
@@ -78,13 +74,12 @@ class VersionListCommand(val parent: VersionCommand) : CliktCommand(
     val info: Boolean by option("-i", "--info", help = "Show detailed information about each version.")
         .flag()
 
-    val timelineName: String by argument("NAME", help = "The timeline of the snapshot.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot.")
         .int()
 
     override fun run() {
-        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val snapshot = getSnapshot(workDirectory, revision)
         val versions = snapshot.versions.values.sortedBy { it.path }
 
         if (info) {
@@ -100,8 +95,6 @@ class VersionInfoCommand(val parent: VersionCommand) : CliktCommand(
     Show information about a version of a file.
 """
 ) {
-    val timelineName: String by argument("TIMELINE", help = "The timeline the snapshot is in.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot.")
         .int()
 
@@ -109,7 +102,8 @@ class VersionInfoCommand(val parent: VersionCommand) : CliktCommand(
         .path()
 
     override fun run() {
-        val version = getVersion(parent.repoPath, timelineName, revision, versionPath)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val version = getVersion(workDirectory, revision, versionPath)
         echo(version.info)
     }
 }

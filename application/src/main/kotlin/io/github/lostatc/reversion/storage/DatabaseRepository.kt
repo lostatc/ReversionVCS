@@ -26,7 +26,6 @@ import io.github.lostatc.reversion.api.Checksum
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
 import io.github.lostatc.reversion.api.IntegrityReport
-import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.RetentionPolicy
 import io.github.lostatc.reversion.api.RetentionPolicyFactory
@@ -109,31 +108,12 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
     override val policyFactory: RetentionPolicyFactory = TruncatingRetentionPolicyFactory(ChronoUnit.MILLIS)
 
-    override val timelinesByName: Map<String, DatabaseTimeline> = object : AbstractMap<String, DatabaseTimeline>() {
-        override val entries: Set<Map.Entry<String, DatabaseTimeline>>
-            get() = transaction {
-                TimelineEntity
-                    .all()
-                    .map { SimpleEntry(it.name, DatabaseTimeline(it, this@DatabaseRepository)) }
-                    .toSet()
-        }
-
-        override fun containsKey(key: String): Boolean = get(key) != null
-
-        override fun get(key: String): DatabaseTimeline? = transaction {
-            TimelineEntity
-                .find { TimelineTable.name eq key }
-                .firstOrNull()
-                ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
-        }
-    }
-
-    override val timelinesById: Map<UUID, DatabaseTimeline> = object : AbstractMap<UUID, DatabaseTimeline>() {
+    override val timelines: Map<UUID, DatabaseTimeline> = object : AbstractMap<UUID, DatabaseTimeline>() {
         override val entries: Set<Map.Entry<UUID, DatabaseTimeline>>
             get() = transaction {
                 TimelineEntity
                     .all()
-                    .map { SimpleEntry(it.uuid, DatabaseTimeline(it, this@DatabaseRepository)) }
+                    .map { SimpleEntry(it.id.value, DatabaseTimeline(it, this@DatabaseRepository)) }
                     .toSet()
             }
 
@@ -141,7 +121,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
         override fun get(key: UUID): DatabaseTimeline? = transaction {
             TimelineEntity
-                .find { TimelineTable.uuid eq key }
+                .find { TimelineTable.id eq key }
                 .firstOrNull()
                 ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
         }
@@ -172,14 +152,8 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      */
     val blockSize: Long by blockSizeProperty
 
-    override fun createTimeline(name: String, policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {
-        if (name in timelinesByName) {
-            throw RecordAlreadyExistsException("A timeline with the name '$name' already exists in this repository.")
-        }
-
+    override fun createTimeline(policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {
         val timelineEntity = TimelineEntity.new {
-            this.name = name
-            this.uuid = UUID.randomUUID()
             this.timeCreated = Instant.now()
         }
 
@@ -189,26 +163,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         timeline
     }
 
-    override fun removeTimeline(name: String): Boolean {
-        // Remove the timeline from the database before modifying the file system to avoid corruption in case this
-        // operation is interrupted.
-        val timeline = timelinesByName[name] ?: return false
-
-        // Remove the timeline and all its snapshots, versions and tags from the database.
-        transaction {
-            timeline.entity.delete()
-        }
-
-        // Remove any blobs associated with the timeline which aren't referenced by any other timeline.
-        clean()
-
-        return true
-    }
-
     override fun removeTimeline(id: UUID): Boolean {
         // Remove the timeline from the database before modifying the file system to avoid corruption in case this
         // operation is interrupted.
-        val timeline = timelinesById[id] ?: return false
+        val timeline = timelines[id] ?: return false
 
         // Remove the timeline and all its snapshots, versions and tags from the database.
         transaction {

@@ -19,14 +19,12 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Repository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -44,65 +42,38 @@ interface RepositoryTest {
             repository.policyFactory.ofVersions(100),
             repository.policyFactory.ofDuration(30, ChronoUnit.DAYS)
         )
-        val timeline = repository.createTimeline("test", policies)
+        val timeline = repository.createTimeline(policies)
 
-        assertEquals("test", timeline.name)
         assertEquals(policies, timeline.retentionPolicies)
         assertTrue(Instant.now() >= timeline.timeCreated)
         assertTrue(timeline.snapshots.isEmpty())
     }
 
     @Test
-    fun `already existing timeline is not created`() {
-        repository.createTimeline("test")
+    fun `get timeline`() {
+        val timeline = repository.createTimeline()
 
-        assertThrows<RecordAlreadyExistsException> {
-            repository.createTimeline("test")
-        }
+        assertEquals(timeline, repository.timelines[timeline.id])
+        assertNull(repository.timelines[UUID.randomUUID()])
     }
 
     @Test
-    fun `get timeline by name`() {
-        val timeline = repository.createTimeline("test")
-
-        assertEquals(timeline, repository.timelinesByName[timeline.name])
-        assertNull(repository.timelinesByName["nonexistent"])
-    }
-
-    @Test
-    fun `get timeline by ID`() {
-        val timeline = repository.createTimeline("test")
-
-        assertEquals(timeline, repository.timelinesById[timeline.uuid])
-        assertNull(repository.timelinesById[UUID.randomUUID()])
-    }
-
-    @Test
-    fun `remove timeline by name`() {
-        val timeline = repository.createTimeline("test")
-
-        assertFalse(repository.removeTimeline("nonexistent"))
-        assertTrue(repository.removeTimeline(timeline.name))
-        assertNull(repository.timelinesByName[timeline.name])
-    }
-
-    @Test
-    fun `remove timeline by ID`() {
-        val timeline = repository.createTimeline("test")
+    fun `remove timeline`() {
+        val timeline = repository.createTimeline()
 
         assertFalse(repository.removeTimeline(UUID.randomUUID()))
-        assertTrue(repository.removeTimeline(timeline.uuid))
-        assertNull(repository.timelinesById[timeline.uuid])
+        assertTrue(repository.removeTimeline(timeline.id))
+        assertNull(repository.timelines[timeline.id])
     }
 
     @Test
     fun `list timelines`() {
-        val first = repository.createTimeline("first")
-        val second = repository.createTimeline("second")
-        val third = repository.createTimeline("third")
+        val timelines = setOf(
+            repository.createTimeline(),
+            repository.createTimeline(),
+            repository.createTimeline()
+        )
 
-        assertEquals(setOf(first.name, second.name, third.name), repository.timelinesByName.keys.toSet())
-        assertEquals(setOf(first.uuid, second.uuid, third.uuid), repository.timelinesById.keys.toSet())
-        assertEquals(setOf(first, second, third), repository.timelinesByName.values.toSet())
+        assertEquals(timelines, repository.timelines.values.toSet())
     }
 }
