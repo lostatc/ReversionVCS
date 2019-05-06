@@ -17,17 +17,29 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion
+package io.github.lostatc.reversion.daemon
 
-import io.github.lostatc.reversion.cli.ReversionCommand
+import org.slf4j.LoggerFactory
+import java.nio.file.Paths
 
 /**
- * Start the CLI.
+ * An exception handler that logs uncaught exceptions and prints them to stderr.
+ */
+val loggingExceptionHandler: Thread.UncaughtExceptionHandler =
+    Thread.UncaughtExceptionHandler { _, throwable ->
+        val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.daemon")
+        logger.error(throwable.message, throwable)
+        System.err.println("Error: ${throwable.message}")
+    }
+
+/**
+ * Start the daemon.
  */
 fun main(args: Array<String>) {
     // Log any uncaught exceptions and print them to stderr.
     Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
 
-    // Run the root command.
-    ReversionCommand().main(args)
+    // Start the daemon.
+    val daemon = WatchDaemon(Paths.get(args[0]))
+    daemon.run()
 }

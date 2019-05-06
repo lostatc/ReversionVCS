@@ -19,6 +19,8 @@
 
 package io.github.lostatc.reversion
 
+import ch.qos.logback.core.PropertyDefinerBase
+import ch.qos.logback.core.spi.PropertyDefiner
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.storage.DatabaseStorageProvider
 import java.nio.file.Path
@@ -102,3 +104,10 @@ val DEFAULT_REPO: Path = pathFromEnv(DEFAULT_REPO_ENV) ?: DATA_DIR.resolve("repo
  * The default storage provider.
  */
 val DEFAULT_PROVIDER: StorageProvider = DatabaseStorageProvider()
+
+/**
+ * A [PropertyDefiner] for getting the path of the directory where log files are stored.
+ */
+class LogDirectoryPropertyDefiner : PropertyDefinerBase() {
+    override fun getPropertyValue(): String = DATA_DIR.toString()
+}
