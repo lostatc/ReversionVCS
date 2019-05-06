@@ -51,7 +51,7 @@ interface TimelineTest {
 
     @Test
     fun `get snapshot`() {
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline()
         val snapshot = timeline.createSnapshot(emptyList(), workPath)
 
         assertEquals(snapshot, timeline.snapshots[snapshot.revision])
@@ -60,7 +60,7 @@ interface TimelineTest {
 
     @Test
     fun `list snapshots`() {
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline()
         val snapshots = setOf(
             timeline.createSnapshot(emptyList(), workPath),
             timeline.createSnapshot(emptyList(), workPath),
@@ -72,10 +72,10 @@ interface TimelineTest {
 
     @Test
     fun `list snapshots with multiple timelines`() {
-        val timeline1 = repository.createTimeline("test1")
+        val timeline1 = repository.createTimeline()
         val snapshot1 = timeline1.createSnapshot(emptyList(), workPath)
 
-        val timeline2 = repository.createTimeline("test2")
+        val timeline2 = repository.createTimeline()
         val snapshot2 = timeline2.createSnapshot(emptyList(), workPath)
 
         assertEquals(setOf(snapshot1), timeline1.snapshots.values.toSet())
@@ -85,7 +85,7 @@ interface TimelineTest {
 
     @Test
     fun `get latest snapshot`() {
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline()
         timeline.createSnapshot(emptyList(), workPath)
         timeline.createSnapshot(emptyList(), workPath)
         val latest = timeline.createSnapshot(emptyList(), workPath)
@@ -95,7 +95,7 @@ interface TimelineTest {
 
     @Test
     fun `list paths`() {
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline()
         timeline.createSnapshot(listOf(Paths.get("a")), workPath)
         timeline.createSnapshot(listOf(Paths.get("b"), Paths.get("c", "a")), workPath)
         timeline.createSnapshot(emptyList(), workPath)
@@ -108,7 +108,7 @@ interface TimelineTest {
     @Test
     fun `created snapshot contains paths`() {
         val paths = setOf(Paths.get("a"), Paths.get("c", "a"))
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline()
         val snapshot = timeline.createSnapshot(paths, workPath)
 
         assertEquals(paths, snapshot.versions.keys)
@@ -116,8 +116,8 @@ interface TimelineTest {
 
     @Test
     fun `creating snapshot of nonexistent paths throws`() {
-        val paths = setOf(Paths.get("a"), Paths.get("z"))
-        val timeline = repository.createTimeline("nonexistent")
+        val paths = setOf(Paths.get("a"), Paths.get("nonexistent"))
+        val timeline = repository.createTimeline()
 
         assertThrows<java.nio.file.NoSuchFileException> {
             timeline.createSnapshot(paths, workPath)
@@ -126,7 +126,7 @@ interface TimelineTest {
 
     @Test
     fun `snapshot revisions increment`() {
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline()
         val first = timeline.createSnapshot(emptyList(), workPath)
         val second = timeline.createSnapshot(emptyList(), workPath)
         val third = timeline.createSnapshot(emptyList(), workPath)
@@ -136,7 +136,7 @@ interface TimelineTest {
 
     @Test
     fun `remove snapshot`() {
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline()
         val snapshot = timeline.createSnapshot(emptyList(), workPath)
 
         assertFalse(timeline.removeSnapshot(Int.MAX_VALUE))
@@ -146,7 +146,7 @@ interface TimelineTest {
 
     @Test
     fun `list versions`() {
-        val timeline = repository.createTimeline("test")
+        val timeline = repository.createTimeline()
         val first = timeline.createSnapshot(listOf(Paths.get("a"), Paths.get("c", "a")), workPath)
         timeline.createSnapshot(emptyList(), workPath)
         val third = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
@@ -162,7 +162,7 @@ interface TimelineTest {
             repository.policyFactory.ofVersions(2),
             repository.policyFactory.ofVersions(3)
         )
-        val timeline = repository.createTimeline("test", policies)
+        val timeline = repository.createTimeline(policies)
 
         val snapshot1 = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
         val snapshot2 = timeline.createSnapshot(listOf(Paths.get("a")), workPath).apply {

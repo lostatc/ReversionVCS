@@ -22,22 +22,20 @@ package io.github.lostatc.reversion.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
-import io.github.lostatc.reversion.DEFAULT_REPO
+import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 
-class SnapshotCommand : CliktCommand(
+class SnapshotCommand(parent: ReversionCommand) : CliktCommand(
     name = "snapshot", help = """
     Manage snapshots.
 """
 ) {
-    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
-        .path()
-        .default(DEFAULT_REPO)
+
+    val workPath: Path = parent.workPath
 
     init {
         subcommands(
@@ -57,14 +55,12 @@ class SnapshotRemoveCommand(val parent: SnapshotCommand) : CliktCommand(
     This deletes any data from the repository that is not associated with another snapshot.
 """
 ) {
-    val timelineName: String by argument("TIMELINE", help = "The timeline the snapshot is in.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot.")
         .int()
 
     override fun run() {
-        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
-        snapshot.timeline.removeSnapshot(revision)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        workDirectory.timeline.removeSnapshot(revision)
     }
 }
 
@@ -75,18 +71,15 @@ class SnapshotListCommand(val parent: SnapshotCommand) : CliktCommand(
 ) {
     val paths: List<Path> by option(
         "-p", "--path",
-        help = "Show only snapshots containing a version with this relative path. Specified multiple times, show "
-                + "snapshots containing any."
+        help = "Show only snapshots containing a version with this relative path. Specified multiple times, show snapshots containing any."
     )
         .path()
         .multiple()
 
-    val timelineName: String by argument("TIMELINE", help = "The timeline to list snapshots from.")
-
     override fun run() {
-        val timeline = getTimeline(parent.repoPath, timelineName)
+        val workDirectory = WorkDirectory.open(parent.workPath)
 
-        val snapshots = timeline.snapshots.values.filter { snapshot ->
+        val snapshots = workDirectory.timeline.snapshots.values.filter { snapshot ->
             if (paths.isEmpty()) true else paths.any { it in snapshot.versions }
         }
 
@@ -99,13 +92,12 @@ class SnapshotInfoCommand(val parent: SnapshotCommand) : CliktCommand(
     Show information about a snapshot.
 """
 ) {
-    val timelineName: String by argument("TIMELINE", help = "The timeline the snapshot is in.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot.")
         .int()
 
     override fun run() {
-        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val snapshot = getSnapshot(workDirectory, revision)
         echo(snapshot.info)
     }
 }

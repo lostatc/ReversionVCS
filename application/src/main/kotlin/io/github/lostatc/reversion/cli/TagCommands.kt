@@ -26,18 +26,16 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
-import com.github.ajalt.clikt.parameters.types.path
-import io.github.lostatc.reversion.DEFAULT_REPO
+import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 
-class TagCommand : CliktCommand(
+class TagCommand(parent: ReversionCommand) : CliktCommand(
     name = "tag", help = """
     Manage tags.
 """
 ) {
-    val repoPath: Path by option("--repo", help = "Use this repository instead of the default repository.")
-        .path()
-        .default(DEFAULT_REPO)
+
+    val workPath: Path = parent.workPath
 
     init {
         subcommands(
@@ -63,15 +61,14 @@ class TagCreateCommand(val parent: TagCommand) : CliktCommand(
     val pinned: Boolean by option("--pin", help = "Never automatically delete the snapshot with this tag.")
         .flag("--no-pin", default = true)
 
-    val timelineName: String by argument("TIMELINE", help = "The timeline to create the tag in.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot to tag.")
         .int()
 
     val tagName: String by argument("NAME", help = "The name of the tag.")
 
     override fun run() {
-        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val snapshot = getSnapshot(workDirectory, revision)
         snapshot.addTag(name = tagName, description = description, pinned = pinned)
     }
 }
@@ -83,15 +80,14 @@ class TagRemoveCommand(val parent: TagCommand) : CliktCommand(
     This does not affect the snapshot it is applied to.
 """
 ) {
-    val timelineName: String by argument("TIMELINE", help = "The timeline the tag is in.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot the tag is in.")
         .int()
 
     val tagName: String by argument("NAME", help = "The name of the tag.")
 
     override fun run() {
-        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val snapshot = getSnapshot(workDirectory, revision)
         snapshot.removeTag(tagName)
     }
 }
@@ -114,15 +110,14 @@ class TagModifyCommand(val parent: TagCommand) : CliktCommand(
     )
         .flag(default = true)
 
-    val timelineName: String by argument("TIMELINE", help = "The timeline the tag is in.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot the tag is in.")
         .int()
 
     val tagName: String by argument("NAME", help = "The name of the tag.")
 
     override fun run() {
-        val tag = getTag(parent.repoPath, timelineName, revision, tagName)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val tag = getTag(workDirectory, revision, tagName)
 
         newName?.let { tag.name = it }
         description?.let { tag.description = it }
@@ -136,13 +131,12 @@ class TagListCommand(val parent: TagCommand) : CliktCommand(
     List the tags in a timeline.
 """
 ) {
-    val timelineName: String by argument("TIMELINE", help = "The timeline to list tags from.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot to list tags from.")
         .int()
 
     override fun run() {
-        val snapshot = getSnapshot(parent.repoPath, timelineName, revision)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val snapshot = getSnapshot(workDirectory, revision)
         val tags = snapshot.tags.values
 
         echo(tags.joinToString(separator = "\n\n") { it.info })
@@ -154,15 +148,14 @@ class TagInfoCommand(val parent: TagCommand) : CliktCommand(
     Show information about a tag.
 """
 ) {
-    val timelineName: String by argument("TIMELINE", help = "The timeline the tag is in.")
-
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot the tag is in.")
         .int()
 
     val tagName: String by argument("NAME", help = "The name of the tag.")
 
     override fun run() {
-        val tag = getTag(parent.repoPath, timelineName, revision, tagName)
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val tag = getTag(workDirectory, revision, tagName)
         echo(tag.info)
     }
 }

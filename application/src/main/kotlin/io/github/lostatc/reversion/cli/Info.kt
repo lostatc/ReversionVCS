@@ -19,19 +19,14 @@
 
 package io.github.lostatc.reversion.cli
 
-import io.github.lostatc.reversion.DEFAULT_REPO
-import io.github.lostatc.reversion.api.*
-import io.github.lostatc.reversion.storage.WorkDirectory
+import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.Tag
+import io.github.lostatc.reversion.api.Version
 import org.apache.commons.io.FileUtils
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-
-/**
- * The string used to indent nested information.
- */
-private const val INDENT: String = "  "
 
 /**
  * Format an [Instant] as a string using the given [style].
@@ -40,27 +35,6 @@ private fun Instant.format(style: FormatStyle = FormatStyle.MEDIUM): String = Da
     .ofLocalizedDateTime(style)
     .withZone(ZoneId.systemDefault())
     .format(this)
-
-/**
- * Human-readable information about the config.
- */
-val Config.info: String
-    get() = properties.joinToString(separator = "\n") { "${it.name} = ${this[it]}" }
-
-/**
- * Human-readable information about the repository.
- */
-val Repository.info: String
-    get() = "Path: $path\nProperties:\n" + config.info.prependIndent(INDENT)
-
-/**
- * Human-readable information about the timeline.
- */
-val Timeline.info: String
-    get() = """
-        Name: $name
-        Created: ${timeCreated.format()}
-    """.trimIndent()
 
 /**
  * Human-readable information about the snapshot.
@@ -91,19 +65,4 @@ val Version.info: String
         Size: ${FileUtils.byteCountToDisplaySize(size)}
         Permissions: ${permissions.toString()}
         Checksum: ${checksum.hex}
-    """.trimIndent()
-
-/**
- * Whether this repository is the default repository.
- */
-private val Repository.isDefault: Boolean
-    get() = path == DEFAULT_REPO
-
-/**
- * Human-readable information about the working directory.
- */
-val WorkDirectory.info: String
-    get() = """
-        Repository: ${timeline.repository.path} ${if (timeline.repository.isDefault) "(Default)" else ""}
-        Timeline: ${timeline.name}
     """.trimIndent()

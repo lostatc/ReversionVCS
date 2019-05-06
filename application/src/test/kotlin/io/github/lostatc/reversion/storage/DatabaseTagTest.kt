@@ -31,7 +31,7 @@ class DatabaseTagTest : TagTest {
     fun createTimeline(@TempDir tempPath: Path) {
         val repoPath = tempPath.resolve("repository")
         val repository = DatabaseStorageProvider().createRepository(repoPath)
-        timeline = repository.createTimeline("test")
+        timeline = repository.createTimeline()
     }
 
 }

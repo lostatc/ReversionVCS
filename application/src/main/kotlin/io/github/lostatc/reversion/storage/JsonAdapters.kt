@@ -19,16 +19,14 @@
 
 package io.github.lostatc.reversion.storage
 
-import com.google.gson.*
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonToken
-import com.google.gson.stream.JsonWriter
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
 import java.lang.reflect.Type
-import java.net.URI
-import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
  * A [JsonSerializer] for serializing [Config] objects as JSON.
@@ -54,27 +52,5 @@ data class ConfigDeserializer(private val properties: Collection<ConfigProperty<
         }
 
         return config
-    }
-}
-
-/**
- * A type adapter for serializing [Path] objects
- */
-object PathTypeAdapter : TypeAdapter<Path>() {
-    override fun write(writer: JsonWriter, value: Path?) {
-        if (value == null) {
-            writer.nullValue()
-        } else {
-            writer.value(value.toUri().toString())
-        }
-    }
-
-    override fun read(reader: JsonReader): Path? {
-        if (reader.peek() == JsonToken.NULL) {
-            reader.nextNull()
-            return null
-        }
-
-        return Paths.get(URI(reader.nextString()))
     }
 }

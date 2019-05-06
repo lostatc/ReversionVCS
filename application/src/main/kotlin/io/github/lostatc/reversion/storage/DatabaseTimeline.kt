@@ -25,6 +25,7 @@ import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.RetentionPolicyEntity
 import io.github.lostatc.reversion.schema.SnapshotEntity
 import io.github.lostatc.reversion.schema.SnapshotTable
+import io.github.lostatc.reversion.schema.TagTable.name
 import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
@@ -47,14 +48,8 @@ private const val STARTING_REVISION: Int = 1
  * An implementation of [Timeline] which is backed by a relational database.
  */
 class DatabaseTimeline(val entity: TimelineEntity, override val repository: DatabaseRepository) : Timeline {
-    override var name: String
-        get() = transaction { entity.name }
-        set(value) {
-            transaction { entity.name = value }
-        }
-
-    override val uuid: UUID
-        get() = transaction { entity.uuid }
+    override val id: UUID
+        get() = transaction { entity.id.value }
 
     override val timeCreated: Instant
         get() = transaction { entity.timeCreated }

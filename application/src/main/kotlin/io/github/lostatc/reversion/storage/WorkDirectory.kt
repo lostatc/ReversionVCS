@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.storage
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.StorageProvider
@@ -84,6 +85,12 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
             val matchers = patterns.map { path.fileSystem.getPathMatcher("glob:$it") }
             return MultiPathMatcher(matchers + PathMatcher { it.startsWith(hiddenPath) })
         }
+
+    /**
+     * The repository associated with this working directory.
+     */
+    val repository: Repository
+        get() = timeline.repository
 
     /**
      * Finds all the descendants of each of the given [paths] in the working directory.
@@ -209,10 +216,9 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     /**
      * Information about the [WorkDirectory].
      *
-     * @param [repositoryPath] The path of the [Repository] containing the [timeline].
-     * @param [timelineID] The ID of the [Timeline] this working directory is associated with.
+     * @param [timeline] The [ID][Timeline.id] of the [Timeline] this working directory is associated with.
      */
-    private data class Info(val repositoryPath: Path, val timelineID: UUID)
+    private data class Info(val timeline: UUID)
 
     companion object {
         /**
@@ -231,11 +237,15 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         private val relativeInfoPath: Path = relativeHiddenPath.resolve("info.json")
 
         /**
+         * The relative path of the repository associated with this working directory.
+         */
+        private val relativeRepoPath: Path = relativeHiddenPath.resolve("repository")
+
+        /**
          * An object used for serializing data as JSON.
          */
         private val gson: Gson = GsonBuilder()
             .setPrettyPrinting()
-            .registerTypeAdapter(Path::class.java, PathTypeAdapter)
             .create()
 
         /**
@@ -243,18 +253,23 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          *
          * @throws [UnsupportedFormatException] There is no installed provider compatible with the repository associated
          * with this working directory.
-         * @throws [InvalidWorkDirException] The timeline associated with this working directory is not in the
-         * repository.
+         * @throws [InvalidWorkDirException] The working directory has not been initialized.
          */
         fun open(path: Path): WorkDirectory {
+            val hiddenDirectory = path.resolve(relativeHiddenPath)
             val infoFile = path.resolve(relativeInfoPath)
+            val repositoryPath = path.resolve(relativeRepoPath)
 
-            val (repoPath, timelineID) = Files.newBufferedReader(infoFile).use {
+            if (Files.notExists(hiddenDirectory)) {
+                throw InvalidWorkDirException("This directory has not been initialized.")
+            }
+
+            val (timelineID) = Files.newBufferedReader(infoFile).use {
                 gson.fromJson(it, Info::class.java)
             }
 
-            val repository = StorageProvider.openRepository(repoPath)
-            val timeline = repository.timelinesById[timelineID] ?: throw InvalidWorkDirException(
+            val repository = StorageProvider.openRepository(repositoryPath)
+            val timeline = repository.timelines[timelineID] ?: error(
                 "The timeline associated with this working directory is not in the repository."
             )
 
@@ -262,22 +277,30 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         }
 
         /**
-         * Creates a new working directory at [path] that is associated with [timeline].
+         * Creates a new working directory at [path] with its own repository.
          *
          * If there is already a directory at [path], it is converted to a working directory.
          *
+         * @param [path] The path of the working directory.
+         * @param [provider] The storage provider to create the repository with.
+         * @param [config] The configuration for the repository.
+         *
          * @throws [InvalidWorkDirException] This directory has already been initialized.
          */
-        fun init(path: Path, timeline: Timeline): WorkDirectory {
+        fun init(path: Path, provider: StorageProvider, config: Config = provider.getConfig()): WorkDirectory {
             val hiddenDirectory = path.resolve(relativeHiddenPath)
             val infoFile = path.resolve(relativeInfoPath)
+            val repositoryPath = path.resolve(relativeRepoPath)
 
             if (Files.exists(hiddenDirectory)) throw InvalidWorkDirException(
                 "This directory has already been initialized."
             )
             Files.createDirectories(hiddenDirectory)
 
-            val info = Info(timeline.repository.path, timeline.uuid)
+            val repository = provider.createRepository(repositoryPath, config)
+            val timeline = repository.createTimeline()
+
+            val info = Info(timeline.id)
             Files.newBufferedWriter(infoFile).use {
                 gson.toJson(info, it)
             }
