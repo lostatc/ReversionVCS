@@ -19,7 +19,6 @@
 
 package io.github.lostatc.reversion.api
 
-import java.io.IOException
 import java.nio.file.Path
 import java.util.UUID
 
@@ -80,13 +79,4 @@ interface Repository : Configurable {
      * Verifies the integrity of the repository.
      */
     fun verify(): IntegrityReport
-
-    /**
-     * Exports this repository to an archive at [target].
-     *
-     * The file created is guaranteed to be a regular file that can be imported with [StorageProvider.importRepository].
-     *
-     * @throws [IOException] An I/O error occurred.
-     */
-    fun export(target: Path)
 }

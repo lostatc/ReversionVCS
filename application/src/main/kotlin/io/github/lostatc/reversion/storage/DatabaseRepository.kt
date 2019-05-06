@@ -50,10 +50,7 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.sqlite.SQLiteConfig
-import org.zeroturnaround.zip.ZipException
-import org.zeroturnaround.zip.ZipUtil
 import java.io.IOException
-import java.nio.charset.Charset
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -197,10 +194,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         }
 
         return IntegrityReport(affectedVersions)
-    }
-
-    override fun export(target: Path) {
-        ZipUtil.pack(path.toFile(), target.toFile())
     }
 
     /**
@@ -419,24 +412,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         }
 
         /**
-         * Imports a repository from a file and returns it.
-         *
-         * This is guaranteed to support importing the file created by [Repository.export].
-         *
-         * @param [source] The file to import the repository from.
-         * @param [target] The path to create the repository at.
-         *
-         * @throws [IOException] An I/O error occurred.
-         */
-        fun import(source: Path, target: Path): DatabaseRepository {
-            if (!checkArchive(source))
-                throw UnsupportedFormatException("There is no compatible archive at '$source'.")
-
-            ZipUtil.unpack(source.toFile(), target.toFile())
-            return open(target)
-        }
-
-        /**
          * Returns whether there is a compatible repository at [path].
          */
         fun checkRepository(path: Path): Boolean = try {
@@ -444,19 +419,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             val version = UUID.fromString(Files.readString(versionPath))
             version in supportedVersions
         } catch (e: IOException) {
-            false
-        } catch (e: IllegalArgumentException) {
-            false
-        }
-
-        /**
-         * Returns whether the file at [path] can be imported as a repository.
-         */
-        fun checkArchive(path: Path): Boolean = try {
-            val versionBytes = ZipUtil.unpackEntry(path.toFile(), relativeVersionPath.toString())
-            val version = UUID.fromString(versionBytes.toString(Charset.defaultCharset()))
-            version in supportedVersions
-        } catch (e: ZipException) {
             false
         } catch (e: IllegalArgumentException) {
             false

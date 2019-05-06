@@ -21,7 +21,7 @@ package io.github.lostatc.reversion.api
 
 import java.io.IOException
 import java.nio.file.Path
-import java.util.*
+import java.util.ServiceLoader
 
 /**
  * An interface for service providers that provide mechanisms for storing file version history.
@@ -63,27 +63,9 @@ interface StorageProvider {
     fun createRepository(path: Path, config: Config = getConfig()): Repository
 
     /**
-     * Creates a new repository at [target] from the archive file at [source].
-     *
-     * This is used to import the file created by [Repository.export].
-     *
-     * @param [source] The file to import the repository from.
-     * @param [target] The path to create the repository at.
-     *
-     * @throws [IOException] An I/O error occurred.
-     * @throws [UnsupportedFormatException] There is no compatible archive at [source].
-     */
-    fun importRepository(source: Path, target: Path): Repository
-
-    /**
      * Returns whether there is a repository compatible with this storage provider at [path].
      */
     fun checkRepository(path: Path): Boolean
-
-    /**
-     * Returns whether the file at [path] can be [imported][importRepository] as a repository.
-     */
-    fun checkArchive(path: Path): Boolean
 
     companion object {
         /**
@@ -107,19 +89,5 @@ interface StorageProvider {
                 ?: throw UnsupportedFormatException("No installed provider can open the repository at '$path'.")
         }
 
-        /**
-         * Imports a repository at with the first [StorageProvider] that supports it.
-         *
-         * @throws [UnsupportedFormatException] There is no installed provider that can import the repository.
-         *
-         * @see [StorageProvider.checkArchive]
-         * @see [StorageProvider.importRepository]
-         */
-        fun importRepository(source: Path, target: Path): Repository {
-            return listProviders()
-                .find { it.checkArchive(source) }
-                ?.importRepository(source, target)
-                ?: throw UnsupportedFormatException("No installed provider can import the archive at '$source'.")
-        }
     }
 }

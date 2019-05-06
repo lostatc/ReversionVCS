@@ -59,34 +59,11 @@ interface StorageProviderTest {
     }
 
     @Test
-    fun `incompatible archive is not imported`() {
-        val archivePath = tempPath.resolve("archive")
-        val targetPath = tempPath.resolve("repository")
-        Files.createFile(archivePath)
-
-        assertThrows<UnsupportedFormatException> {
-            provider.importRepository(archivePath, targetPath)
-        }
-    }
-
-    @Test
     fun `created repository is valid`() {
         val repoPath = tempPath.resolve("repository")
 
         provider.createRepository(repoPath)
 
         assertTrue(provider.checkRepository(repoPath))
-    }
-
-    @Test
-    fun `exported repository is valid`() {
-        val archivePath = tempPath.resolve("archive")
-        val repoPath = tempPath.resolve("repository")
-        Files.createFile(archivePath)
-
-        val repository = provider.createRepository(repoPath)
-        repository.export(archivePath)
-
-        assertTrue(provider.checkArchive(archivePath))
     }
 }

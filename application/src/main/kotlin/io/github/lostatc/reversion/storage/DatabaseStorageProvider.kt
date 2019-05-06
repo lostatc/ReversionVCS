@@ -43,12 +43,7 @@ class DatabaseStorageProvider : StorageProvider {
     override fun createRepository(path: Path, config: Config): DatabaseRepository =
         DatabaseRepository.create(path, config)
 
-    override fun importRepository(source: Path, target: Path): DatabaseRepository =
-        DatabaseRepository.import(source, target)
-
     override fun checkRepository(path: Path): Boolean =
         DatabaseRepository.checkRepository(path)
 
-    override fun checkArchive(path: Path): Boolean =
-        DatabaseRepository.checkArchive(path)
 }
