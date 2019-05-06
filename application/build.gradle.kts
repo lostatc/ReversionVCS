@@ -21,6 +21,15 @@ dependencies {
 }
 
 application {
-    mainClassName = "io.github.lostatc.reversion.MainKt"
+    applicationName = "reversion"
+    mainClassName = "io.github.lostatc.reversion.cli.MainKt"
 }
 
+tasks {
+    register<CreateStartScripts>("daemonScript") {
+        applicationName = "reversiond"
+        mainClassName = "io.github.lostatc.reversion.daemon.MainKt"
+        outputDir = getByName<CreateStartScripts>("startScripts").outputDir
+        classpath = getByName<CreateStartScripts>("startScripts").classpath
+    }
+}

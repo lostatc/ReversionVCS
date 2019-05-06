@@ -17,25 +17,29 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion
+package io.github.lostatc.reversion.daemon
 
-import ch.qos.logback.core.PropertyDefinerBase
-import ch.qos.logback.core.spi.PropertyDefiner
 import org.slf4j.LoggerFactory
+import java.nio.file.Paths
 
 /**
  * An exception handler that logs uncaught exceptions and prints them to stderr.
  */
 val loggingExceptionHandler: Thread.UncaughtExceptionHandler =
     Thread.UncaughtExceptionHandler { _, throwable ->
-        val logger = LoggerFactory.getLogger("io.github.lostatc.reversion")
+        val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.daemon")
         logger.error(throwable.message, throwable)
         System.err.println("Error: ${throwable.message}")
     }
 
 /**
- * A [PropertyDefiner] for getting the path of the directory where log files are stored.
+ * Start the daemon.
  */
-class LogDirectoryPropertyDefiner : PropertyDefinerBase() {
-    override fun getPropertyValue(): String = DATA_DIR.toString()
+fun main(args: Array<String>) {
+    // Log any uncaught exceptions and print them to stderr.
+    Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
+
+    // Start the daemon.
+    val daemon = WatchDaemon(Paths.get(args[0]))
+    daemon.run()
 }
