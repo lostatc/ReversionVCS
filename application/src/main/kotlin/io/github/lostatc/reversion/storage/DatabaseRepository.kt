@@ -93,7 +93,7 @@ private object DatabaseFactory {
         val connection = Database.connect(
             "jdbc:sqlite:${path.toUri().path}",
             driver = "org.sqlite.JDBC",
-            setupConnection = ::configure
+            setupConnection = { configure(it) }
         )
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
         connection

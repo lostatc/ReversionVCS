@@ -67,7 +67,14 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
             }.toSet()
         }
         set(value) {
+            // This must be a separate transaction.
+            val policyEntities = transaction { entity.retentionPolicies }
+
             transaction {
+                for (policyEntity in policyEntities) {
+                    policyEntity.delete()
+                }
+
                 val entities = value.map {
                     RetentionPolicyEntity.new {
                         minInterval = it.minInterval

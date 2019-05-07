@@ -29,13 +29,14 @@ import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 
-class SnapshotCommand(parent: ReversionCommand) : CliktCommand(
+class SnapshotCommand(val parent: ReversionCommand) : CliktCommand(
     name = "snapshot", help = """
     Manage snapshots.
 """
 ) {
 
-    val workPath: Path = parent.workPath
+    val workPath: Path
+        get() = parent.workPath
 
     init {
         subcommands(
