@@ -57,5 +57,5 @@ class DatabaseTag(val entity: TagEntity, override val repository: DatabaseReposi
 
     override fun hashCode(): Int = Objects.hash(entity.id, repository)
 
-    override fun toString(): String = "Tag(name=$name)"
+    override fun toString(): String = "Tag(name=$name, snapshot=$snapshot)"
 }

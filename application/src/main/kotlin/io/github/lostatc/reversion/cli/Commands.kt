@@ -54,7 +54,8 @@ class ReversionCommand : CliktCommand(name = "reversion") {
             CheckoutCommand(this),
             UpdateCommand(this),
             CleanCommand(this),
-            VerifyCommand(this)
+            VerifyCommand(this),
+            RepairCommand(this)
         )
     }
 

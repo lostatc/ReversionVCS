@@ -75,5 +75,5 @@ class DatabaseVersion(val entity: VersionEntity, override val repository: Databa
 
     override fun hashCode(): Int = Objects.hash(entity.id, repository)
 
-    override fun toString(): String = "Version(path=$path)"
+    override fun toString(): String = "Version(path=$path, snapshot=$snapshot)"
 }

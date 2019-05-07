@@ -19,6 +19,8 @@
 
 package io.github.lostatc.reversion.api
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Path
 import java.time.Instant
@@ -184,6 +186,15 @@ interface Timeline {
             }
         }
 
+        logger.info("Cleaning up $totalDeleted versions in timeline $this.")
+
         return totalDeleted
+    }
+
+    companion object {
+        /**
+         * The logger for this class.
+         */
+        private val logger: Logger = LoggerFactory.getLogger(Timeline::class.java)
     }
 }

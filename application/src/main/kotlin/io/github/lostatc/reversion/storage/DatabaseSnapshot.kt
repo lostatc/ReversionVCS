@@ -36,6 +36,8 @@ import io.github.lostatc.reversion.schema.VersionTable
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -109,42 +111,48 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
                 .any()
         }
 
-    fun createVersion(path: Path, workDirectory: Path): DatabaseVersion = transaction {
+    fun createVersion(path: Path, workDirectory: Path): DatabaseVersion {
         if (path in versions) {
             throw RecordAlreadyExistsException("A version with the path '$path' already exists in this snapshot.")
         }
 
-        val absolutePath = workDirectory.resolve(path)
+        val version = transaction {
+            val absolutePath = workDirectory.resolve(path)
 
-        // Record file metadata in the database.
-        val versionEntity = VersionEntity.new {
-            this.path = path
-            snapshot = entity
-            lastModifiedTime = Files.getLastModifiedTime(absolutePath)
-            permissions = PermissionSet.fromPath(absolutePath)
-            size = Files.size(absolutePath)
-            checksum = Checksum.fromFile(absolutePath, repository.hashAlgorithm)
-        }
-
-        // Create a list of blobs from the file.
-        val blobs = Blob.chunkFile(absolutePath, repository.hashAlgorithm, repository.blockSize)
-
-        // Add the blobs to the file system. Because this is wrapped in a transaction, records in the database won't be
-        // updated until all the blobs have been added. This is to prevent corruption in case the operation is
-        // interrupted.
-        for ((index, blob) in blobs.withIndex()) {
-            repository.addBlob(blob)
-
-            val blobEntity = BlobEntity.find { BlobTable.checksum eq blob.checksum }.single()
-
-            BlockEntity.new {
-                version = versionEntity
-                this.blob = blobEntity
-                this.index = index
+            // Record file metadata in the database.
+            val versionEntity = VersionEntity.new {
+                this.path = path
+                snapshot = entity
+                lastModifiedTime = Files.getLastModifiedTime(absolutePath)
+                permissions = PermissionSet.fromPath(absolutePath)
+                size = Files.size(absolutePath)
+                checksum = Checksum.fromFile(absolutePath, repository.hashAlgorithm)
             }
+
+            // Create a list of blobs from the file.
+            val blobs = Blob.chunkFile(absolutePath, repository.hashAlgorithm, repository.blockSize)
+
+            // Add the blobs to the file system. Because this is wrapped in a transaction, records in the database won't be
+            // updated until all the blobs have been added. This is to prevent corruption in case the operation is
+            // interrupted.
+            for ((index, blob) in blobs.withIndex()) {
+                repository.addBlob(blob)
+
+                val blobEntity = BlobEntity.find { BlobTable.checksum eq blob.checksum }.single()
+
+                BlockEntity.new {
+                    version = versionEntity
+                    this.blob = blobEntity
+                    this.index = index
+                }
+            }
+
+            DatabaseVersion(versionEntity, repository)
         }
 
-        DatabaseVersion(versionEntity, repository)
+        logger.info("Created version $version.")
+
+        return version
     }
 
     override fun removeVersion(path: Path): Boolean {
@@ -160,23 +168,30 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         // Remove any blobs associated with the version which aren't referenced by any other version.
         repository.clean()
 
+        logger.info("Removed version $version.")
+
         return true
     }
 
-    override fun addTag(name: String, description: String, pinned: Boolean): DatabaseTag = transaction {
-        // if (getTag(name) != null) {
+    override fun addTag(name: String, description: String, pinned: Boolean): DatabaseTag {
         if (name in tags) {
             throw RecordAlreadyExistsException("A tag with the name '$name' already exists in this snapshot.")
         }
 
-        val tagEntity = TagEntity.new {
-            this.name = name
-            this.description = description
-            this.pinned = pinned
-            this.snapshot = entity
+        val tag = transaction {
+            val tagEntity = TagEntity.new {
+                this.name = name
+                this.description = description
+                this.pinned = pinned
+                this.snapshot = entity
+            }
+
+            DatabaseTag(tagEntity, repository)
         }
 
-        DatabaseTag(tagEntity, repository)
+        logger.info("Created tag $tag.")
+
+        return tag
     }
 
     override fun removeTag(name: String): Boolean {
@@ -185,6 +200,8 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         transaction {
             tag.entity.delete()
         }
+
+        logger.info("Removed tag $tag.")
 
         return true
     }
@@ -197,5 +214,12 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
 
     override fun hashCode(): Int = Objects.hash(entity.id, repository)
 
-    override fun toString(): String = "Snapshot(revision=$revision)"
+    override fun toString(): String = "Snapshot(revision=$revision, timeline=$timeline)"
+
+    companion object {
+        /**
+         * The logger for this class.
+         */
+        private val logger: Logger = LoggerFactory.getLogger(DatabaseSnapshot::class.java)
+    }
 }

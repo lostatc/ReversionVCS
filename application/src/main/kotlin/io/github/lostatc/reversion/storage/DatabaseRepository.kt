@@ -48,6 +48,8 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteConfig
 import java.io.IOException
 import java.nio.file.FileAlreadyExistsException
@@ -149,15 +151,19 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      */
     val blockSize: Long by blockSizeProperty
 
-    override fun createTimeline(policies: Set<RetentionPolicy>): DatabaseTimeline = transaction {
-        val timelineEntity = TimelineEntity.new {
-            this.timeCreated = Instant.now()
+    override fun createTimeline(policies: Set<RetentionPolicy>): DatabaseTimeline {
+        val timelineEntity = transaction {
+            TimelineEntity.new {
+                this.timeCreated = Instant.now()
+            }
         }
 
         val timeline = DatabaseTimeline(timelineEntity, this@DatabaseRepository)
         timeline.retentionPolicies = policies
 
-        timeline
+        logger.info("Created timeline $timeline.")
+
+        return timeline
     }
 
     override fun removeTimeline(id: UUID): Boolean {
@@ -172,6 +178,8 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
         // Remove any blobs associated with the timeline which aren't referenced by any other timeline.
         clean()
+
+        logger.info("Removed timeline $timeline.")
 
         return true
     }
@@ -233,6 +241,8 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         for (version in versionsToDelete) {
             version.snapshot.removeVersion(version.path)
         }
+
+        logger.info("Repaired repository $this and deleted ${versionsToDelete.size} versions.")
     }
 
     /**
@@ -321,6 +331,11 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
     companion object {
         /**
+         * The logger for this class.
+         */
+        private val logger: Logger = LoggerFactory.getLogger(DatabaseRepository::class.java)
+
+        /**
          * The current version of the repository format.
          */
         private val currentVersion: UUID = UUID.fromString("c0747b1e-4bd2-11e9-a623-bff5824aa175")
@@ -399,7 +414,11 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                 gson.fromJson(it, Config::class.java)
             }
 
-            return DatabaseRepository(path, config)
+            val repository = DatabaseRepository(path, config)
+
+            logger.debug("Opened repository $repository.")
+
+            return repository
         }
 
         /**
@@ -447,7 +466,11 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             // Do this last to signify that the repository is valid.
             Files.writeString(versionPath, currentVersion.toString())
 
-            return open(path)
+            val repository = open(path)
+
+            logger.info("Created repository $repository.")
+
+            return repository
         }
 
         /**

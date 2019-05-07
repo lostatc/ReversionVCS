@@ -25,7 +25,6 @@ import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.RetentionPolicyEntity
 import io.github.lostatc.reversion.schema.SnapshotEntity
 import io.github.lostatc.reversion.schema.SnapshotTable
-import io.github.lostatc.reversion.schema.TagTable.name
 import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
@@ -34,6 +33,8 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.time.Instant
 import java.util.Objects
@@ -118,21 +119,27 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
                 .toSet()
         }
 
-    override fun createSnapshot(paths: Iterable<Path>, workDirectory: Path): DatabaseSnapshot = transaction {
-        val snapshotEntity = SnapshotEntity.new {
-            revision = snapshots.keys.max()?.let { it + 1 } ?: STARTING_REVISION
-            timeCreated = Instant.now()
-            timeline = entity
+    override fun createSnapshot(paths: Iterable<Path>, workDirectory: Path): DatabaseSnapshot {
+        val snapshot = transaction {
+            val snapshotEntity = SnapshotEntity.new {
+                revision = snapshots.keys.max()?.let { it + 1 } ?: STARTING_REVISION
+                timeCreated = Instant.now()
+                timeline = entity
+            }
+
+            val snapshot = DatabaseSnapshot(snapshotEntity, repository)
+
+            // To avoid corruption, don't commit the snapshot until all versions have been added to it.
+            for (path in paths.distinct()) {
+                snapshot.createVersion(path, workDirectory)
+            }
+
+            snapshot
         }
 
-        val snapshot = DatabaseSnapshot(snapshotEntity, repository)
+        logger.info("Created snapshot $snapshot.")
 
-        // To avoid corruption, don't commit the snapshot until all versions have been added to it.
-        for (path in paths.distinct()) {
-            snapshot.createVersion(path, workDirectory)
-        }
-
-        snapshot
+        return snapshot
     }
 
     override fun removeSnapshot(revision: Int): Boolean {
@@ -147,6 +154,8 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
 
         // Remove any blobs associated with the snapshot which aren't referenced by any other snapshot.
         repository.clean()
+
+        logger.info("Removed snapshot $snapshot.")
 
         return true
     }
@@ -170,5 +179,12 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
 
     override fun hashCode(): Int = Objects.hash(entity.id, repository)
 
-    override fun toString(): String = "Timeline(name=$name)"
+    override fun toString(): String = "Timeline(id=$id, repository=$repository)"
+
+    companion object {
+        /**
+         * The logger for this class.
+         */
+        private val logger: Logger = LoggerFactory.getLogger(DatabaseTimeline::class.java)
+    }
 }

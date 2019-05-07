@@ -27,6 +27,8 @@ import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.UnsupportedFormatException
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -43,15 +45,14 @@ class InvalidWorkDirException(message: String) : Exception(message)
 /**
  * Filters out paths with are descendants of another path in the iterable.
  */
-private fun Iterable<Path>.flattenPaths(): List<Path> = this
-    .filterNot { this.any { other -> it != other && it.startsWith(other) } }
+private fun Iterable<Path>.flattenPaths(): List<Path> =
+    filterNot { any { other -> it != other && it.startsWith(other) } }
 
 /**
  * A [PathMatcher] that matches paths matched by any of the given [matchers].
  */
 private data class MultiPathMatcher(val matchers: Iterable<PathMatcher>) : PathMatcher {
     override fun matches(path: Path): Boolean = matchers.any { it.matches(path) }
-
 }
 
 /**
@@ -186,6 +187,8 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
             val version = targetSnapshot.cumulativeVersions[file] ?: continue
             version.checkout(absolutePath, overwrite = overwrite || file !in modifiedFiles)
         }
+
+        logger.info("Updating files to snapshot $targetSnapshot.")
     }
 
     /**
@@ -221,6 +224,11 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     private data class Info(val timeline: UUID)
 
     companion object {
+        /**
+         * The logger for this class.
+         */
+        private val logger: Logger = LoggerFactory.getLogger(WorkDirectory::class.java)
+
         /**
          * The relative path of the directory containing metadata for the working directory.
          */
@@ -273,7 +281,11 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
                 "The timeline associated with this working directory is not in the repository."
             )
 
-            return WorkDirectory(path, timeline)
+            val workDirectory = WorkDirectory(path, timeline)
+
+            logger.debug("Opening working directory $workDirectory.")
+
+            return workDirectory
         }
 
         /**
@@ -305,7 +317,11 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
                 gson.toJson(info, it)
             }
 
-            return open(path)
+            val workDirectory = open(path)
+
+            logger.info("Initializing working directory $workDirectory.")
+
+            return workDirectory
         }
     }
 }

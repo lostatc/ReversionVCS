@@ -56,6 +56,8 @@ private abstract class AbstractBlob(private val algorithm: String) : Blob {
     }
 
     override fun hashCode(): Int = Objects.hash(checksum)
+
+    override fun toString(): String = "Blob(checksum=$checksum)"
 }
 
 /**
