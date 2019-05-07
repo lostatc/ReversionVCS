@@ -48,6 +48,7 @@ class ReversionCommand : CliktCommand(name = "reversion") {
             SnapshotCommand(this),
             TagCommand(this),
             VersionCommand(this),
+            PolicyCommand(this),
             InitCommand(this),
             StatusCommand(this),
             CommitCommand(this),

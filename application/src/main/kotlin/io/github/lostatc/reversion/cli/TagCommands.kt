@@ -29,13 +29,14 @@ import com.github.ajalt.clikt.parameters.types.int
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 
-class TagCommand(parent: ReversionCommand) : CliktCommand(
+class TagCommand(val parent: ReversionCommand) : CliktCommand(
     name = "tag", help = """
     Manage tags.
 """
 ) {
 
-    val workPath: Path = parent.workPath
+    val workPath: Path
+        get() = parent.workPath
 
     init {
         subcommands(

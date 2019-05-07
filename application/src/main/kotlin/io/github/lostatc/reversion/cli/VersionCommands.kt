@@ -29,13 +29,14 @@ import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 
-class VersionCommand(parent: ReversionCommand) : CliktCommand(
+class VersionCommand(val parent: ReversionCommand) : CliktCommand(
     name = "version", help = """
     Manage versions of files.
 """
 ) {
 
-    val workPath: Path = parent.workPath
+    val workPath: Path
+        get() = parent.workPath
 
     init {
         subcommands(

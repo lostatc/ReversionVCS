@@ -105,6 +105,16 @@ interface RetentionPolicyFactory {
         maxVersions = Int.MAX_VALUE,
         description = "Keep each version for $amount ${unit.name}."
     )
+
+    /**
+     * Creates a [RetentionPolicy] that keeps each version forever.
+     */
+    fun forever(): RetentionPolicy = of(
+        minInterval = ChronoUnit.FOREVER.duration,
+        timeFrame = ChronoUnit.FOREVER.duration,
+        maxVersions = Int.MAX_VALUE,
+        description = "Keep each version forever."
+    )
 }
 
 /**
