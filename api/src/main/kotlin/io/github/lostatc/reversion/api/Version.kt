@@ -19,6 +19,8 @@
 
 package io.github.lostatc.reversion.api
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -135,6 +137,15 @@ interface Version {
         Files.setLastModifiedTime(target, lastModifiedTime)
         if (permissions != null) Files.setPosixFilePermissions(target, permissions)
 
+        logger.debug("Checked out $this to '$target'.")
+
         return true
+    }
+
+    companion object {
+        /**
+         * The logger for this class.
+         */
+        private val logger: Logger = LoggerFactory.getLogger(Version::class.java)
     }
 }
