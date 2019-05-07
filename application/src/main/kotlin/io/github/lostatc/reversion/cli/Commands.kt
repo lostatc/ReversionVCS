@@ -196,3 +196,16 @@ class VerifyCommand(val parent: ReversionCommand) : CliktCommand(
         }
     }
 }
+
+class RepairCommand(val parent: ReversionCommand) : CliktCommand(
+    name = "repair", help = """
+    Repair corrupt data in the repository.
+
+    Corrupt file versions are repaired if possible using existing data in the working directory and deleted otherwise.
+"""
+) {
+    override fun run() {
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        workDirectory.repository.repair(workDirectory.path)
+    }
+}

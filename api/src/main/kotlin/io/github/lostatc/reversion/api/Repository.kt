@@ -25,7 +25,7 @@ import java.util.UUID
 /**
  * Information about the integrity of a repository.
  *
- * @param [corruptVersions] The set of files in the repository which are corrupt.
+ * @param [corruptVersions] The set of versions in the repository which are corrupt.
  */
 data class IntegrityReport(val corruptVersions: Set<Version>) {
     /**
@@ -77,6 +77,19 @@ interface Repository : Configurable {
 
     /**
      * Verifies the integrity of the repository.
+     *
+     * @return A report of which versions are corrupt.
      */
     fun verify(): IntegrityReport
+
+    /**
+     * Repairs the repository.
+     *
+     * This attempts to repair corrupt data in the repository using files from the working directory. Any versions which
+     * cannot be repaired are removed. If this returns without throwing an exception, it is guaranteed that
+     * `verify().isValid` will evaluate to `true`. However, data may be lost.
+     *
+     * @param [workDirectory] The path of the working directory.
+     */
+    fun repair(workDirectory: Path)
 }
