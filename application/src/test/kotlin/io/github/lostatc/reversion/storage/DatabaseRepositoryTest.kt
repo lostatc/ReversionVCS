@@ -76,4 +76,43 @@ class DatabaseRepositoryTest : RepositoryTest {
         assertEquals(expectedReport, repository.verify())
 
     }
+
+    @Test
+    fun `corrupt data is repaired`() {
+        val paths = setOf(Paths.get("a"), Paths.get("b"), Paths.get("c", "a"))
+        val timeline = repository.createTimeline()
+        val snapshot = timeline.createSnapshot(paths, workPath)
+
+        Files.delete(repository.getBlobPath((Checksum.fromFile(workPath.resolve("a"), repository.hashAlgorithm))))
+        Files.writeString(
+            repository.getBlobPath(Checksum.fromFile(workPath.resolve("c", "a"), repository.hashAlgorithm)),
+            "corrupt data"
+        )
+
+        repository.repair(workPath)
+
+        assertTrue(repository.verify().isValid)
+        assertEquals(paths, snapshot.versions.keys)
+    }
+
+    @Test
+    fun `corrupt data is removed`() {
+        val paths = setOf(Paths.get("a"), Paths.get("b"), Paths.get("c", "a"))
+        val timeline = repository.createTimeline()
+        val snapshot = timeline.createSnapshot(paths, workPath)
+
+        Files.delete(repository.getBlobPath((Checksum.fromFile(workPath.resolve("a"), repository.hashAlgorithm))))
+        Files.writeString(
+            repository.getBlobPath(Checksum.fromFile(workPath.resolve("c", "a"), repository.hashAlgorithm)),
+            "corrupt data"
+        )
+
+        Files.delete(workPath.resolve("a"))
+        Files.delete(workPath.resolve("c", "a"))
+
+        repository.repair(workPath)
+
+        assertTrue(repository.verify().isValid)
+        assertEquals(setOf(Paths.get("b")), snapshot.versions.keys)
+    }
 }

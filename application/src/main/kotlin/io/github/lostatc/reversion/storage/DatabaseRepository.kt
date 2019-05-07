@@ -31,7 +31,6 @@ import io.github.lostatc.reversion.api.RetentionPolicy
 import io.github.lostatc.reversion.api.RetentionPolicyFactory
 import io.github.lostatc.reversion.api.TruncatingRetentionPolicyFactory
 import io.github.lostatc.reversion.api.UnsupportedFormatException
-import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
 import io.github.lostatc.reversion.schema.BlockEntity
@@ -55,6 +54,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.sql.Connection
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -176,24 +176,63 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         return true
     }
 
-    override fun verify(): IntegrityReport {
-        val affectedVersions = mutableSetOf<Version>()
+    private fun getCorruptBlobs(): Set<BlobEntity> = transaction {
+        BlobEntity
+            .all()
+            .filter { getBlob(it.checksum)?.checksum != it.checksum }
+            .toSet()
+    }
+
+    override fun verify(): IntegrityReport = transaction {
+        IntegrityReport(
+            getCorruptBlobs()
+                .flatMap { it.blocks }
+                .map { DatabaseVersion(it.version, this@DatabaseRepository) }
+                .toSet()
+        )
+    }
+
+    override fun repair(workDirectory: Path) {
+        val versionsToDelete = mutableSetOf<DatabaseVersion>()
 
         transaction {
-            for (blobEntity in BlobEntity.all()) {
-                val blob = getBlob(blobEntity.checksum)
+            val corruptBlobs = getCorruptBlobs()
 
-                // Skip the blob if it is valid.
-                if (blob != null && blob.checksum == blobEntity.checksum) continue
+            // Iterate over each corrupt blob.
+            blobs@ for (blobEntity in corruptBlobs) {
+                val blobPath = getBlobPath(blobEntity.checksum)
 
-                // The blob is either missing or corrupt. Find all versions that contain the blob.
-                affectedVersions.addAll(
-                    blobEntity.blocks.map { DatabaseVersion(it.version, this@DatabaseRepository) }
-                )
+                val versions = blobEntity.blocks.map { DatabaseVersion(it.version, this@DatabaseRepository) }
+                val versionPaths = versions.map { it.path }.distinct()
+
+                // Iterate over the path of each version the corrupt blob is in.
+                for (relativePath in versionPaths) {
+                    val absolutePath = workDirectory.resolve(relativePath)
+
+                    // Get blobs from the current version of the file in the file system.
+                    val fileSystemBlobs = try {
+                        Blob.chunkFile(absolutePath, hashAlgorithm)
+                    } catch (e: IOException) {
+                        continue
+                    }
+
+                    // Find the missing blob in the current version of the file. Go to the next version otherwise.
+                    val missingBlob = fileSystemBlobs.find { it.checksum == blobEntity.checksum } ?: continue
+
+                    // If the missing blob was found, use it to repair the repository and go to the next blob.
+                    missingBlob.newInputStream().use { Files.copy(it, blobPath, StandardCopyOption.REPLACE_EXISTING) }
+                    continue@blobs
+                }
+
+                // The missing blob was not found in the file system. Delete all versions containing the blob.
+                versionsToDelete.addAll(versions)
             }
         }
 
-        return IntegrityReport(affectedVersions)
+        // Delete all versions which could not be repaired.
+        for (version in versionsToDelete) {
+            version.snapshot.removeVersion(version.path)
+        }
     }
 
     /**
