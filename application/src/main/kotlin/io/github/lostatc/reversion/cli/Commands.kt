@@ -20,7 +20,9 @@
 package io.github.lostatc.reversion.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.options.default
@@ -29,6 +31,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
+import io.github.lostatc.reversion.api.ValueConvertException
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -69,12 +72,33 @@ class InitCommand(val parent: ReversionCommand) : CliktCommand(
     Begin tracking changes in an existing directory.
 """
 ) {
-    // TODO: Not implemented.
-    val configure by option("-c", "--configure", help = "Interactively configure the repository.")
+    val configure: Boolean by option("-c", "--configure", help = "Interactively configure the repository.")
         .flag()
 
     override fun run() {
-        WorkDirectory.init(parent.workPath, DEFAULT_PROVIDER)
+        val provider = DEFAULT_PROVIDER
+        val config = provider.getConfig()
+
+        if (configure) {
+            for (property in config.properties) {
+                while (true) {
+                    echo(property.description)
+                    val value = TermUi.prompt(text = property.name, default = property.default)
+                        ?: throw CliktError("Cannot prompt interactively because stdin is not a terminal.")
+
+                    try {
+                        config[property] = value
+                        break
+                    } catch (e: ValueConvertException) {
+                        echo("\n${e.message}\n")
+                    }
+                }
+
+                println()
+            }
+        }
+
+        WorkDirectory.init(parent.workPath, DEFAULT_PROVIDER, config)
     }
 }
 

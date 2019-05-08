@@ -42,6 +42,7 @@ import io.github.lostatc.reversion.schema.TimelineCleanupPolicyTable
 import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import io.github.lostatc.reversion.schema.VersionTable
+import org.apache.commons.codec.digest.DigestUtils
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.deleteWhere
@@ -374,7 +375,8 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             key = "hashFunc",
             name = "Hash algorithm",
             default = "SHA-256",
-            description = "The name of the algorithm used to calculate checksums."
+            description = "The name of the algorithm used to calculate checksums.",
+            validator = { require(DigestUtils.isAvailable(it)) { "The given algorithm is not supported." } }
         )
 
         /**
@@ -384,7 +386,8 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             key = "blockSize",
             name = "Block size",
             default = Long.MAX_VALUE,
-            description = "The maximum size of the blocks that files stored in the repository are split into."
+            description = "The maximum size of the blocks that files stored in the repository are split into.",
+            validator = { require(it > 0) { "The given value must be greater than 0." } }
         )
 
         /**
