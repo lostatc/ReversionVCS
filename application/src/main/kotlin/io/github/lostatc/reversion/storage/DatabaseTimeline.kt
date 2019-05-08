@@ -19,10 +19,10 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.RetentionPolicy
+import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
-import io.github.lostatc.reversion.schema.RetentionPolicyEntity
+import io.github.lostatc.reversion.schema.CleanupPolicyEntity
 import io.github.lostatc.reversion.schema.SnapshotEntity
 import io.github.lostatc.reversion.schema.SnapshotTable
 import io.github.lostatc.reversion.schema.TimelineEntity
@@ -55,10 +55,10 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
     override val timeCreated: Instant
         get() = transaction { entity.timeCreated }
 
-    override var retentionPolicies: Set<RetentionPolicy>
+    override var cleanupPolicies: Set<CleanupPolicy>
         get() = transaction {
-            entity.retentionPolicies.map {
-                RetentionPolicy(
+            entity.cleanupPolicies.map {
+                CleanupPolicy(
                     minInterval = it.minInterval,
                     timeFrame = it.timeFrame,
                     maxVersions = it.maxVersions,
@@ -68,7 +68,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
         }
         set(value) {
             // This must be a separate transaction.
-            val policyEntities = transaction { entity.retentionPolicies }
+            val policyEntities = transaction { entity.cleanupPolicies }
 
             transaction {
                 for (policyEntity in policyEntities) {
@@ -76,7 +76,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
                 }
 
                 val entities = value.map {
-                    RetentionPolicyEntity.new {
+                    CleanupPolicyEntity.new {
                         minInterval = it.minInterval
                         timeFrame = it.timeFrame
                         maxVersions = it.maxVersions
@@ -84,7 +84,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
                     }
                 }
 
-                entity.retentionPolicies = SizedCollection(entities)
+                entity.cleanupPolicies = SizedCollection(entities)
             }
         }
 

@@ -79,7 +79,7 @@ interface Timeline {
     /**
      * The rules which govern how old snapshots in this timeline are cleaned up.
      */
-    var retentionPolicies: Set<RetentionPolicy>
+    var cleanupPolicies: Set<CleanupPolicy>
 
     /**
      * The snapshots in this timeline indexed by their [revision number][Snapshot.revision].
@@ -141,7 +141,7 @@ interface Timeline {
     /**
      * Removes old versions of files with the given [pathsToClean].
      *
-     * The timeline's [retentionPolicies] govern which versions are removed. By default, old versions of all files are
+     * The timeline's [cleanupPolicies] govern which versions are removed. By default, old versions of all files are
      * removed.
      *
      * This also removes any snapshots which do not have any versions.
@@ -153,7 +153,7 @@ interface Timeline {
     fun clean(pathsToClean: Iterable<Path> = paths): Int {
         val versionsToDeletePerPolicy = mutableSetOf<Set<Version>>()
 
-        for (policy in retentionPolicies) {
+        for (policy in cleanupPolicies) {
             for (path in pathsToClean) {
                 // Get versions with this path sorted from newest to oldest. Skip versions that are pinned.
                 val sortedVersions = listVersions(path).filter { !it.snapshot.pinned }

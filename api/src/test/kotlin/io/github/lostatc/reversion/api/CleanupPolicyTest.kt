@@ -22,8 +22,8 @@ package io.github.lostatc.reversion.api
 import org.junit.jupiter.api.Test
 import java.time.temporal.ChronoUnit
 
-class RetentionPolicyTest {
-    val policyFactory: RetentionPolicyFactory = TruncatingRetentionPolicyFactory(ChronoUnit.MILLIS)
+class CleanupPolicyTest {
+    val policyFactory: CleanupPolicyFactory = TruncatingCleanupPolicyFactory(ChronoUnit.MILLIS)
 
     @Test
     fun `time-based units don't throw`() {

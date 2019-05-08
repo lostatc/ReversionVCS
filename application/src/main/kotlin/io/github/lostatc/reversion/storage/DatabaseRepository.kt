@@ -23,23 +23,23 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.api.Blob
 import io.github.lostatc.reversion.api.Checksum
+import io.github.lostatc.reversion.api.CleanupPolicy
+import io.github.lostatc.reversion.api.CleanupPolicyFactory
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
 import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.api.RetentionPolicy
-import io.github.lostatc.reversion.api.RetentionPolicyFactory
-import io.github.lostatc.reversion.api.TruncatingRetentionPolicyFactory
+import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
 import io.github.lostatc.reversion.schema.BlockEntity
 import io.github.lostatc.reversion.schema.BlockTable
-import io.github.lostatc.reversion.schema.RetentionPolicyTable
+import io.github.lostatc.reversion.schema.CleanupPolicyTable
 import io.github.lostatc.reversion.schema.SnapshotTable
 import io.github.lostatc.reversion.schema.TagTable
+import io.github.lostatc.reversion.schema.TimelineCleanupPolicyTable
 import io.github.lostatc.reversion.schema.TimelineEntity
-import io.github.lostatc.reversion.schema.TimelineRetentionPolicyTable
 import io.github.lostatc.reversion.schema.TimelineTable
 import io.github.lostatc.reversion.schema.VersionTable
 import org.jetbrains.exposed.sql.Database
@@ -105,7 +105,7 @@ private object DatabaseFactory {
  */
 data class DatabaseRepository(override val path: Path, override val config: Config) : Repository {
 
-    override val policyFactory: RetentionPolicyFactory = TruncatingRetentionPolicyFactory(ChronoUnit.MILLIS)
+    override val policyFactory: CleanupPolicyFactory = TruncatingCleanupPolicyFactory(ChronoUnit.MILLIS)
 
     override val timelines: Map<UUID, DatabaseTimeline> = object : AbstractMap<UUID, DatabaseTimeline>() {
         override val entries: Set<Map.Entry<UUID, DatabaseTimeline>>
@@ -151,7 +151,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      */
     val blockSize: Long by blockSizeProperty
 
-    override fun createTimeline(policies: Set<RetentionPolicy>): DatabaseTimeline {
+    override fun createTimeline(policies: Set<CleanupPolicy>): DatabaseTimeline {
         val timelineEntity = transaction {
             TimelineEntity.new {
                 this.timeCreated = Instant.now()
@@ -159,7 +159,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         }
 
         val timeline = DatabaseTimeline(timelineEntity, this@DatabaseRepository)
-        timeline.retentionPolicies = policies
+        timeline.cleanupPolicies = policies
 
         logger.info("Created timeline $timeline.")
 
@@ -448,8 +448,8 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             transaction {
                 SchemaUtils.create(
                     TimelineTable,
-                    RetentionPolicyTable,
-                    TimelineRetentionPolicyTable,
+                    CleanupPolicyTable,
+                    TimelineCleanupPolicyTable,
                     SnapshotTable,
                     TagTable,
                     VersionTable,

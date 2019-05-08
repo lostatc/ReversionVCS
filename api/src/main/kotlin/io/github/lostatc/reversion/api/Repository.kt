@@ -50,9 +50,9 @@ interface Repository : Configurable {
     override val config: Config
 
     /**
-     * A factory for creating [RetentionPolicy] instances.
+     * A factory for creating [CleanupPolicy] instances.
      */
-    val policyFactory: RetentionPolicyFactory
+    val policyFactory: CleanupPolicyFactory
 
     /**
      * The timelines in this repository indexed by their [ID][Timeline.id].
@@ -64,7 +64,7 @@ interface Repository : Configurable {
      *
      * @param [policies] The rules which govern how old snapshots in this timeline are cleaned up.
      */
-    fun createTimeline(policies: Set<RetentionPolicy> = setOf()): Timeline
+    fun createTimeline(policies: Set<CleanupPolicy> = setOf()): Timeline
 
     /**
      * Removes the timeline with the given [id] from the repository.

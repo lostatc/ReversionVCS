@@ -27,7 +27,7 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.SizedIterable
 import java.time.Duration
 
-object RetentionPolicyTable : IntIdTable() {
+object CleanupPolicyTable : IntIdTable() {
     val minInterval: Column<Duration> = duration("minIntervalMilliseconds")
 
     val timeFrame: Column<Duration> = duration("timeFrameMilliseconds")
@@ -43,31 +43,31 @@ object RetentionPolicyTable : IntIdTable() {
  * For the first [timeFrame] after a snapshot is taken, this policy will only keep [maxVersions] versions of each file
  * for every [minInterval] interval.
  */
-class RetentionPolicyEntity(id: EntityID<Int>) : IntEntity(id) {
+class CleanupPolicyEntity(id: EntityID<Int>) : IntEntity(id) {
     /**
      * The minimum interval of time between each group of versions to keep.
      */
-    var minInterval: Duration by RetentionPolicyTable.minInterval
+    var minInterval: Duration by CleanupPolicyTable.minInterval
 
     /**
      * The number of seconds into the past during which this policy takes effect.
      */
-    var timeFrame: Duration by RetentionPolicyTable.timeFrame
+    var timeFrame: Duration by CleanupPolicyTable.timeFrame
 
     /**
      * The maximum number of versions of each file to keep within each [minInterval] interval.
      */
-    var maxVersions: Int by RetentionPolicyTable.maxVersions
+    var maxVersions: Int by CleanupPolicyTable.maxVersions
 
     /**
      * The human-readable description of the policy.
      */
-    var description: String by RetentionPolicyTable.description
+    var description: String by CleanupPolicyTable.description
 
     /**
-     * The timelines that are associated with this retention policy.
+     * The timelines that are associated with this cleanup policy.
      */
-    var timelines: SizedIterable<TimelineEntity> by TimelineEntity via TimelineRetentionPolicyTable
+    var timelines: SizedIterable<TimelineEntity> by TimelineEntity via TimelineCleanupPolicyTable
 
-    companion object : IntEntityClass<RetentionPolicyEntity>(RetentionPolicyTable)
+    companion object : IntEntityClass<CleanupPolicyEntity>(CleanupPolicyTable)
 }
