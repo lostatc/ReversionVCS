@@ -139,24 +139,24 @@ interface Timeline {
         .mapNotNull { it.versions[path] }
 
     /**
-     * Removes old versions of files with the given [paths].
+     * Removes old versions of files with the given [pathsToClean].
      *
      * The timeline's [retentionPolicies] govern which versions are removed. By default, old versions of all files are
      * removed.
      *
      * This also removes any snapshots which do not have any versions.
      *
-     * @param [paths] The paths of the files relative to their working directory.
+     * @param [pathsToClean] The paths of the files relative to their working directory.
      *
      * @return The number of versions that were removed.
      */
-    fun clean(paths: Iterable<Path> = this.paths): Int {
-        var totalDeleted = 0
+    fun clean(pathsToClean: Iterable<Path> = paths): Int {
+        val versionsToDeletePerPolicy = mutableSetOf<Set<Version>>()
 
         for (policy in retentionPolicies) {
-            for (path in paths) {
+            for (path in pathsToClean) {
                 // Get versions with this path sorted from newest to oldest. Skip versions that are pinned.
-                val sortedVersions = listVersions(path).filter { !it.snapshot.pinned }.toList()
+                val sortedVersions = listVersions(path).filter { !it.snapshot.pinned }
 
                 val latestVersionCreated = sortedVersions.first().snapshot.timeCreated
                 val intervals = Interval.step(
@@ -171,12 +171,17 @@ interface Timeline {
                     val versionsInThisInterval = sortedVersions.filter { it.snapshot.timeCreated in interval }
 
                     // Drop the newest files to keep them and delete the rest.
-                    for (versionToDelete in versionsInThisInterval.drop(policy.maxVersions)) {
-                        versionToDelete.snapshot.removeVersion(versionToDelete.path)
-                        totalDeleted++
-                    }
+                    versionsToDeletePerPolicy.add(versionsInThisInterval.drop(policy.maxVersions).toSet())
                 }
             }
+        }
+
+        val versionsToDelete = versionsToDeletePerPolicy.reduce { accumulator, it -> accumulator intersect it }
+        val totalDeleted = versionsToDelete.size
+
+        // Delete versions.
+        for (version in versionsToDelete) {
+            version.snapshot.removeVersion(version.path)
         }
 
         // Remove empty snapshots.
@@ -186,7 +191,7 @@ interface Timeline {
             }
         }
 
-        logger.info("Cleaning up $totalDeleted versions in timeline $this.")
+        logger.info("Cleaned up $totalDeleted versions in timeline $this.")
 
         return totalDeleted
     }
