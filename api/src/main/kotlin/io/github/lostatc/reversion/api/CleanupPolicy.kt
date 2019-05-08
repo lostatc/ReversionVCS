@@ -29,14 +29,14 @@ import java.time.temporal.TemporalUnit
  * For the first [timeFrame] after a new version of a file is created, this policy will only keep [maxVersions] versions
  * of that file for every [minInterval] interval.
  *
- * Each [RetentionPolicy] has a [description] that is shown in the UI.
+ * Each [CleanupPolicy] has a [description] that is shown in the UI.
  *
  * @param [minInterval] The interval of time.
  * @param [timeFrame] The maximum amount of time to keep files for.
  * @param [maxVersions] The maximum number of versions to keep for each interval.
  * @param [description] A human-readable description of the policy.
  */
-data class RetentionPolicy(
+data class CleanupPolicy(
     val minInterval: Duration,
     val timeFrame: Duration,
     val maxVersions: Int,
@@ -44,9 +44,9 @@ data class RetentionPolicy(
 )
 
 /**
- * A factory for creating [RetentionPolicy] objects.
+ * A factory for creating [CleanupPolicy] objects.
  */
-interface RetentionPolicyFactory {
+interface CleanupPolicyFactory {
     /**
      * The lower-case name of the unit.
      */
@@ -54,26 +54,26 @@ interface RetentionPolicyFactory {
         get() = toString().toLowerCase()
 
     /**
-     * Creates a [RetentionPolicy].
+     * Creates a [CleanupPolicy].
      *
      * @param [minInterval] The interval of time.
      * @param [timeFrame] The maximum amount of time to keep files for.
      * @param [maxVersions] The maximum number of versions to keep for each interval.
      * @param [description] A human-readable description of the policy.
      */
-    fun of(minInterval: Duration, timeFrame: Duration, maxVersions: Int, description: String): RetentionPolicy
+    fun of(minInterval: Duration, timeFrame: Duration, maxVersions: Int, description: String): CleanupPolicy
 
     /**
-     * Creates a [RetentionPolicy] based on a unit of time.
+     * Creates a [CleanupPolicy] based on a unit of time.
      *
-     * The [minInterval][RetentionPolicy.minInterval] and [timeFrame][RetentionPolicy.timeFrame] of the created
-     * [RetentionPolicy] may be based on estimated durations.
+     * The [minInterval][CleanupPolicy.minInterval] and [timeFrame][CleanupPolicy.timeFrame] of the created
+     * [CleanupPolicy] may be based on estimated durations.
      *
      * @param [amount] The maximum amount of time to keep files for in terms of [unit].
      * @param [unit] The interval of time.
      * @param [versions] The maximum number of versions to keep for each interval.
      */
-    fun ofUnit(amount: Long, unit: TemporalUnit, versions: Int): RetentionPolicy = of(
+    fun ofUnit(amount: Long, unit: TemporalUnit, versions: Int): CleanupPolicy = of(
         minInterval = unit.duration,
         timeFrame = unit.duration.multipliedBy(amount),
         maxVersions = versions,
@@ -81,9 +81,9 @@ interface RetentionPolicyFactory {
     )
 
     /**
-     * Creates a [RetentionPolicy] that keeps a given number of [versions] of each file.
+     * Creates a [CleanupPolicy] that keeps a given number of [versions] of each file.
      */
-    fun ofVersions(versions: Int): RetentionPolicy = of(
+    fun ofVersions(versions: Int): CleanupPolicy = of(
         minInterval = ChronoUnit.FOREVER.duration,
         timeFrame = ChronoUnit.FOREVER.duration,
         maxVersions = versions,
@@ -91,15 +91,15 @@ interface RetentionPolicyFactory {
     )
 
     /**
-     * Creates a [RetentionPolicy] that keeps each version for a given amount of time.
+     * Creates a [CleanupPolicy] that keeps each version for a given amount of time.
      *
-     * The [minInterval][RetentionPolicy.minInterval] and [timeFrame][RetentionPolicy.timeFrame] of the created
-     * [RetentionPolicy] may be based on estimated durations.
+     * The [minInterval][CleanupPolicy.minInterval] and [timeFrame][CleanupPolicy.timeFrame] of the created
+     * [CleanupPolicy] may be based on estimated durations.
      *
      * @param [amount] The amount of time in terms of [unit].
      * @param [unit] The unit to measure the duration in.
      */
-    fun ofDuration(amount: Long, unit: TemporalUnit): RetentionPolicy = of(
+    fun ofDuration(amount: Long, unit: TemporalUnit): CleanupPolicy = of(
         minInterval = unit.duration.multipliedBy(amount),
         timeFrame = unit.duration.multipliedBy(amount),
         maxVersions = Int.MAX_VALUE,
@@ -107,9 +107,9 @@ interface RetentionPolicyFactory {
     )
 
     /**
-     * Creates a [RetentionPolicy] that keeps each version forever.
+     * Creates a [CleanupPolicy] that keeps each version forever.
      */
-    fun forever(): RetentionPolicy = of(
+    fun forever(): CleanupPolicy = of(
         minInterval = ChronoUnit.FOREVER.duration,
         timeFrame = ChronoUnit.FOREVER.duration,
         maxVersions = Int.MAX_VALUE,
@@ -134,22 +134,22 @@ private fun Duration.inTermsOf(unit: TemporalUnit): Duration {
 
 
 /**
- * A [RetentionPolicyFactory] that allows for serializing durations.
+ * A [CleanupPolicyFactory] that allows for serializing durations.
  *
- * This truncates durations in the [RetentionPolicy] to the given [unit] so that the [RetentionPolicy] is equal to
+ * This truncates durations in the [CleanupPolicy] to the given [unit] so that the [CleanupPolicy] is equal to
  * itself after being serialized and deserialized. If a duration is too long to be stored in a [Long] in terms of
  * [unit], it is shortened to the longest duration which can.
  *
  * @param [unit] The unit to serialize [Duration] objects as.
  */
-data class TruncatingRetentionPolicyFactory(val unit: TemporalUnit) : RetentionPolicyFactory {
+data class TruncatingCleanupPolicyFactory(val unit: TemporalUnit) : CleanupPolicyFactory {
     override fun of(
         minInterval: Duration,
         timeFrame: Duration,
         maxVersions: Int,
         description: String
-    ): RetentionPolicy {
-        return RetentionPolicy(
+    ): CleanupPolicy {
+        return CleanupPolicy(
             minInterval = minInterval.inTermsOf(unit),
             timeFrame = timeFrame.inTermsOf(unit),
             maxVersions = maxVersions,

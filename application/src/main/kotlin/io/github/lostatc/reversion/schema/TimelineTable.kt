@@ -42,9 +42,9 @@ class TimelineEntity(id: EntityID<UUID>) : UUIDEntity(id) {
     var timeCreated: Instant by TimelineTable.timeCreated
 
     /**
-     * The retention policies that are associated with this timeline.
+     * The cleanup policies that are associated with this timeline.
      */
-    var retentionPolicies: SizedIterable<RetentionPolicyEntity> by RetentionPolicyEntity via TimelineRetentionPolicyTable
+    var cleanupPolicies: SizedIterable<CleanupPolicyEntity> by CleanupPolicyEntity via TimelineCleanupPolicyTable
 
     /**
      * The snapshots that are a part of this timeline.

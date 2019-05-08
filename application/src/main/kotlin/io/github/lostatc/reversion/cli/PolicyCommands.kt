@@ -109,7 +109,7 @@ class PolicyCreateCommand(val parent: PolicyCommand) : CliktCommand(
             throw CliktError("The options '--unit' and '--amount' must be specified together.")
         }
 
-        workDirectory.timeline.retentionPolicies += policy
+        workDirectory.timeline.cleanupPolicies += policy
     }
 }
 
@@ -120,7 +120,7 @@ class PolicyListCommand(val parent: PolicyCommand) : CliktCommand(
 ) {
     override fun run() {
         val workDirectory = WorkDirectory.open(parent.workPath)
-        echo(workDirectory.timeline.retentionPolicies.joinToString(separator = "\n") { it.description })
+        echo(workDirectory.timeline.cleanupPolicies.joinToString(separator = "\n") { it.description })
     }
 }
 
@@ -131,6 +131,6 @@ class PolicyClearCommand(val parent: PolicyCommand) : CliktCommand(
 ) {
     override fun run() {
         val workDirectory = WorkDirectory.open(parent.workPath)
-        workDirectory.timeline.retentionPolicies = setOf()
+        workDirectory.timeline.cleanupPolicies = setOf()
     }
 }

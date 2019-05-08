@@ -44,7 +44,7 @@ interface RepositoryTest {
         )
         val timeline = repository.createTimeline(policies)
 
-        assertEquals(policies, timeline.retentionPolicies)
+        assertEquals(policies, timeline.cleanupPolicies)
         assertTrue(Instant.now() >= timeline.timeCreated)
         assertTrue(timeline.snapshots.isEmpty())
     }

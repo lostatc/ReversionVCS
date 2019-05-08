@@ -25,10 +25,10 @@ import org.jetbrains.exposed.sql.Table
 import java.util.UUID
 
 /**
- * A table for storing the relationships between timelines and retention policies.
+ * A table for storing the relationships between timelines and cleanup policies.
  */
-object TimelineRetentionPolicyTable : Table() {
+object TimelineCleanupPolicyTable : Table() {
     val timeline: Column<EntityID<UUID>> = cascadeReference("timeline", TimelineTable).primaryKey(0)
 
-    val retentionPolicy: Column<EntityID<Int>> = cascadeReference("retentionPolicy", RetentionPolicyTable).primaryKey(1)
+    val cleanupPolicy: Column<EntityID<Int>> = cascadeReference("cleanupPolicy", CleanupPolicyTable).primaryKey(1)
 }
