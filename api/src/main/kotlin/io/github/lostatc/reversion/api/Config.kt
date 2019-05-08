@@ -84,11 +84,20 @@ data class ConfigProperty<T>(
         /**
          * Constructs a [ConfigProperty] for a [String] value.
          */
-        fun of(key: String, default: String, name: String = key, description: String = ""): ConfigProperty<String> =
+        fun of(
+            key: String,
+            default: String,
+            validator: ConvertContext.(String) -> Unit = { },
+            name: String = key,
+            description: String = ""
+        ): ConfigProperty<String> =
             ConfigProperty(
                 key = key,
                 default = default,
-                converter = { it },
+                converter = {
+                    this.validator(it)
+                    it
+                },
                 name = name,
                 description = description
             )
@@ -96,11 +105,21 @@ data class ConfigProperty<T>(
         /**
          * Constructs a [ConfigProperty] for an [Int] value.
          */
-        fun of(key: String, default: Int, name: String = key, description: String = ""): ConfigProperty<Int> =
+        fun of(
+            key: String,
+            default: Int,
+            validator: ConvertContext.(Int) -> Unit = { },
+            name: String = key,
+            description: String = ""
+        ): ConfigProperty<Int> =
             ConfigProperty(
                 key = key,
                 default = default.toString(),
-                converter = { it.toIntOrNull() ?: fail("The value '$it' must be an integer.") },
+                converter = {
+                    val value = it.toIntOrNull() ?: fail("The value '$it' must be an integer.")
+                    this.validator(value)
+                    value
+                },
                 name = name,
                 description = description
             )
@@ -108,11 +127,21 @@ data class ConfigProperty<T>(
         /**
          * Constructs a [ConfigProperty] for a [Long] value.
          */
-        fun of(key: String, default: Long, name: String = key, description: String = ""): ConfigProperty<Long> =
+        fun of(
+            key: String,
+            default: Long,
+            validator: ConvertContext.(Long) -> Unit = { },
+            name: String = key,
+            description: String = ""
+        ): ConfigProperty<Long> =
             ConfigProperty(
                 key = key,
                 default = default.toString(),
-                converter = { it.toLongOrNull() ?: fail("The value '$it' must be an integer.") },
+                converter = {
+                    val value = it.toLongOrNull() ?: fail("The value '$it' must be an integer.")
+                    this.validator(value)
+                    value
+                },
                 name = name,
                 description = description
             )
@@ -120,11 +149,21 @@ data class ConfigProperty<T>(
         /**
          * Constructs a [ConfigProperty] for a [Float] value.
          */
-        fun of(key: String, default: Float, name: String = key, description: String = ""): ConfigProperty<Float> =
+        fun of(
+            key: String,
+            default: Float,
+            validator: ConvertContext.(Float) -> Unit = { },
+            name: String = key,
+            description: String = ""
+        ): ConfigProperty<Float> =
             ConfigProperty(
                 key = key,
                 default = default.toString(),
-                converter = { it.toFloatOrNull() ?: fail("The value '$it' must be a decimal.") },
+                converter = {
+                    val value = it.toFloatOrNull() ?: fail("The value '$it' must be a decimal.")
+                    this.validator(value)
+                    value
+                },
                 name = name,
                 description = description
             )
@@ -132,11 +171,21 @@ data class ConfigProperty<T>(
         /**
          * Constructs a [ConfigProperty] for a [Double] value.
          */
-        fun of(key: String, default: Double, name: String = key, description: String = ""): ConfigProperty<Double> =
+        fun of(
+            key: String,
+            default: Double,
+            validator: ConvertContext.(Double) -> Unit = { },
+            name: String = key,
+            description: String = ""
+        ): ConfigProperty<Double> =
             ConfigProperty(
                 key = key,
                 default = default.toString(),
-                converter = { it.toDoubleOrNull() ?: fail("The value '$it' must be a decimal.") },
+                converter = {
+                    val value = it.toDoubleOrNull() ?: fail("The value '$it' must be a decimal.")
+                    this.validator(value)
+                    value
+                },
                 name = name,
                 description = description
             )
@@ -144,16 +193,24 @@ data class ConfigProperty<T>(
         /**
          * Constructs a [ConfigProperty] for a [Boolean] value.
          */
-        fun of(key: String, default: Boolean, name: String = key, description: String = ""): ConfigProperty<Boolean> =
+        fun of(
+            key: String,
+            default: Boolean,
+            validator: ConvertContext.(Boolean) -> Unit = { },
+            name: String = key,
+            description: String = ""
+        ): ConfigProperty<Boolean> =
             ConfigProperty(
                 key = key,
                 default = default.toString(),
                 converter = {
-                    when (it.toLowerCase()) {
+                    val value = when (it.toLowerCase()) {
                         "y", "yes", "t", "true" -> true
                         "n", "no", "f", "false" -> false
                         else -> fail("The value '$it' must be boolean.")
                     }
+                    this.validator(value)
+                    value
                 },
                 name = name,
                 description = description
