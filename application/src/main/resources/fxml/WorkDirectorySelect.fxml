@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXButton?>
+<?import com.jfoenix.controls.JFXTextField?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.*?>
+<?import java.lang.String?>
+<?import java.net.URL?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER" maxHeight="-Infinity" maxWidth="-Infinity"
+      minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" styleClass="grey-200"
+      xmlns="http://javafx.com/javafx/11.0.1">
+    <children>
+        <Label text="Select a directory to manage">
+            <styleClass>
+                <String fx:value="grey-50"/>
+                <String fx:value="depth-1"/>
+            </styleClass>
+            <padding>
+                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+            </padding>
+        </Label>
+        <HBox alignment="CENTER" maxHeight="80.0" maxWidth="800.0" minHeight="80.0" minWidth="400.0"
+              nodeOrientation="RIGHT_TO_LEFT" VBox.vgrow="ALWAYS">
+            <VBox.margin>
+                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+            </VBox.margin>
+            <styleClass>
+                <String fx:value="grey-50"/>
+                <String fx:value="depth-1"/>
+            </styleClass>
+            <children>
+                <JFXButton styleClass="blue-grey-400" text="Browse">
+                    <HBox.margin>
+                        <Insets/>
+                    </HBox.margin>
+                </JFXButton>
+                <JFXTextField nodeOrientation="LEFT_TO_RIGHT" promptText="Path" HBox.hgrow="ALWAYS">
+                    <HBox.margin>
+                        <Insets left="15.0"/>
+                    </HBox.margin>
+                </JFXTextField>
+            </children>
+            <padding>
+                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+            </padding>
+        </HBox>
+    </children>
+    <stylesheets>
+        <URL value="@../css/jfoenix-fonts.css"/>
+        <URL value="@../css/application.css"/>
+        <URL value="@../css/jfoenix-design.css"/>
+    </stylesheets>
+</VBox>
