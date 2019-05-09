@@ -1,0 +1,45 @@
+.depth-1 {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 10, 0.12, -1, 2);
+}
+
+.depth-2 {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 15, 0.16, 0, 4);
+}
+
+.depth-3 {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 20, 0.19, 0, 6);
+}
+
+.depth-4 {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 25, 0.25, 0, 8);
+}
+
+.depth-5 {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 30, 0.30, 0, 10);
+}
+
+.root {
+    -fx-font-family: "Roboto";
+}
+
+.label {
+    -fx-font-family: "Roboto Medium";
+    -fx-font-size: 16;
+}
+
+.jfx-tool-bar {
+    -fx-min-height: 50;
+}
+
+.jfx-button {
+    -jfx-button-type: RAISED;
+    -fx-min-height: 30;
+    -fx-min-width: 80;
+}
+
+.jfx-text-field {
+    -jfx-unfocus-color: -grey-600;
+    -jfx-focus-color: -grey-600;
+    -fx-prompt-text-fill: -grey-700;
+    -fx-text-fill: -grey-900;
+}
