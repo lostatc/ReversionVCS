@@ -22,11 +22,6 @@
     -fx-font-family: "Roboto";
 }
 
-.label {
-    -fx-font-family: "Roboto Medium";
-    -fx-font-size: 16;
-}
-
 .jfx-tool-bar {
     -fx-min-height: 50;
 }
@@ -42,4 +37,18 @@
     -jfx-focus-color: -grey-600;
     -fx-prompt-text-fill: -grey-700;
     -fx-text-fill: -grey-900;
+}
+
+.jfx-rippler {
+    -jfx-rippler-fill: white;
+}
+
+.card-list-view {
+    -fx-background-color: transparent;
+    -jfx-vertical-gap: 5px;
+    -jfx-expanded: true;
+}
+
+.list-view .list-cell:selected {
+    -fx-background-color: -blue-grey-400;
 }

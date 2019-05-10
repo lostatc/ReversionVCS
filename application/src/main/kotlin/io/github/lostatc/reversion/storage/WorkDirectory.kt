@@ -257,18 +257,59 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
             .create()
 
         /**
+         * A cache of [WorkDirectory] instances.
+         *
+         * This allows previously-created [WorkDirectory] instances to be re-used.
+         */
+        private val instanceCache: MutableMap<Path, WorkDirectory> = mutableMapOf()
+
+        /**
+         * Returns whether the directory at the given [path] is a working directory.
+         */
+        fun isWorkDirectory(path: Path): Boolean = Files.isDirectory(path.resolve(relativeHiddenPath))
+
+        /**
          * Opens the working directory at [path] and returns it.
          *
          * @throws [UnsupportedFormatException] There is no installed provider compatible with the repository associated
          * with this working directory.
          * @throws [InvalidWorkDirException] The working directory has not been initialized.
          */
-        fun open(path: Path): WorkDirectory {
+        fun open(path: Path): WorkDirectory = instanceCache.getOrPut(path) { openNew(path) }
+
+        /**
+         * Opens the working directory associated with the file at the given [path].
+         *
+         * The working directory associated with [path] is the working directory that [path] is a descendant of.
+         *
+         * @throws [UnsupportedFormatException] There is no installed provider compatible with the repository associated
+         * with this working directory.
+         * @throws [InvalidWorkDirException] There is no working directory associated with the given [path].
+         */
+        fun openFromDescendant(path: Path): WorkDirectory {
+            var directory = path
+
+            do {
+                directory = directory.parent
+                    ?: throw InvalidWorkDirException("There is no working directory associated with this path.")
+            } while (!isWorkDirectory(directory))
+
+            return open(directory)
+        }
+
+        /**
+         * Opens the working directory at [path] whether or not it already exists.
+         *
+         * @throws [UnsupportedFormatException] There is no installed provider compatible with the repository associated
+         * with this working directory.
+         * @throws [InvalidWorkDirException] The working directory has not been initialized.
+         */
+        private fun openNew(path: Path): WorkDirectory {
             val hiddenDirectory = path.resolve(relativeHiddenPath)
             val infoFile = path.resolve(relativeInfoPath)
             val repositoryPath = path.resolve(relativeRepoPath)
 
-            if (Files.notExists(hiddenDirectory)) {
+            if (!isWorkDirectory(path)) {
                 throw InvalidWorkDirException("This directory has not been initialized.")
             }
 
