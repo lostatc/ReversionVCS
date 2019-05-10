@@ -60,6 +60,11 @@ interface WorkDirectoryTest {
     }
 
     @Test
+    fun `open a work directory from a descendant`() {
+        assertEquals(workDirectory, WorkDirectory.openFromDescendant(workPath.resolve("c", "a")))
+    }
+
+    @Test
     fun `committing a directory commits its descendants`() {
         val paths = setOf(Paths.get("a"), Paths.get("b"), Paths.get("c", "a"))
         workDirectory.commit(listOf(workPath))

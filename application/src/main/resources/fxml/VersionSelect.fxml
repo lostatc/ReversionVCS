@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.jfoenix.controls.JFXButton?>
-<?import com.jfoenix.controls.JFXListView?>
-<?import com.jfoenix.controls.JFXTextField?>
-<?import com.jfoenix.controls.JFXToolbar?>
-<?import javafx.geometry.Insets?>
+<?import com.jfoenix.controls.*?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.layout.*?>
 <?import java.lang.String?>
 <?import java.net.URL?>
@@ -20,7 +17,13 @@
                     </padding>
                     <children>
                         <JFXButton buttonType="RAISED" styleClass="blue-grey-400" text="Browse"/>
-                        <JFXTextField nodeOrientation="LEFT_TO_RIGHT" promptText="Path" HBox.hgrow="ALWAYS">
+                        <JFXButton onAction="#loadVersions" styleClass="green-A400" text="OK">
+                            <HBox.margin>
+                                <Insets left="15.0"/>
+                            </HBox.margin>
+                        </JFXButton>
+                        <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#loadVersions"
+                                      promptText="Path" HBox.hgrow="ALWAYS">
                             <HBox.margin>
                                 <Insets left="15.0"/>
                             </HBox.margin>
@@ -34,14 +37,11 @@
                 <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
             </padding>
             <children>
-                <JFXListView depth="1" minWidth="200.0" prefWidth="400.0">
+                <JFXListView fx:id="versionList" depth="1" minWidth="200.0" prefWidth="400.0"
+                             styleClass="card-list-view">
                     <HBox.margin>
                         <Insets right="15.0"/>
                     </HBox.margin>
-                    <styleClass>
-                        <String fx:value="grey-50"/>
-                        <String fx:value="depth-1"/>
-                    </styleClass>
                 </JFXListView>
                 <VBox minWidth="400.0" prefWidth="600.0" HBox.hgrow="SOMETIMES">
                     <styleClass>
