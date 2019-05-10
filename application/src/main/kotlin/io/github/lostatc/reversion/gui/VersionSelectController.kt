@@ -26,7 +26,9 @@ import javafx.event.ActionEvent
 import javafx.fxml.FXML
 import javafx.fxml.Initializable
 import javafx.scene.control.Label
+import javafx.stage.FileChooser
 import java.net.URL
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.ResourceBundle
 
@@ -46,14 +48,29 @@ class VersionSelectController : Initializable {
 
     override fun initialize(location: URL, resources: ResourceBundle?) = Unit
 
-    @FXML
-    fun loadVersions(event: ActionEvent) {
-        val path = Paths.get(pathField.text)
+    private fun loadVersions(path: Path) {
         val workDirectory = WorkDirectory.openFromDescendant(path)
         val relativePath = workDirectory.path.relativize(path)
         val versions = workDirectory.timeline.listVersions(relativePath)
 
         versionList.items.clear()
         versionList.items.addAll(versions.map { Label("Version ${it.snapshot.revision}") })
+    }
+
+    @FXML
+    fun browsePath(event: ActionEvent) {
+        val file = FileChooser().run {
+            title = "Select file"
+            showOpenDialog(pathField.scene.window)?.toPath() ?: return
+        }
+
+        pathField.text = file.toString()
+        loadVersions(file)
+    }
+
+    @FXML
+    fun setPath(event: ActionEvent) {
+        val file = Paths.get(pathField.text)
+        loadVersions(file)
     }
 }

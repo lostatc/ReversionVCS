@@ -16,13 +16,14 @@
                         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                     </padding>
                     <children>
-                        <JFXButton buttonType="RAISED" styleClass="blue-grey-400" text="Browse"/>
-                        <JFXButton onAction="#loadVersions" styleClass="green-A400" text="OK">
+                        <JFXButton buttonType="RAISED" onAction="#browsePath" styleClass="button-default"
+                                   text="Browse"/>
+                        <JFXButton onAction="#setPath" styleClass="button-confirm" text="OK">
                             <HBox.margin>
                                 <Insets left="15.0"/>
                             </HBox.margin>
                         </JFXButton>
-                        <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#loadVersions"
+                        <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#setPath"
                                       promptText="Path" HBox.hgrow="ALWAYS">
                             <HBox.margin>
                                 <Insets left="15.0"/>

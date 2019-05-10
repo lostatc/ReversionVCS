@@ -32,6 +32,16 @@
     -fx-min-width: 80;
 }
 
+.button-default {
+    -fx-background-color: -blue-grey-400;
+    -fx-text-fill: white;
+}
+
+.button-confirm {
+    -fx-background-color: -green-A400;
+    -fx-text-fill: white;
+}
+
 .jfx-text-field {
     -jfx-unfocus-color: -grey-600;
     -jfx-focus-color: -grey-600;
