@@ -55,10 +55,24 @@
 
 .card-list-view {
     -fx-background-color: transparent;
-    -jfx-vertical-gap: 5px;
+    -jfx-vertical-gap: 10px;
     -jfx-expanded: true;
 }
 
 .list-view .list-cell:selected {
     -fx-background-color: -blue-grey-400;
+}
+
+.list-view .list-cell:selected .label {
+    -fx-text-fill: white;
+}
+
+.card-title {
+    -fx-font-family: "Roboto Medium";
+    -fx-font-size: 16;
+}
+
+.card-subtitle {
+    -fx-font-size: 14;
+    -fx-text-fill: -grey-600;
 }
