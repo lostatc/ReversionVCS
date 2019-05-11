@@ -31,7 +31,7 @@ import java.time.format.FormatStyle
 /**
  * Format an [Instant] as a string using the given [style].
  */
-private fun Instant.format(style: FormatStyle = FormatStyle.MEDIUM): String = DateTimeFormatter
+fun Instant.format(style: FormatStyle = FormatStyle.MEDIUM): String = DateTimeFormatter
     .ofLocalizedDateTime(style)
     .withZone(ZoneId.systemDefault())
     .format(this)

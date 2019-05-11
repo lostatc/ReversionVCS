@@ -2,6 +2,7 @@
 
 <?import com.jfoenix.controls.*?>
 <?import javafx.geometry.*?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.*?>
 <?import java.lang.String?>
 <?import java.net.URL?>
@@ -38,12 +39,21 @@
                 <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
             </padding>
             <children>
-                <JFXListView fx:id="versionList" depth="1" minWidth="200.0" prefWidth="400.0"
-                             styleClass="card-list-view">
+                <StackPane minWidth="200.0" prefWidth="400.0">
+                    <children>
+                        <VBox fx:id="noVersionsMessage" alignment="CENTER" prefHeight="200.0" prefWidth="100.0">
+                            <children>
+                                <Label styleClass="card-title" text="No versions"/>
+                                <Label styleClass="card-subtitle" text="Enter a file path to show versions"
+                                       textAlignment="CENTER" wrapText="true"/>
+                            </children>
+                        </VBox>
+                        <JFXListView fx:id="versionList" depth="1" styleClass="card-list-view" visible="false"/>
+                    </children>
                     <HBox.margin>
                         <Insets right="15.0"/>
                     </HBox.margin>
-                </JFXListView>
+                </StackPane>
                 <VBox minWidth="400.0" prefWidth="600.0" HBox.hgrow="SOMETIMES">
                     <styleClass>
                         <String fx:value="grey-50"/>
