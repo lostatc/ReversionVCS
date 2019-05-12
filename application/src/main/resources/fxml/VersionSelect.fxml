@@ -2,7 +2,6 @@
 
 <?import com.jfoenix.controls.*?>
 <?import javafx.geometry.*?>
-<?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.*?>
 <?import java.lang.String?>
 <?import java.net.URL?>
@@ -10,9 +9,9 @@
       prefWidth="640.0" styleClass="grey-200" xmlns="http://javafx.com/javafx/11.0.1"
       fx:controller="io.github.lostatc.reversion.gui.VersionSelectController">
     <children>
-        <JFXToolbar minHeight="50.0" styleClass="grey-50">
+        <JFXToolbar styleClass="grey-50">
             <top>
-                <HBox nodeOrientation="RIGHT_TO_LEFT" prefHeight="40.0" BorderPane.alignment="CENTER">
+                <HBox alignment="CENTER" minHeight="50.0" nodeOrientation="RIGHT_TO_LEFT" BorderPane.alignment="CENTER">
                     <padding>
                         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                     </padding>
@@ -39,22 +38,13 @@
                 <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
             </padding>
             <children>
-                <StackPane minWidth="200.0" prefWidth="400.0">
-                    <children>
-                        <VBox fx:id="noVersionsMessage" alignment="CENTER" prefHeight="200.0" prefWidth="100.0">
-                            <children>
-                                <Label styleClass="card-title" text="No versions"/>
-                                <Label styleClass="card-subtitle" text="Enter a file path to show versions"
-                                       textAlignment="CENTER" wrapText="true"/>
-                            </children>
-                        </VBox>
-                        <JFXListView fx:id="versionList" depth="1" styleClass="card-list-view" visible="false"/>
-                    </children>
+                <JFXListView fx:id="versionList" depth="1" minWidth="200.0" prefWidth="400.0"
+                             styleClass="card-list-view">
                     <HBox.margin>
                         <Insets right="15.0"/>
                     </HBox.margin>
-                </StackPane>
-                <VBox minWidth="400.0" prefWidth="600.0" HBox.hgrow="SOMETIMES">
+                </JFXListView>
+                <VBox minHeight="200.0" minWidth="400.0" HBox.hgrow="SOMETIMES">
                     <styleClass>
                         <String fx:value="grey-50"/>
                         <String fx:value="depth-1"/>
@@ -64,7 +54,8 @@
         </HBox>
     </children>
     <stylesheets>
-        <URL value="@../css/application.css"/>
+        <URL value="@../css/jfoenix-fonts.css"/>
         <URL value="@../css/jfoenix-design.css"/>
+        <URL value="@../css/application.css"/>
     </stylesheets>
 </VBox>

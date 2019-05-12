@@ -8,6 +8,8 @@ version = "0.1.0"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
+    implementation(group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version = "1.2.1")
+    implementation(group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-javafx", version = "1.2.1")
     implementation(project(":api"))
 
     implementation(group = "org.jetbrains.exposed", name = "exposed", version = "0.13.6")
