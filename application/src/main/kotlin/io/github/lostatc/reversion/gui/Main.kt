@@ -19,7 +19,6 @@
 
 package io.github.lostatc.reversion.gui
 
-import com.jfoenix.assets.JFoenixResources
 import javafx.application.Application
 import javafx.fxml.FXMLLoader
 import javafx.scene.Parent
@@ -31,13 +30,7 @@ class Reversion : Application() {
         val root = FXMLLoader.load<Parent>(this::class.java.getResource("/fxml/VersionSelect.fxml"))
         primaryStage.apply {
             title = "Reversion"
-            scene = Scene(root).apply {
-                stylesheets.addAll(
-                    this::class.java.getResource("/css/application.css").toExternalForm(),
-                    JFoenixResources.load("css/jfoenix-design.css").toExternalForm(),
-                    JFoenixResources.load("css/jfoenix-fonts.css").toExternalForm()
-                )
-            }
+            scene = Scene(root)
             minWidth = 320.0
             minHeight = 200.0
             show()

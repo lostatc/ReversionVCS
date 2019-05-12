@@ -22,14 +22,24 @@ package io.github.lostatc.reversion.gui
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.storage.WorkDirectory
+import javafx.collections.FXCollections
+import javafx.collections.ObservableList
 import javafx.event.ActionEvent
 import javafx.fxml.FXML
+import javafx.fxml.FXMLLoader
 import javafx.fxml.Initializable
+import javafx.scene.Node
 import javafx.scene.control.Label
 import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -42,7 +52,11 @@ import java.util.ResourceBundle
 private val Snapshot.displayName: String
     get() = tags.values.let { if (it.isEmpty()) "Version $revision" else it.joinToString { tag -> tag.name } }
 
-class VersionSelectController : Initializable {
+class VersionSelectController : Initializable, CoroutineScope by MainScope() {
+    /**
+     * The versions currently visible in the UI.
+     */
+    private val versions: ObservableList<Version> = FXCollections.observableArrayList()
 
     /**
      * The text field containing the path of the file to get versions for.
@@ -54,52 +68,55 @@ class VersionSelectController : Initializable {
      * The list of versions in the UI.
      */
     @FXML
-    private lateinit var versionList: JFXListView<VBox>
+    private lateinit var versionList: JFXListView<Node>
 
-    /**
-     * The message to display if there are no versions.
-     */
-    @FXML
-    private lateinit var noVersionsMessage: VBox
-
-    override fun initialize(location: URL, resources: ResourceBundle?) = Unit
-
-    private fun loadVersions(path: Path) {
-        val workDirectory = WorkDirectory.openFromDescendant(path)
-        val relativePath = workDirectory.path.relativize(path)
-        val versions = workDirectory.timeline.listVersions(relativePath)
-
-        noVersionsMessage.isVisible = false
-        versionList.isVisible = true
-
-        versionList.items.setAll(
-            versions.map {
-                VBox(
-                    Label(it.snapshot.displayName).apply {
-                        styleClass.add("card-title")
-                    },
-                    Label(it.snapshot.timeCreated.format(FormatStyle.MEDIUM)).apply {
-                        styleClass.add("card-subtitle")
-                    }
-                )
-            }
-        )
+    override fun initialize(location: URL, resources: ResourceBundle?) {
+        versionList.items = MappedList(versions) {
+            VBox(
+                Label(it.snapshot.displayName).apply {
+                    styleClass.add("card-title")
+                },
+                Label(it.snapshot.timeCreated.format(FormatStyle.MEDIUM)).apply {
+                    styleClass.add("card-subtitle")
+                }
+            )
+        }
+        versionList.placeholder = FXMLLoader.load(this::class.java.getResource("/fxml/NoVersionsPlaceholder.fxml"))
     }
 
+    /**
+     * Update [versions] with data from the repository.
+     */
+    private suspend fun reloadVersions(path: Path) {
+        val newVersions = withContext(Dispatchers.Default) {
+            val workDirectory = WorkDirectory.openFromDescendant(path)
+            val relativePath = workDirectory.path.relativize(path)
+            workDirectory.timeline.listVersions(relativePath)
+        }
+
+        versions.setAll(newVersions)
+    }
+
+    /**
+     * Load versions by browsing for a file.
+     */
     @FXML
-    fun browsePath(event: ActionEvent) {
+    fun browsePath(event: ActionEvent) = launch {
         val file = FileChooser().run {
             title = "Select file"
-            showOpenDialog(pathField.scene.window)?.toPath() ?: return
+            showOpenDialog(pathField.scene.window)?.toPath() ?: return@launch
         }
 
         pathField.text = file.toString()
-        loadVersions(file)
+        reloadVersions(file)
     }
 
+    /**
+     * Load versions by selecting a file path.
+     */
     @FXML
-    fun setPath(event: ActionEvent) {
+    fun setPath(event: ActionEvent) = launch {
         val file = Paths.get(pathField.text)
-        loadVersions(file)
+        reloadVersions(file)
     }
 }
