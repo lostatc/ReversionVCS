@@ -75,7 +75,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     }
 
     /**
-     * Update [versions] with data from the repository.
+     * Updates [versions] and [versionList] with data from the repository.
      */
     private suspend fun reloadVersions(path: Path) {
         val newVersions = withContext(Dispatchers.Default) {
