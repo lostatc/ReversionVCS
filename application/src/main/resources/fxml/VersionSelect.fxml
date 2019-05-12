@@ -44,7 +44,7 @@
                         <Insets right="15.0"/>
                     </HBox.margin>
                 </JFXListView>
-                <VBox minHeight="200.0" minWidth="400.0" HBox.hgrow="SOMETIMES">
+                <VBox minHeight="200.0" minWidth="400.0" prefWidth="600.0" HBox.hgrow="SOMETIMES">
                     <styleClass>
                         <String fx:value="grey-50"/>
                         <String fx:value="depth-1"/>
