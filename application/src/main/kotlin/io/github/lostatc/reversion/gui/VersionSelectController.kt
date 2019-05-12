@@ -71,16 +71,6 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     private lateinit var versionList: JFXListView<Node>
 
     override fun initialize(location: URL, resources: ResourceBundle?) {
-        versionList.items = MappedList(versions) {
-            VBox(
-                Label(it.snapshot.displayName).apply {
-                    styleClass.add("card-title")
-                },
-                Label(it.snapshot.timeCreated.format(FormatStyle.MEDIUM)).apply {
-                    styleClass.add("card-subtitle")
-                }
-            )
-        }
         versionList.placeholder = FXMLLoader.load(this::class.java.getResource("/fxml/NoVersionsPlaceholder.fxml"))
     }
 
@@ -95,6 +85,18 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
         }
 
         versions.setAll(newVersions)
+        versionList.items.setAll(
+            newVersions.map {
+                VBox(
+                    Label(it.snapshot.displayName).apply {
+                        styleClass.add("card-title")
+                    },
+                    Label(it.snapshot.timeCreated.format(FormatStyle.MEDIUM)).apply {
+                        styleClass.add("card-subtitle")
+                    }
+                )
+            }
+        )
     }
 
     /**
