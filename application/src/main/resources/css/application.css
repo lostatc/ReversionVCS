@@ -32,13 +32,23 @@
     -fx-min-width: 80;
 }
 
+.jfx-check-box {
+    -jfx-checked-color: -blue-grey-400;
+    -fx-font-size: 14;
+}
+
 .button-default {
     -fx-background-color: -blue-grey-400;
     -fx-text-fill: white;
 }
 
 .button-confirm {
-    -fx-background-color: -green-A400;
+    -fx-background-color: -green-400;
+    -fx-text-fill: white;
+}
+
+.button-danger {
+    -fx-background-color: -red-400;
     -fx-text-fill: white;
 }
 
@@ -75,4 +85,13 @@
 .card-subtitle {
     -fx-font-size: 14;
     -fx-text-fill: -grey-600;
+}
+
+.info-key {
+    -fx-font-size: 12;
+    -fx-text-fill: -grey-600;
+}
+
+.info-value {
+    -fx-font-size: 16;
 }
