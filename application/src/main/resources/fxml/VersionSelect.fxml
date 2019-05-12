@@ -2,6 +2,7 @@
 
 <?import com.jfoenix.controls.*?>
 <?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import java.lang.String?>
 <?import java.net.URL?>
@@ -44,12 +45,64 @@
                         <Insets right="15.0"/>
                     </HBox.margin>
                 </JFXListView>
-                <VBox minHeight="200.0" minWidth="400.0" prefWidth="600.0" HBox.hgrow="SOMETIMES">
+                <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" HBox.hgrow="SOMETIMES">
                     <styleClass>
                         <String fx:value="grey-50"/>
                         <String fx:value="depth-1"/>
                     </styleClass>
-                </VBox>
+                    <children>
+                        <VBox fx:id="versionInfoPane" minHeight="200.0" minWidth="400.0" prefWidth="600.0"
+                              spacing="15.0">
+                            <children>
+                        <FlowPane hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
+                            <children>
+                                <JFXTextField fx:id="versionNameField" onAction="#saveVersionInfo" prefColumnCount="30"
+                                              promptText="Name"/>
+                                <HBox alignment="CENTER_LEFT" spacing="30.0">
+                                    <children>
+                                        <VBox>
+                                            <children>
+                                                <Label styleClass="info-key" text="Last Modified"/>
+                                                <Label fx:id="versionModifiedLabel" styleClass="info-value"/>
+                                            </children>
+                                        </VBox>
+                                        <VBox>
+                                            <children>
+                                                <Label styleClass="info-key" text="Size"/>
+                                                <Label fx:id="versionSizeLabel" styleClass="info-value"/>
+                                            </children>
+                                        </VBox>
+                                        <VBox>
+                                            <children>
+                                                <Label styleClass="info-key" text="Keep Forever"/>
+                                                <JFXCheckBox fx:id="versionPinnedCheckBox" onAction="#saveVersionInfo"
+                                                             styleClass="info-value" text="Pinned"/>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </HBox>
+                            </children>
+                        </FlowPane>
+                                <JFXTextArea fx:id="versionDescriptionField" prefColumnCount="0"
+                                             promptText="Description" VBox.vgrow="ALWAYS"/>
+                        <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
+                            <children>
+                                <JFXButton styleClass="button-danger" text="Delete"/>
+                                <JFXButton styleClass="button-default" text="Restore"/>
+                                <JFXButton styleClass="button-default" text="Open"/>
+                            </children>
+                        </FlowPane>
+                            </children>
+                            <padding>
+                                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+                            </padding>
+                            <styleClass>
+                                <String fx:value="grey-50"/>
+                                <String fx:value="depth-1"/>
+                            </styleClass>
+                        </VBox>
+                    </children>
+                </StackPane>
             </children>
         </HBox>
     </children>
