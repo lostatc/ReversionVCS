@@ -45,13 +45,13 @@ import java.util.Objects
 
 /**
  * An implementation of [Snapshot] which is backed by a relational database.
+ *
+ * This must be instantiated inside a [transaction] block.
  */
 data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository: DatabaseRepository) : Snapshot {
-    override val revision: Int
-        get() = transaction { entity.revision }
+    override val revision: Int = entity.revision
 
-    override val timeCreated: Instant
-        get() = transaction { entity.timeCreated }
+    override val timeCreated: Instant = entity.timeCreated
 
     override val versions: Map<Path, DatabaseVersion> = object : AbstractMap<Path, DatabaseVersion>() {
         override val entries: Set<Map.Entry<Path, DatabaseVersion>>
@@ -84,11 +84,11 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     override val tags: Map<String, DatabaseTag> = object : AbstractMap<String, DatabaseTag>() {
         override val entries: Set<Map.Entry<String, DatabaseTag>>
             get() = transaction {
-            TagEntity
-                .find { TagTable.snapshot eq entity.id }
-                .map { SimpleEntry(it.name, DatabaseTag(it, repository)) }
-                .toSet()
-        }
+                TagEntity
+                    .find { TagTable.snapshot eq entity.id }
+                    .map { SimpleEntry(it.name, DatabaseTag(it, repository)) }
+                    .toSet()
+            }
 
         override fun containsKey(key: String): Boolean = get(key) != null
 
