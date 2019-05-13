@@ -34,25 +34,21 @@ import java.util.Objects
 
 /**
  * An implementation of [Version] which is backed by a relational database.
+ *
+ * This must be instantiated inside a [transaction] block.
  */
 class DatabaseVersion(val entity: VersionEntity, override val repository: DatabaseRepository) : Version {
-    override val path: Path
-        get() = transaction { entity.path }
+    override val path: Path = entity.path
 
-    override val lastModifiedTime: FileTime
-        get() = transaction { entity.lastModifiedTime }
+    override val lastModifiedTime: FileTime = entity.lastModifiedTime
 
-    override val permissions: PermissionSet?
-        get() = transaction { entity.permissions }
+    override val permissions: PermissionSet? = entity.permissions
 
-    override val size: Long
-        get() = transaction { entity.size }
+    override val size: Long = entity.size
 
-    override val checksum: Checksum
-        get() = transaction { entity.checksum }
+    override val checksum: Checksum = entity.checksum
 
-    override val snapshot: DatabaseSnapshot
-        get() = transaction { DatabaseSnapshot(entity.snapshot, repository) }
+    override val snapshot: DatabaseSnapshot = DatabaseSnapshot(entity.snapshot, repository)
 
     override val data: Blob by lazy {
         transaction {

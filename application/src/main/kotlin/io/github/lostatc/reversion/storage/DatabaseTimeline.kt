@@ -47,25 +47,23 @@ private const val STARTING_REVISION: Int = 1
 
 /**
  * An implementation of [Timeline] which is backed by a relational database.
+ *
+ * This must be instantiated inside a [transaction] block.
  */
 class DatabaseTimeline(val entity: TimelineEntity, override val repository: DatabaseRepository) : Timeline {
-    override val id: UUID
-        get() = transaction { entity.id.value }
+    override val id: UUID = entity.id.value
 
-    override val timeCreated: Instant
-        get() = transaction { entity.timeCreated }
+    override val timeCreated: Instant = entity.timeCreated
 
-    override var cleanupPolicies: Set<CleanupPolicy>
-        get() = transaction {
-            entity.cleanupPolicies.map {
-                CleanupPolicy(
-                    minInterval = it.minInterval,
-                    timeFrame = it.timeFrame,
-                    maxVersions = it.maxVersions,
-                    description = it.description
-                )
-            }.toSet()
-        }
+    override var cleanupPolicies: Set<CleanupPolicy> =
+        entity.cleanupPolicies.map {
+            CleanupPolicy(
+                minInterval = it.minInterval,
+                timeFrame = it.timeFrame,
+                maxVersions = it.maxVersions,
+                description = it.description
+            )
+        }.toSet()
         set(value) {
             // This must be a separate transaction.
             val policyEntities = transaction { entity.cleanupPolicies }
@@ -86,6 +84,8 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
 
                 entity.cleanupPolicies = SizedCollection(entities)
             }
+
+            field = value
         }
 
     override val snapshots: Map<Int, DatabaseSnapshot> = object : AbstractMap<Int, DatabaseSnapshot>() {
