@@ -153,14 +153,15 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     val blockSize: Long by blockSizeProperty
 
     override fun createTimeline(policies: Set<CleanupPolicy>): DatabaseTimeline {
-        val timelineEntity = transaction {
-            TimelineEntity.new {
+        val timeline = transaction {
+            val timelineEntity = TimelineEntity.new {
                 this.timeCreated = Instant.now()
             }
-        }
 
-        val timeline = DatabaseTimeline(timelineEntity, this@DatabaseRepository)
-        timeline.cleanupPolicies = policies
+            DatabaseTimeline(timelineEntity, this@DatabaseRepository).apply {
+                cleanupPolicies = policies
+            }
+        }
 
         logger.info("Created timeline $timeline.")
 
