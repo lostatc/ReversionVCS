@@ -62,6 +62,11 @@ private val Snapshot.primaryTag: Tag?
 private val Snapshot.displayName: String
     get() = primaryTag?.name ?: "Version $revision"
 
+/**
+ * Returns this integer or `null` if it is less than 0.
+ */
+private fun Int.positiveOrNull(): Int? = if (this < 0) null else this
+
 class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     /**
      * The versions currently visible in the UI.
@@ -71,7 +76,8 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     /**
      * The index of the currently selected version or `null` if there is none.
      */
-    private var selectedIndex: Int? = null
+    private val selectedIndex: Int?
+        get() = versionList.selectionModel.selectedIndex.positiveOrNull()
 
     /**
      * The currently selected version.
@@ -127,20 +133,21 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     @FXML
     private lateinit var versionPinnedCheckBox: JFXCheckBox
 
+    /**
+     * Runs the given [action] when any of the given [nodes] lose focus.
+     */
+    private fun addFocusLossListener(vararg nodes: Node, action: () -> Unit) {
+        for (node in nodes) {
+            val property = node.focusedProperty()
+            property.addListener { _, _, focused ->
+                if (!focused) action()
+            }
+        }
+    }
+
     override fun initialize(location: URL, resources: ResourceBundle?) {
         // Show a placeholder when there are no versions.
         versionList.placeholder = FXMLLoader.load(this::class.java.getResource("/fxml/NoVersionsPlaceholder.fxml"))
-
-        // Set the [selectedIndex] and update the UI when the user selects a version.
-        versionList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
-            // Save unsaved changes before loading.
-            saveVersionInfo()
-
-            val index = newValue.toInt()
-            selectedIndex = if (index < 0) null else index
-
-            updateVersionInfo()
-        }
 
         // Map [Version] objects in the model to [Node] objects to display in the view.
         versionList.items = MappedList(versions) {
@@ -154,13 +161,35 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
             )
         }
 
+        // Save and reload version information when the selected version changes.
+        versionList.selectionModel.selectedIndexProperty().addListener { _, oldValue, newValue ->
+            saveVersionInfo(oldValue.toInt())
+            updateVersionInfo(newValue.toInt())
+        }
+
+        // Save version information when certain nodes lose focus.
+        addFocusLossListener(versionNameField, versionDescriptionField) {
+            saveVersionInfo()
+        }
+
         // Make the version info invisible until a version is selected.
         versionInfoPane.isVisible = false
+    }
 
-        // Save the contents of the version description text area when it loses focus.
-        versionDescriptionField.focusedProperty().addListener { _, _, focused ->
-            // TODO: Fix description not being updated when you click to another version.
-            if (!focused) saveVersionInfo()
+    /**
+     * Update the value of the primary tag of this snapshot or create it if it doesn't exist.
+     *
+     * @param [name] The name of the tag.
+     * @param [description] The description for the tag.
+     * @param [pinned] Whether to keep the snapshot forever.
+     */
+    private suspend fun Snapshot.updateTag(name: String, description: String, pinned: Boolean) {
+        withContext(Dispatchers.IO) {
+            primaryTag?.apply {
+                this.name = name
+                this.description = description
+                this.pinned = pinned
+            } ?: addTag(name = name, description = description, pinned = pinned)
         }
     }
 
@@ -168,7 +197,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * Updates [versions] with the versions of the given [path].
      */
     private suspend fun loadVersions(path: Path) {
-        val newVersions = withContext(Dispatchers.Default) {
+        val newVersions = withContext(Dispatchers.IO) {
             val workDirectory = WorkDirectory.openFromDescendant(path)
             val relativePath = workDirectory.path.relativize(path)
             workDirectory.timeline.listVersions(relativePath)
@@ -178,14 +207,15 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     }
 
     /**
-     * Update the UI to display information about the [selectedVersion].
+     * Updates the UI to display information about the version with the given [index].
      */
-    private fun updateVersionInfo() {
-        val version = selectedVersion
+    private fun updateVersionInfo(index: Int?) = launch {
+        index?.positiveOrNull() ?: return@launch
+        val version = versions[index]
 
         if (version == null) {
             versionInfoPane.isVisible = false
-            return
+            return@launch
         }
 
         versionInfoPane.isVisible = true
@@ -197,51 +227,53 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     }
 
     /**
-     * Saves version information in the UI to storage.
+     * Saves information from the UI about the version with the given [index].
      */
-    @FXML
-    fun saveVersionInfo() {
-        val index = selectedIndex ?: return
-        val version = selectedVersion ?: return
+    private fun saveVersionInfo(index: Int?) = launch {
+        index?.positiveOrNull() ?: return@launch
+        val version = versions[index]
 
-        val tagName = versionNameField.text
-        val tagDescription = versionDescriptionField.text ?: ""
-        val tagPinned = versionPinnedCheckBox.isSelected
+        version.snapshot.updateTag(
+            name = versionNameField.text,
+            description = versionDescriptionField.text ?: "",
+            pinned = versionPinnedCheckBox.isSelected
+        )
 
-        launch {
-            withContext(Dispatchers.Default) {
-                version.snapshot.primaryTag?.apply {
-                    name = tagName
-                    description = tagDescription
-                    pinned = tagPinned
-                } ?: version.snapshot.addTag(name = tagName, description = tagDescription, pinned = tagPinned)
-            }
-
-            versions[index] = version
-        }
-
+        versions[index] = version
     }
 
     /**
-     * Load versions by browsing for a file.
+     * Updates the UI to display information about the currently selected version.
      */
     @FXML
-    fun browsePath() {
+    fun updateVersionInfo() = updateVersionInfo(selectedIndex)
+
+    /**
+     * Saves information from the UI about the currently selected version.
+     */
+    @FXML
+    fun saveVersionInfo() = saveVersionInfo(selectedIndex)
+
+    /**
+     * Loads versions by browsing for a file.
+     */
+    @FXML
+    fun browsePath() = launch {
         val file = FileChooser().run {
             title = "Select file"
-            showOpenDialog(pathField.scene.window)?.toPath() ?: return
+            showOpenDialog(pathField.scene.window)?.toPath() ?: return@launch
         }
 
         pathField.text = file.toString()
-        launch { loadVersions(file) }
+        loadVersions(file)
     }
 
     /**
-     * Load versions by selecting a file path.
+     * Loads versions by selecting a file path.
      */
     @FXML
-    fun setPath() {
+    fun setPath() = launch {
         val file = Paths.get(pathField.text)
-        launch { loadVersions(file) }
+        loadVersions(file)
     }
 }
