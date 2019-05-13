@@ -26,28 +26,29 @@ import java.util.Objects
 
 /**
  * An implementation of [Tag] which is backed by a relational database.
+ *
+ * This must be instantiated inside a [transaction] block.
  */
 class DatabaseTag(val entity: TagEntity, override val repository: DatabaseRepository) : Tag {
-    override var name: String
-        get() = transaction { entity.name }
+    override var name: String = entity.name
         set(value) {
             transaction { entity.name = value }
+            field = value
         }
 
-    override var description: String
-        get() = transaction { entity.description }
+    override var description: String = entity.description
         set(value) {
             transaction { entity.description = value }
+            field = value
         }
 
-    override var pinned: Boolean
-        get() = transaction { entity.pinned }
+    override var pinned: Boolean = entity.pinned
         set(value) {
             transaction { entity.pinned = value }
+            field = value
         }
 
-    override val snapshot: DatabaseSnapshot
-        get() = transaction { DatabaseSnapshot(entity.snapshot, repository) }
+    override val snapshot: DatabaseSnapshot = DatabaseSnapshot(entity.snapshot, repository)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
