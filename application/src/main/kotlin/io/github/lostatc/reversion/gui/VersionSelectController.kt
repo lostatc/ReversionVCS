@@ -33,13 +33,12 @@ import javafx.fxml.FXMLLoader
 import javafx.fxml.Initializable
 import javafx.scene.Node
 import javafx.scene.control.Label
-import javafx.scene.input.KeyCode
-import javafx.scene.input.KeyEvent
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -146,14 +145,6 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
 
         // Make the version info invisible until a version is selected.
         versionInfoPane.isVisible = false
-
-        // Save the text area and don't add a newline when the enter key is pressed.
-        versionDescriptionField.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
-            if (event.code == KeyCode.ENTER) {
-                saveVersionInfo()
-                event.consume()
-            }
-        }
     }
 
     /**
@@ -177,81 +168,73 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * Updates the UI to display information about the currently selected version.
      */
     @FXML
-    fun updateVersionInfo() {
-        launch {
-            val version = selectedVersion
+    fun updateVersionInfo(): Job = launch {
+        val version = selectedVersion
 
-            if (version == null) {
-                versionInfoPane.isVisible = false
-                return@launch
-            }
-
-            versionInfoPane.isVisible = true
-            versionNameField.text = version.snapshot.name
-            versionDescriptionField.text = version.snapshot.description
-            versionModifiedLabel.text = version.lastModifiedTime.toInstant().format(FormatStyle.MEDIUM)
-            versionSizeLabel.text = FileUtils.byteCountToDisplaySize(version.size)
-            versionPinnedCheckBox.isSelected = version.snapshot.pinned
+        if (version == null) {
+            versionInfoPane.isVisible = false
+            return@launch
         }
+
+        versionInfoPane.isVisible = true
+        versionNameField.text = version.snapshot.name
+        versionDescriptionField.text = version.snapshot.description
+        versionModifiedLabel.text = version.lastModifiedTime.toInstant().format(FormatStyle.MEDIUM)
+        versionSizeLabel.text = FileUtils.byteCountToDisplaySize(version.size)
+        versionPinnedCheckBox.isSelected = version.snapshot.pinned
     }
 
     /**
      * Saves information from the UI about the currently selected version.
      */
     @FXML
-    fun saveVersionInfo() {
-        launch {
-            val version = selectedVersion ?: return@launch
-            val index = selectedIndex ?: return@launch
+    fun saveVersionInfo(): Job = launch {
+        val version = selectedVersion ?: return@launch
+        val index = selectedIndex ?: return@launch
 
-            val name = versionNameField.text?.let { if (it.isEmpty()) null else it }
-            val description = versionDescriptionField.text ?: ""
-            val pinned = versionPinnedCheckBox.isSelected
+        val name = versionNameField.text?.let { if (it.isEmpty()) null else it }
+        val description = versionDescriptionField.text ?: ""
+        val pinned = versionPinnedCheckBox.isSelected
 
-            withContext(Dispatchers.IO) {
-                version.snapshot.apply {
-                    this.name = name
-                    this.description = description
-                    this.pinned = pinned
-                }
+        withContext(Dispatchers.IO) {
+            version.snapshot.apply {
+                this.name = name
+                this.description = description
+                this.pinned = pinned
             }
-
-            versions[index] = version
         }
+
+        versions[index] = version
     }
 
     /**
      * Loads versions by browsing for a file.
      */
     @FXML
-    fun browsePath() {
-        launch {
-            val file = FileChooser().run {
-                title = "Select file"
-                showOpenDialog(pathField.scene.window)?.toPath() ?: return@launch
-            }
-
-            pathField.text = file.toString()
-            loadVersions(file)
+    fun browsePath(): Job = launch {
+        val file = FileChooser().run {
+            title = "Select file"
+            showOpenDialog(pathField.scene.window)?.toPath() ?: return@launch
         }
+
+        pathField.text = file.toString()
+        loadVersions(file)
     }
 
     /**
      * Loads versions by selecting a file path.
      */
     @FXML
-    fun setPath() {
-        launch {
-            val file = Paths.get(pathField.text)
-            loadVersions(file)
-        }
+    fun setPath(): Job = launch {
+        val file = Paths.get(pathField.text)
+        loadVersions(file)
     }
 
     /**
      * Open the selected version in its default application.
      */
     @FXML
-    fun openVersion() = launch {
+    fun openVersion(): Job = launch {
         val version = selectedVersion ?: return@launch
 
         withContext(Dispatchers.IO) {
@@ -268,7 +251,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * This saves the current version of the file and then overwrites it.
      */
     @FXML
-    fun restoreVersion() = launch {
+    fun restoreVersion(): Job = launch {
         val workDirectory = workDirectory ?: return@launch
         val version = selectedVersion ?: return@launch
         val targetPath = workDirectory.path.resolve(version.path)
@@ -292,7 +275,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * Deletes the currently selected version.
      */
     @FXML
-    fun deleteVersion() = launch {
+    fun deleteVersion(): Job = launch {
         val workDirectory = workDirectory ?: return@launch
         val version = selectedVersion ?: return@launch
         val targetPath = workDirectory.path.resolve(version.path)

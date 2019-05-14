@@ -27,10 +27,12 @@ import javafx.stage.Stage
 
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
-        val root = FXMLLoader.load<Parent>(this::class.java.getResource("/fxml/VersionSelect.fxml"))
+        val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/VersionSelect.fxml"))
+        val rootNode = rootLoader.load<Parent>()
+
         primaryStage.apply {
             title = "Reversion"
-            scene = Scene(root)
+            scene = Scene(rootNode)
             width = 900.0
             height = 600.0
             minWidth = 450.0
