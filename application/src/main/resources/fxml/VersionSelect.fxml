@@ -87,9 +87,9 @@
                                 </VBox>
                         <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
                             <children>
-                                <JFXButton styleClass="button-danger" text="Delete"/>
-                                <JFXButton styleClass="button-default" text="Restore"/>
-                                <JFXButton styleClass="button-default" text="Open"/>
+                                <JFXButton onAction="#deleteVersion" styleClass="button-danger" text="Delete"/>
+                                <JFXButton onAction="#restoreVersion" styleClass="button-default" text="Restore"/>
+                                <JFXButton onAction="#openVersion" styleClass="button-default" text="Open"/>
                             </children>
                         </FlowPane>
                             </children>

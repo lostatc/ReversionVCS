@@ -31,8 +31,10 @@ class Reversion : Application() {
         primaryStage.apply {
             title = "Reversion"
             scene = Scene(root)
-            minWidth = 320.0
-            minHeight = 200.0
+            width = 900.0
+            height = 600.0
+            minWidth = 450.0
+            minHeight = 300.0
             show()
         }
     }
