@@ -52,39 +52,35 @@
                     </styleClass>
                     <children>
                         <VBox fx:id="versionInfoPane" minHeight="200.0" minWidth="400.0" prefWidth="600.0"
-                              spacing="15.0">
+                              spacing="50.0">
                             <children>
-                        <FlowPane hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
+                                <FlowPane hgap="30.0" vgap="15.0" VBox.vgrow="NEVER">
                             <children>
-                                <JFXTextField fx:id="versionNameField" onAction="#saveVersionInfo" prefColumnCount="30"
-                                              promptText="Name"/>
-                                <HBox alignment="CENTER_LEFT" spacing="30.0">
+                                <VBox>
                                     <children>
-                                        <VBox>
-                                            <children>
-                                                <Label styleClass="info-key" text="Last Modified"/>
-                                                <Label fx:id="versionModifiedLabel" styleClass="info-value"/>
-                                            </children>
-                                        </VBox>
-                                        <VBox>
-                                            <children>
-                                                <Label styleClass="info-key" text="Size"/>
-                                                <Label fx:id="versionSizeLabel" styleClass="info-value"/>
-                                            </children>
-                                        </VBox>
-                                        <VBox>
-                                            <children>
-                                                <Label styleClass="info-key" text="Keep Forever"/>
-                                                <JFXCheckBox fx:id="versionPinnedCheckBox" onAction="#saveVersionInfo"
-                                                             styleClass="info-value" text="Pinned"/>
-                                            </children>
-                                        </VBox>
+                                        <Label styleClass="info-key" text="Keep Forever"/>
+                                        <JFXCheckBox fx:id="versionPinnedCheckBox" onAction="#saveVersionInfo"
+                                                     styleClass="info-value" text="Pinned"/>
                                     </children>
-                                </HBox>
+                                </VBox>
+                                <VBox>
+                                    <children>
+                                        <Label styleClass="info-key" text="Last Modified"/>
+                                        <Label fx:id="versionModifiedLabel" styleClass="info-value"/>
+                                    </children>
+                                </VBox>
+                                <VBox>
+                                    <children>
+                                        <Label styleClass="info-key" text="Size"/>
+                                        <Label fx:id="versionSizeLabel" styleClass="info-value"/>
+                                    </children>
+                                </VBox>
                             </children>
                         </FlowPane>
-                                <JFXTextArea fx:id="versionDescriptionField" prefColumnCount="0"
-                                             promptText="Description" VBox.vgrow="ALWAYS"/>
+                                <JFXTextField fx:id="versionNameField" onAction="#saveVersionInfo" promptText="Name"
+                                              VBox.vgrow="NEVER"/>
+                                <JFXTextField fx:id="versionDescriptionField" onAction="#saveVersionInfo"
+                                              promptText="Description" VBox.vgrow="NEVER"/>
                         <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
                             <children>
                                 <JFXButton styleClass="button-danger" text="Delete"/>
