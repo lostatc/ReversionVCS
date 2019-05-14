@@ -21,7 +21,6 @@ package io.github.lostatc.reversion.gui
 
 import com.jfoenix.controls.JFXCheckBox
 import com.jfoenix.controls.JFXListView
-import com.jfoenix.controls.JFXTextArea
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.Tag
@@ -62,11 +61,6 @@ private val Snapshot.primaryTag: Tag?
 private val Snapshot.displayName: String
     get() = primaryTag?.name ?: "Version $revision"
 
-/**
- * Returns this integer or `null` if it is less than 0.
- */
-private fun Int.positiveOrNull(): Int? = if (this < 0) null else this
-
 class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     /**
      * The versions currently visible in the UI.
@@ -77,7 +71,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * The index of the currently selected version or `null` if there is none.
      */
     private val selectedIndex: Int?
-        get() = versionList.selectionModel.selectedIndex.positiveOrNull()
+        get() = versionList.selectionModel.selectedIndex.let { if (it < 0) null else it }
 
     /**
      * The currently selected version.
@@ -113,7 +107,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * The text area containing the description of the tag.
      */
     @FXML
-    private lateinit var versionDescriptionField: JFXTextArea
+    private lateinit var versionDescriptionField: JFXTextField
 
     /**
      * The label displaying the last modified time of the version.
@@ -133,18 +127,6 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     @FXML
     private lateinit var versionPinnedCheckBox: JFXCheckBox
 
-    /**
-     * Runs the given [action] when any of the given [nodes] lose focus.
-     */
-    private fun addFocusLossListener(vararg nodes: Node, action: () -> Unit) {
-        for (node in nodes) {
-            val property = node.focusedProperty()
-            property.addListener { _, _, focused ->
-                if (!focused) action()
-            }
-        }
-    }
-
     override fun initialize(location: URL, resources: ResourceBundle?) {
         // Show a placeholder when there are no versions.
         versionList.placeholder = FXMLLoader.load(this::class.java.getResource("/fxml/NoVersionsPlaceholder.fxml"))
@@ -161,15 +143,9 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
             )
         }
 
-        // Save and reload version information when the selected version changes.
-        versionList.selectionModel.selectedIndexProperty().addListener { _, oldValue, newValue ->
-            saveVersionInfo(oldValue.toInt())
-            updateVersionInfo(newValue.toInt())
-        }
-
-        // Save version information when certain nodes lose focus.
-        addFocusLossListener(versionNameField, versionDescriptionField) {
-            saveVersionInfo()
+        // Reload version information when the selected version changes.
+        versionList.selectionModel.selectedIndexProperty().addListener { _, _, _ ->
+            updateVersionInfo()
         }
 
         // Make the version info invisible until a version is selected.
@@ -207,73 +183,70 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     }
 
     /**
-     * Updates the UI to display information about the version with the given [index].
-     */
-    private fun updateVersionInfo(index: Int?) = launch {
-        index?.positiveOrNull() ?: return@launch
-        val version = versions[index]
-
-        if (version == null) {
-            versionInfoPane.isVisible = false
-            return@launch
-        }
-
-        versionInfoPane.isVisible = true
-        versionNameField.text = version.snapshot.primaryTag?.name
-        versionDescriptionField.text = version.snapshot.primaryTag?.description
-        versionModifiedLabel.text = version.lastModifiedTime.toInstant().format(FormatStyle.MEDIUM)
-        versionSizeLabel.text = FileUtils.byteCountToDisplaySize(version.size)
-        versionPinnedCheckBox.isSelected = version.snapshot.pinned
-    }
-
-    /**
-     * Saves information from the UI about the version with the given [index].
-     */
-    private fun saveVersionInfo(index: Int?) = launch {
-        index?.positiveOrNull() ?: return@launch
-        val version = versions[index]
-
-        version.snapshot.updateTag(
-            name = versionNameField.text,
-            description = versionDescriptionField.text ?: "",
-            pinned = versionPinnedCheckBox.isSelected
-        )
-
-        versions[index] = version
-    }
-
-    /**
      * Updates the UI to display information about the currently selected version.
      */
     @FXML
-    fun updateVersionInfo() = updateVersionInfo(selectedIndex)
+    fun updateVersionInfo() {
+        launch {
+            val version = selectedVersion
+
+            if (version == null) {
+                versionInfoPane.isVisible = false
+                return@launch
+            }
+
+            versionInfoPane.isVisible = true
+            versionNameField.text = version.snapshot.displayName
+            versionDescriptionField.text = version.snapshot.primaryTag?.description ?: ""
+            versionModifiedLabel.text = version.lastModifiedTime.toInstant().format(FormatStyle.MEDIUM)
+            versionSizeLabel.text = FileUtils.byteCountToDisplaySize(version.size)
+            versionPinnedCheckBox.isSelected = version.snapshot.pinned
+        }
+    }
 
     /**
      * Saves information from the UI about the currently selected version.
      */
     @FXML
-    fun saveVersionInfo() = saveVersionInfo(selectedIndex)
+    fun saveVersionInfo() {
+        launch {
+            val version = selectedVersion ?: return@launch
+            val index = selectedIndex ?: return@launch
+
+            version.snapshot.updateTag(
+                name = versionNameField.text,
+                description = versionDescriptionField.text,
+                pinned = versionPinnedCheckBox.isSelected
+            )
+
+            versions[index] = version
+        }
+    }
 
     /**
      * Loads versions by browsing for a file.
      */
     @FXML
-    fun browsePath() = launch {
-        val file = FileChooser().run {
-            title = "Select file"
-            showOpenDialog(pathField.scene.window)?.toPath() ?: return@launch
-        }
+    fun browsePath() {
+        launch {
+            val file = FileChooser().run {
+                title = "Select file"
+                showOpenDialog(pathField.scene.window)?.toPath() ?: return@launch
+            }
 
-        pathField.text = file.toString()
-        loadVersions(file)
+            pathField.text = file.toString()
+            loadVersions(file)
+        }
     }
 
     /**
      * Loads versions by selecting a file path.
      */
     @FXML
-    fun setPath() = launch {
-        val file = Paths.get(pathField.text)
-        loadVersions(file)
+    fun setPath() {
+        launch {
+            val file = Paths.get(pathField.text)
+            loadVersions(file)
+        }
     }
 }
