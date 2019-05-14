@@ -64,8 +64,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     /**
      * The index of the currently selected version or `null` if there is none.
      */
-    private val selectedIndex: Int?
-        get() = versionList.selectionModel.selectedIndex.let { if (it < 0) null else it }
+    private var selectedIndex: Int? = null
 
     /**
      * The currently selected version.
@@ -138,11 +137,13 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
         }
 
         // Reload version information when the selected version changes.
-        versionList.selectionModel.selectedIndexProperty().addListener { _, _, _ ->
+        versionList.selectionModel.selectedIndexProperty().addListener { _, oldValue, newValue ->
+            saveVersionInfo()
+            selectedIndex = newValue.toInt().let { if (it < 0) null else it }
             updateVersionInfo()
         }
 
-        // Make the version info invisible until a version is selected.
+        // Make the version information invisible until a version is selected.
         versionInfoPane.isVisible = false
     }
 
@@ -159,6 +160,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
             newWorkDirectory.timeline.listVersions(relativePath)
         }
 
+        selectedIndex = null
         workDirectory = newWorkDirectory
         versions.setAll(newVersions)
     }
