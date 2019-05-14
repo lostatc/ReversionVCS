@@ -29,6 +29,7 @@ class Reversion : Application() {
     override fun start(primaryStage: Stage) {
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/VersionSelect.fxml"))
         val rootNode = rootLoader.load<Parent>()
+        val rootControl = rootLoader.getController<VersionSelectController>()
 
         primaryStage.apply {
             title = "Reversion"
@@ -37,6 +38,9 @@ class Reversion : Application() {
             height = 600.0
             minWidth = 450.0
             minHeight = 300.0
+            setOnCloseRequest {
+                rootControl.saveVersionInfo()
+            }
             show()
         }
     }

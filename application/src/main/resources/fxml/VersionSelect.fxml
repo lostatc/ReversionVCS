@@ -85,27 +85,14 @@
                                                      wrapText="true"/>
                                     </children>
                                 </VBox>
-                                <HBox alignment="BOTTOM_LEFT" prefHeight="100.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                                <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
                                     <children>
-                                        <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" HBox.hgrow="ALWAYS">
-                                            <children>
-                                                <JFXButton onAction="#deleteVersion" styleClass="button-danger"
-                                                           text="Delete"/>
-                                                <JFXButton onAction="#restoreVersion" styleClass="button-default"
-                                                           text="Restore"/>
-                                                <JFXButton onAction="#openVersion" styleClass="button-default"
-                                                           text="Open"/>
-                                            </children>
-                                        </FlowPane>
-                                        <FlowPane alignment="BOTTOM_LEFT" nodeOrientation="RIGHT_TO_LEFT"
-                                                  prefHeight="200.0" prefWidth="200.0" HBox.hgrow="ALWAYS">
-                                            <children>
-                                                <JFXButton onAction="#saveVersionInfo" styleClass="button-confirm"
-                                                           text="Accept"/>
-                                            </children>
-                                        </FlowPane>
+                                        <JFXButton onAction="#deleteVersion" styleClass="button-danger" text="Delete"/>
+                                        <JFXButton onAction="#restoreVersion" styleClass="button-default"
+                                                   text="Restore"/>
+                                        <JFXButton onAction="#openVersion" styleClass="button-default" text="Open"/>
                                     </children>
-                                </HBox>
+                                </FlowPane>
                             </children>
                             <padding>
                                 <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
