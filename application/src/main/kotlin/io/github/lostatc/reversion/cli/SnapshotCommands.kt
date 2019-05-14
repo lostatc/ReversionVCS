@@ -22,6 +22,7 @@ package io.github.lostatc.reversion.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
@@ -41,6 +42,7 @@ class SnapshotCommand(val parent: ReversionCommand) : CliktCommand(
     init {
         subcommands(
             SnapshotRemoveCommand(this),
+            SnapshotModifyCommand(this),
             SnapshotListCommand(this),
             SnapshotInfoCommand(this)
         )
@@ -62,6 +64,35 @@ class SnapshotRemoveCommand(val parent: SnapshotCommand) : CliktCommand(
     override fun run() {
         val workDirectory = WorkDirectory.open(parent.workPath)
         workDirectory.timeline.removeSnapshot(revision)
+    }
+}
+
+class SnapshotModifyCommand(val parent: SnapshotCommand) : CliktCommand(
+    name = "modify", help = """
+    Modify the snapshot.
+"""
+) {
+    val name: String? by option("-n", "--name", help = "The new name of the snapshot.")
+
+    val description: String? by option("-d", "--description", help = "The new description of the snapshot.")
+
+    val pin: Boolean by option("--pin", help = "Pin the snapshot so it is never deleted.")
+        .flag()
+
+    val unpin: Boolean by option("--no-pin", help = "Unpin the snapshot so it can be deleted.")
+        .flag()
+
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot.")
+        .int()
+
+    override fun run() {
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val snapshot = getSnapshot(workDirectory, revision)
+
+        name?.let { snapshot.name = it }
+        description?.let { snapshot.description = it }
+        if (unpin) snapshot.pinned = false
+        if (pin) snapshot.pinned = true
     }
 }
 

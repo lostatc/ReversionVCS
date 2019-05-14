@@ -156,9 +156,25 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      *
      * @param [paths] The paths of files to commit.
      * @param [force] If `true`, commit files that have no uncommitted changes. If `false`, don't commit them.
+     * @param [name] The initial name of the snapshot.
+     * @param [description] The initial description of the snapshot.
+     * @param [pinned] Whether the snapshot is pinned.
      */
-    fun commit(paths: Iterable<Path>, force: Boolean = false): Snapshot = walkDirectory(paths).let {
-        timeline.createSnapshot(if (force) it else filterModified(it), path)
+    fun commit(
+        paths: Iterable<Path>,
+        force: Boolean = false,
+        name: String? = null,
+        description: String = "",
+        pinned: Boolean = false
+    ): Snapshot {
+        val allFiles = walkDirectory(paths)
+        return timeline.createSnapshot(
+            paths = if (force) allFiles else filterModified(allFiles),
+            workDirectory = path,
+            name = name,
+            description = description,
+            pinned = pinned
+        )
     }
 
     /**
@@ -305,7 +321,6 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * @throws [InvalidWorkDirException] The working directory has not been initialized.
          */
         private fun openNew(path: Path): WorkDirectory {
-            val hiddenDirectory = path.resolve(relativeHiddenPath)
             val infoFile = path.resolve(relativeInfoPath)
             val repositoryPath = path.resolve(relativeRepoPath)
 

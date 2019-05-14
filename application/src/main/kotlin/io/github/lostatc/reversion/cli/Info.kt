@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion.cli
 
 import io.github.lostatc.reversion.api.Snapshot
-import io.github.lostatc.reversion.api.Tag
 import io.github.lostatc.reversion.api.Version
 import org.apache.commons.io.FileUtils
 import java.time.Instant
@@ -42,17 +41,10 @@ fun Instant.format(style: FormatStyle = FormatStyle.MEDIUM): String = DateTimeFo
 val Snapshot.info: String
     get() = """
         Revision: $revision
-        Created: ${timeCreated.format()}
-    """.trimIndent()
-
-/**
- * Human-readable information about the tag.
- */
-val Tag.info: String
-    get() = """
-        Name: $name
+        Name: $displayName
         Description: $description
         Pinned: ${if (pinned) "Yes" else "No"}
+        Created: ${timeCreated.format()}
     """.trimIndent()
 
 /**

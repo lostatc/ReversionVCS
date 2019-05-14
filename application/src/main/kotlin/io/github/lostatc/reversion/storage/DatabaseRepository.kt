@@ -37,7 +37,6 @@ import io.github.lostatc.reversion.schema.BlockEntity
 import io.github.lostatc.reversion.schema.BlockTable
 import io.github.lostatc.reversion.schema.CleanupPolicyTable
 import io.github.lostatc.reversion.schema.SnapshotTable
-import io.github.lostatc.reversion.schema.TagTable
 import io.github.lostatc.reversion.schema.TimelineCleanupPolicyTable
 import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
@@ -456,7 +455,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                     CleanupPolicyTable,
                     TimelineCleanupPolicyTable,
                     SnapshotTable,
-                    TagTable,
                     VersionTable,
                     BlobTable,
                     BlockTable

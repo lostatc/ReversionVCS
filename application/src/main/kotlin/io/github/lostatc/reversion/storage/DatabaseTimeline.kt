@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.CleanupPolicy
+import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.CleanupPolicyEntity
@@ -126,12 +127,21 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
                 .toSet()
         }
 
-    override fun createSnapshot(paths: Iterable<Path>, workDirectory: Path): DatabaseSnapshot {
+    override fun createSnapshot(
+        paths: Iterable<Path>,
+        workDirectory: Path,
+        name: String?,
+        description: String,
+        pinned: Boolean
+    ): Snapshot {
         val snapshot = transaction {
             val snapshotEntity = SnapshotEntity.new {
-                revision = snapshots.keys.max()?.let { it + 1 } ?: STARTING_REVISION
-                timeCreated = Instant.now()
-                timeline = entity
+                this.revision = snapshots.keys.max()?.let { it + 1 } ?: STARTING_REVISION
+                this.name = name
+                this.description = description
+                this.pinned = pinned
+                this.timeCreated = Instant.now()
+                this.timeline = entity
             }
 
             val snapshot = DatabaseSnapshot(snapshotEntity, repository)

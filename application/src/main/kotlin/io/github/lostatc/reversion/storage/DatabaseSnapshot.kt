@@ -29,8 +29,6 @@ import io.github.lostatc.reversion.schema.BlobTable
 import io.github.lostatc.reversion.schema.BlockEntity
 import io.github.lostatc.reversion.schema.SnapshotEntity
 import io.github.lostatc.reversion.schema.SnapshotTable
-import io.github.lostatc.reversion.schema.TagEntity
-import io.github.lostatc.reversion.schema.TagTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
 import org.jetbrains.exposed.sql.SortOrder
@@ -50,6 +48,33 @@ import java.util.Objects
  */
 data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository: DatabaseRepository) : Snapshot {
     override val revision: Int = entity.revision
+
+    override var name: String? = entity.name
+        set(value) {
+            transaction {
+                entity.name = value
+            }
+
+            field = value
+        }
+
+    override var description: String = entity.description
+        set(value) {
+            transaction {
+                entity.description = value
+            }
+
+            field = value
+        }
+
+    override var pinned: Boolean = entity.pinned
+        set(value) {
+            transaction {
+                entity.pinned = value
+            }
+
+            field = value
+        }
 
     override val timeCreated: Instant = entity.timeCreated
 
@@ -81,35 +106,8 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
                 .associate { it.path to DatabaseVersion(it, repository) }
         }
 
-    override val tags: Map<String, DatabaseTag> = object : AbstractMap<String, DatabaseTag>() {
-        override val entries: Set<Map.Entry<String, DatabaseTag>>
-            get() = transaction {
-                TagEntity
-                    .find { TagTable.snapshot eq entity.id }
-                    .map { SimpleEntry(it.name, DatabaseTag(it, repository)) }
-                    .toSet()
-            }
-
-        override fun containsKey(key: String): Boolean = get(key) != null
-
-        override fun get(key: String): DatabaseTag? = transaction {
-            TagEntity
-                .find { (TagTable.snapshot eq entity.id) and (TagTable.name eq key) }
-                .firstOrNull()
-                ?.let { DatabaseTag(it, repository) }
-        }
-    }
-
     override val timeline: DatabaseTimeline
         get() = transaction { DatabaseTimeline(entity.timeline, repository) }
-
-    override val pinned: Boolean
-        get() = transaction {
-            TagEntity
-                .find { (TagTable.snapshot eq entity.id) and (TagTable.pinned eq true) }
-                .limit(1)
-                .any()
-        }
 
     fun createVersion(path: Path, workDirectory: Path): DatabaseVersion {
         if (path in versions) {
@@ -169,39 +167,6 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         repository.clean()
 
         logger.info("Removed version $version.")
-
-        return true
-    }
-
-    override fun addTag(name: String, description: String, pinned: Boolean): DatabaseTag {
-        if (name in tags) {
-            throw RecordAlreadyExistsException("A tag with the name '$name' already exists in this snapshot.")
-        }
-
-        val tag = transaction {
-            val tagEntity = TagEntity.new {
-                this.name = name
-                this.description = description
-                this.pinned = pinned
-                this.snapshot = entity
-            }
-
-            DatabaseTag(tagEntity, repository)
-        }
-
-        logger.info("Created tag $tag.")
-
-        return tag
-    }
-
-    override fun removeTag(name: String): Boolean {
-        val tag = tags[name] ?: return false
-
-        transaction {
-            tag.entity.delete()
-        }
-
-        logger.info("Removed tag $tag.")
 
         return true
     }

@@ -50,6 +50,22 @@ interface TimelineTest {
     }
 
     @Test
+    fun `create snapshot`() {
+        val timeline = repository.createTimeline()
+        val snapshot = timeline.createSnapshot(
+            emptyList(),
+            workPath,
+            name = "Name",
+            description = "Description",
+            pinned = true
+        )
+
+        assertEquals("Name", snapshot.name)
+        assertEquals("Description", snapshot.description)
+        assertEquals(true, snapshot.pinned)
+    }
+
+    @Test
     fun `get snapshot`() {
         val timeline = repository.createTimeline()
         val snapshot = timeline.createSnapshot(emptyList(), workPath)
@@ -165,9 +181,7 @@ interface TimelineTest {
         val timeline = repository.createTimeline(policies)
 
         val snapshot1 = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
-        val snapshot2 = timeline.createSnapshot(listOf(Paths.get("a")), workPath).apply {
-            addTag(name = "Don't delete", pinned = true)
-        }
+        val snapshot2 = timeline.createSnapshot(listOf(Paths.get("a")), workPath, pinned = true)
         val snapshot3 = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
         val snapshot4 = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
         val snapshot5 = timeline.createSnapshot(listOf(Paths.get("a")), workPath)

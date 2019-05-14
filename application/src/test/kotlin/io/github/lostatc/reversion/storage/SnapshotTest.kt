@@ -19,7 +19,6 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Timeline
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -28,7 +27,6 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -49,6 +47,18 @@ interface SnapshotTest {
                 file("a")
             }
         }
+    }
+
+    @Test
+    fun `modify snapshot`() {
+        val snapshot = timeline.createSnapshot(emptyList(), workPath)
+        snapshot.name = "New name"
+        snapshot.description = "New description"
+        snapshot.pinned = true
+
+        assertEquals("New name", snapshot.name)
+        assertEquals("New description", snapshot.description)
+        assertEquals(true, snapshot.pinned)
     }
 
     @Test
@@ -94,48 +104,6 @@ interface SnapshotTest {
     }
 
     @Test
-    fun `get tag`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath)
-        val tag = snapshot.addTag(name = "test")
-
-        assertEquals(tag, snapshot.tags[tag.name])
-        assertNull(snapshot.tags["nonexistent"])
-    }
-
-    @Test
-    fun `list tags`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath)
-        val tags = setOf(
-            snapshot.addTag("test1"),
-            snapshot.addTag("test2"),
-            snapshot.addTag("test3")
-        )
-
-        assertEquals(tags, snapshot.tags.values.toSet())
-    }
-
-    @Test
-    fun `snapshot is pinned if any tags are pinned`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath).apply {
-            addTag("test1", pinned = false)
-            addTag("test2", pinned = true)
-            addTag("test3", pinned = false)
-        }
-
-        assertTrue(snapshot.pinned)
-    }
-
-    @Test
-    fun `snapshot is not pinned if no tags are pinned`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath).apply {
-            addTag("test1", pinned = false)
-            addTag("test2", pinned = false)
-        }
-
-        assertFalse(snapshot.pinned)
-    }
-
-    @Test
     fun `remove version`() {
         val snapshot = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
         val version = snapshot.versions.getValue(Paths.get("a"))
@@ -143,25 +111,5 @@ interface SnapshotTest {
         assertFalse(snapshot.removeVersion(Paths.get("nonexistent")))
         assertTrue(snapshot.removeVersion(version.path))
         assertNull(snapshot.versions[version.path])
-    }
-
-    @Test
-    fun `creating a tag that already exists throws`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath)
-        snapshot.addTag("test")
-
-        assertThrows<RecordAlreadyExistsException> {
-            snapshot.addTag("test")
-        }
-    }
-
-    @Test
-    fun `remove tag`() {
-        val snapshot = timeline.createSnapshot(emptyList(), workPath)
-        val tag = snapshot.addTag("test")
-
-        assertFalse(snapshot.removeTag("nonexistent"))
-        assertTrue(snapshot.removeTag(tag.name))
-        assertNull(snapshot.tags[tag.name])
     }
 }
