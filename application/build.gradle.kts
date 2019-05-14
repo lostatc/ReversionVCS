@@ -37,17 +37,22 @@ javafx {
 }
 
 tasks {
+    val startScripts = getByName<CreateStartScripts>("startScripts")
+
     register<CreateStartScripts>("cliScript") {
         applicationName = "reversion"
         mainClassName = "io.github.lostatc.reversion.cli.MainKt"
-        outputDir = getByName<CreateStartScripts>("startScripts").outputDir
-        classpath = getByName<CreateStartScripts>("startScripts").classpath
+        outputDir = startScripts.outputDir
+        classpath = startScripts.classpath
     }
 
     register<CreateStartScripts>("daemonScript") {
         applicationName = "reversiond"
         mainClassName = "io.github.lostatc.reversion.daemon.MainKt"
-        outputDir = getByName<CreateStartScripts>("startScripts").outputDir
-        classpath = getByName<CreateStartScripts>("startScripts").classpath
+        outputDir = startScripts.outputDir
+        classpath = startScripts.classpath
     }
+
+    startScripts.dependsOn("cliScript")
+    startScripts.dependsOn("daemonScript")
 }
