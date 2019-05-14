@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion.cli
 
 import io.github.lostatc.reversion.api.Snapshot
-import io.github.lostatc.reversion.api.Tag
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
@@ -49,16 +48,3 @@ fun getSnapshot(workDirectory: WorkDirectory, revision: Int): Snapshot =
 fun getVersion(workDirectory: WorkDirectory, revision: Int, path: Path): Version =
     getSnapshot(workDirectory, revision).versions[path]
         ?: throw NoSuchElementException("No version with the path '$path'.")
-
-/**
- * Get a tag.
- *
- * @param [workDirectory] The working directory.
- * @param [revision] The revision number of the snapshot.
- * @param [name] The name of the tag.
- *
- * @throws [NoSuchElementException] There is no tag with the given [name].
- */
-fun getTag(workDirectory: WorkDirectory, revision: Int, name: String): Tag =
-    getSnapshot(workDirectory, revision).tags[name]
-        ?: throw NoSuchElementException("No tag named '$name'.")

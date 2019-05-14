@@ -49,7 +49,6 @@ class ReversionCommand : CliktCommand(name = "reversion") {
     init {
         subcommands(
             SnapshotCommand(this),
-            TagCommand(this),
             VersionCommand(this),
             PolicyCommand(this),
             InitCommand(this),
@@ -123,6 +122,14 @@ class CommitCommand(val parent: ReversionCommand) : CliktCommand(
     By default, files are only committed if they have uncommitted changes.
 """
 ) {
+    val name: String? by option("-n", "--name", help = "The name of the snapshot.")
+
+    val description: String by option("-d", "--description", help = "The description of the snapshot.")
+        .default("")
+
+    val pinned: Boolean by option("--pin", help = "Pin the snapshot so it is never deleted.")
+        .flag()
+
     val force: Boolean by option("--force", help = "Commit files even if they don't have uncommitted changes.")
         .flag()
 
@@ -132,7 +139,7 @@ class CommitCommand(val parent: ReversionCommand) : CliktCommand(
 
     override fun run() {
         val workDir = WorkDirectory.open(parent.workPath)
-        workDir.commit(paths, force = force)
+        workDir.commit(paths, force = force, name = name, description = description, pinned = pinned)
     }
 }
 

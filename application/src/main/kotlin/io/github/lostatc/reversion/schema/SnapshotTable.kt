@@ -31,9 +31,15 @@ import java.util.UUID
 object SnapshotTable : IntIdTable() {
     val revision: Column<Int> = integer("revision")
 
-    val timeline: Column<EntityID<UUID>> = cascadeReference("timeline", TimelineTable)
+    val name: Column<String?> = varchar("name", 255).nullable()
+
+    val description: Column<String> = text("description")
+
+    val pinned: Column<Boolean> = bool("pinned")
 
     val timeCreated: Column<Instant> = instant("timeCreated")
+
+    val timeline: Column<EntityID<UUID>> = cascadeReference("timeline", TimelineTable)
 
     init {
         uniqueIndex(revision, timeline)
@@ -52,6 +58,21 @@ class SnapshotEntity(id: EntityID<Int>) : IntEntity(id) {
     var revision: Int by SnapshotTable.revision
 
     /**
+     * The user-provided name of the snapshot.
+     */
+    var name: String? by SnapshotTable.name
+
+    /**
+     * The user-provided description of the snapshot.
+     */
+    var description: String by SnapshotTable.description
+
+    /**
+     * Whether the snapshot is pinned.
+     */
+    var pinned: Boolean by SnapshotTable.pinned
+
+    /**
      * The timeline the snapshot is a part of.
      */
     var timeline: TimelineEntity by TimelineEntity referencedOn SnapshotTable.timeline
@@ -65,11 +86,6 @@ class SnapshotEntity(id: EntityID<Int>) : IntEntity(id) {
      * The versions of files that are a part of this snapshot.
      */
     val versions: SizedIterable<VersionEntity> by VersionEntity referrersOn VersionTable.snapshot
-
-    /**
-     * The tags which are associated with this snapshot.
-     */
-    val tags: SizedIterable<TagEntity> by TagEntity referrersOn TagTable.snapshot
 
     companion object : IntEntityClass<SnapshotEntity>(SnapshotTable)
 }

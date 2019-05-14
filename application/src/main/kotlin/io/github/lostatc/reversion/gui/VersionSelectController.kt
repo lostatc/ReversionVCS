@@ -22,8 +22,6 @@ package io.github.lostatc.reversion.gui
 import com.jfoenix.controls.JFXCheckBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTextField
-import io.github.lostatc.reversion.api.Snapshot
-import io.github.lostatc.reversion.api.Tag
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.storage.WorkDirectory
@@ -48,18 +46,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.format.FormatStyle
 import java.util.ResourceBundle
-
-/**
- * The tag to display in the UI, or `null` if there is none.
- */
-private val Snapshot.primaryTag: Tag?
-    get() = tags.values.firstOrNull()
-
-/**
- * The name of the snapshot to display to the user.
- */
-private val Snapshot.displayName: String
-    get() = primaryTag?.name ?: "Version $revision"
 
 class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     /**
@@ -153,23 +139,6 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
     }
 
     /**
-     * Update the value of the primary tag of this snapshot or create it if it doesn't exist.
-     *
-     * @param [name] The name of the tag.
-     * @param [description] The description for the tag.
-     * @param [pinned] Whether to keep the snapshot forever.
-     */
-    private suspend fun Snapshot.updateTag(name: String, description: String, pinned: Boolean) {
-        withContext(Dispatchers.IO) {
-            primaryTag?.apply {
-                this.name = name
-                this.description = description
-                this.pinned = pinned
-            } ?: addTag(name = name, description = description, pinned = pinned)
-        }
-    }
-
-    /**
      * Updates [versions] with the versions of the given [path].
      */
     private suspend fun loadVersions(path: Path) {
@@ -196,8 +165,8 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
             }
 
             versionInfoPane.isVisible = true
-            versionNameField.text = version.snapshot.displayName
-            versionDescriptionField.text = version.snapshot.primaryTag?.description ?: ""
+            versionNameField.text = version.snapshot.name
+            versionDescriptionField.text = version.snapshot.description
             versionModifiedLabel.text = version.lastModifiedTime.toInstant().format(FormatStyle.MEDIUM)
             versionSizeLabel.text = FileUtils.byteCountToDisplaySize(version.size)
             versionPinnedCheckBox.isSelected = version.snapshot.pinned
@@ -213,11 +182,17 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
             val version = selectedVersion ?: return@launch
             val index = selectedIndex ?: return@launch
 
-            version.snapshot.updateTag(
-                name = versionNameField.text,
-                description = versionDescriptionField.text,
-                pinned = versionPinnedCheckBox.isSelected
-            )
+            val name = versionNameField.text
+            val description = versionDescriptionField.text ?: ""
+            val pinned = versionPinnedCheckBox.isSelected
+
+            withContext(Dispatchers.IO) {
+                version.snapshot.apply {
+                    this.name = name
+                    this.description = description
+                    this.pinned = pinned
+                }
+            }
 
             versions[index] = version
         }

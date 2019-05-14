@@ -35,6 +35,31 @@ interface Snapshot {
     val revision: Int
 
     /**
+     * The user-provided name of the snapshot.
+     */
+    var name: String?
+
+    /**
+     * The name to display to the user.
+     *
+     * If [name] is not `null`, this is equal to [name].
+     */
+    val displayName: String
+        get() = name ?: "Revision $revision"
+
+    /**
+     * The user-provided description of the snapshot.
+     */
+    var description: String
+
+    /**
+     * Whether the snapshot is pinned.
+     *
+     * If this is `true`, the tag will not be automatically deleted.
+     */
+    var pinned: Boolean
+
+    /**
      * The time the snapshot was created.
      */
     val timeCreated: Instant
@@ -59,11 +84,6 @@ interface Snapshot {
             .associateBy { it.path }
 
     /**
-     * The tags in this snapshot indexed by their [name][Tag.name].
-     */
-    val tags: Map<String, Tag>
-
-    /**
      * The timeline this snapshot is a part of.
      */
     val timeline: Timeline
@@ -75,12 +95,6 @@ interface Snapshot {
         get() = timeline.repository
 
     /**
-     * Whether this snapshot is pinned by at least one tag.
-     */
-    val pinned: Boolean
-        get() = tags.values.any { it.pinned }
-
-    /**
      * Removes the version with the given [path] from this snapshot.
      *
      * @param [path] The path of the file relative to its working directory.
@@ -88,22 +102,4 @@ interface Snapshot {
      * @return `true` if the version was removed, `false` if it didn't exist.
      */
     fun removeVersion(path: Path): Boolean
-
-    /**
-     * Adds a tag to this snapshot and returns it.
-     *
-     * @param [name] The name of the tag.
-     * @param [description] The description of the tag.
-     * @param [pinned] Whether the tag should be kept forever.
-     *
-     * @throws [RecordAlreadyExistsException] A tag with the given [name] already exists in this snapshot.
-     */
-    fun addTag(name: String, description: String = "", pinned: Boolean = true): Tag
-
-    /**
-     * Removes the tag with the given [name] from this snapshot.
-     *
-     * @return `true` if the tag was removed, `false` if it didn't exist.
-     */
-    fun removeTag(name: String): Boolean
 }

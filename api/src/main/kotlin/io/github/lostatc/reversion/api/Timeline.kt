@@ -114,11 +114,20 @@ interface Timeline {
      *
      * @param [paths] The paths of the files relative to their working directory.
      * @param [workDirectory] The path of the working directory containing the files.
+     * @param [name] The initial name of the snapshot.
+     * @param [description] The initial description of the snapshot.
+     * @param [pinned] Whether the snapshot is pinned.
      *
      * @throws [NoSuchFileException] One of the files in [paths] doesn't exist.
      * @throws [IOException] An I/O error occurred.
      */
-    fun createSnapshot(paths: Iterable<Path>, workDirectory: Path): Snapshot
+    fun createSnapshot(
+        paths: Iterable<Path>,
+        workDirectory: Path,
+        name: String? = null,
+        description: String = "",
+        pinned: Boolean = false
+    ): Snapshot
 
     /**
      * Removes the snapshot with the given [revision] number from this timeline.
