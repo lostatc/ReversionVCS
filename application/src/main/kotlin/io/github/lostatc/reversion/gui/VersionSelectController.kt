@@ -38,7 +38,6 @@ import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -168,12 +167,12 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * Updates the UI to display information about the currently selected version.
      */
     @FXML
-    fun updateVersionInfo(): Job = launch {
+    fun updateVersionInfo() {
         val version = selectedVersion
 
         if (version == null) {
             versionInfoPane.isVisible = false
-            return@launch
+            return
         }
 
         versionInfoPane.isVisible = true
@@ -188,56 +187,57 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * Saves information from the UI about the currently selected version.
      */
     @FXML
-    fun saveVersionInfo(): Job = launch {
-        val version = selectedVersion ?: return@launch
-        val index = selectedIndex ?: return@launch
+    fun saveVersionInfo() {
+        val version = selectedVersion ?: return
 
         val name = versionNameField.text?.let { if (it.isEmpty()) null else it }
         val description = versionDescriptionField.text ?: ""
         val pinned = versionPinnedCheckBox.isSelected
 
-        withContext(Dispatchers.IO) {
-            version.snapshot.apply {
-                this.name = name
-                this.description = description
-                this.pinned = pinned
+        launch {
+            withContext(Dispatchers.IO) {
+                version.snapshot.apply {
+                    this.name = name
+                    this.description = description
+                    this.pinned = pinned
+                }
             }
-        }
 
-        versions[index] = version
+            versionList.refresh()
+        }
     }
 
     /**
      * Loads versions by browsing for a file.
      */
     @FXML
-    fun browsePath(): Job = launch {
+    fun browsePath() {
         val file = FileChooser().run {
             title = "Select file"
-            showOpenDialog(pathField.scene.window)?.toPath() ?: return@launch
+            showOpenDialog(pathField.scene.window)?.toPath() ?: return
         }
 
         pathField.text = file.toString()
-        loadVersions(file)
+        launch { loadVersions(file) }
     }
 
     /**
      * Loads versions by selecting a file path.
      */
     @FXML
-    fun setPath(): Job = launch {
+    fun setPath() {
         val file = Paths.get(pathField.text)
-        loadVersions(file)
+        launch { loadVersions(file) }
     }
 
     /**
      * Open the selected version in its default application.
      */
     @FXML
-    fun openVersion(): Job = launch {
-        val version = selectedVersion ?: return@launch
+    fun openVersion() {
+        val version = selectedVersion ?: return
 
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val tempDirectory = Files.createTempDirectory("reversion-")
             val targetPath = tempDirectory.resolve(version.path.fileName)
             version.checkout(targetPath)
@@ -251,39 +251,43 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * This saves the current version of the file and then overwrites it.
      */
     @FXML
-    fun restoreVersion(): Job = launch {
-        val workDirectory = workDirectory ?: return@launch
-        val version = selectedVersion ?: return@launch
+    fun restoreVersion() {
+        val workDirectory = workDirectory ?: return
+        val version = selectedVersion ?: return
         val targetPath = workDirectory.path.resolve(version.path)
 
-        withContext(Dispatchers.IO) {
-            // Save the current version of the file.
-            workDirectory.commit(
-                listOf(targetPath),
-                description = "This version was created before the file was overwritten by a restore.",
-                pinned = true
-            )
+        launch {
+            withContext(Dispatchers.IO) {
+                // Save the current version of the file.
+                workDirectory.commit(
+                    listOf(targetPath),
+                    description = "This version was created before the file was overwritten by a restore.",
+                    pinned = true
+                )
 
-            // Restore the old version of the file.
-            version.checkout(targetPath, overwrite = true)
+                // Restore the old version of the file.
+                version.checkout(targetPath, overwrite = true)
+            }
+
+            loadVersions(targetPath)
         }
-
-        loadVersions(targetPath)
     }
 
     /**
      * Deletes the currently selected version.
      */
     @FXML
-    fun deleteVersion(): Job = launch {
-        val workDirectory = workDirectory ?: return@launch
-        val version = selectedVersion ?: return@launch
+    fun deleteVersion() {
+        val workDirectory = workDirectory ?: return
+        val version = selectedVersion ?: return
         val targetPath = workDirectory.path.resolve(version.path)
 
-        withContext(Dispatchers.IO) {
-            version.snapshot.removeVersion(version.path)
-        }
+        launch {
+            withContext(Dispatchers.IO) {
+                version.snapshot.removeVersion(version.path)
+            }
 
-        loadVersions(targetPath)
+            loadVersions(targetPath)
+        }
     }
 }
