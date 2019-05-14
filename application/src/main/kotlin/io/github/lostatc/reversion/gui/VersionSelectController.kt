@@ -44,13 +44,20 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.apache.commons.io.FileUtils
+import java.awt.Desktop
 import java.net.URL
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.format.FormatStyle
 import java.util.ResourceBundle
 
 class VersionSelectController : Initializable, CoroutineScope by MainScope() {
+    /**
+     * The current working directory.
+     */
+    private var workDirectory: WorkDirectory? = null
+
     /**
      * The versions currently visible in the UI.
      */
@@ -153,12 +160,16 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * Updates [versions] with the versions of the given [path].
      */
     private suspend fun loadVersions(path: Path) {
-        val newVersions = withContext(Dispatchers.IO) {
-            val workDirectory = WorkDirectory.openFromDescendant(path)
-            val relativePath = workDirectory.path.relativize(path)
-            workDirectory.timeline.listVersions(relativePath)
+        val newWorkDirectory = withContext(Dispatchers.IO) {
+            WorkDirectory.openFromDescendant(path)
         }
 
+        val newVersions = withContext(Dispatchers.IO) {
+            val relativePath = newWorkDirectory.path.relativize(path)
+            newWorkDirectory.timeline.listVersions(relativePath)
+        }
+
+        workDirectory = newWorkDirectory
         versions.setAll(newVersions)
     }
 
@@ -193,7 +204,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
             val version = selectedVersion ?: return@launch
             val index = selectedIndex ?: return@launch
 
-            val name = versionNameField.text
+            val name = versionNameField.text?.let { if (it.isEmpty()) null else it }
             val description = versionDescriptionField.text ?: ""
             val pinned = versionPinnedCheckBox.isSelected
 
@@ -234,5 +245,62 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
             val file = Paths.get(pathField.text)
             loadVersions(file)
         }
+    }
+
+    /**
+     * Open the selected version in its default application.
+     */
+    @FXML
+    fun openVersion() = launch {
+        val version = selectedVersion ?: return@launch
+
+        withContext(Dispatchers.IO) {
+            val tempDirectory = Files.createTempDirectory("reversion-")
+            val targetPath = tempDirectory.resolve(version.path.fileName)
+            version.checkout(targetPath)
+            Desktop.getDesktop().open(targetPath.toFile())
+        }
+    }
+
+    /**
+     * Restores the currently selected version to its original location.
+     *
+     * This saves the current version of the file and then overwrites it.
+     */
+    @FXML
+    fun restoreVersion() = launch {
+        val workDirectory = workDirectory ?: return@launch
+        val version = selectedVersion ?: return@launch
+        val targetPath = workDirectory.path.resolve(version.path)
+
+        withContext(Dispatchers.IO) {
+            // Save the current version of the file.
+            workDirectory.commit(
+                listOf(targetPath),
+                description = "This version was created before the file was overwritten by a restore.",
+                pinned = true
+            )
+
+            // Restore the old version of the file.
+            version.checkout(targetPath, overwrite = true)
+        }
+
+        loadVersions(targetPath)
+    }
+
+    /**
+     * Deletes the currently selected version.
+     */
+    @FXML
+    fun deleteVersion() = launch {
+        val workDirectory = workDirectory ?: return@launch
+        val version = selectedVersion ?: return@launch
+        val targetPath = workDirectory.path.resolve(version.path)
+
+        withContext(Dispatchers.IO) {
+            version.snapshot.removeVersion(version.path)
+        }
+
+        loadVersions(targetPath)
     }
 }
