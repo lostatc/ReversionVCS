@@ -83,6 +83,7 @@ private object DatabaseFactory {
     private fun configure(connection: Connection) {
         SQLiteConfig().apply {
             enforceForeignKeys(true)
+            setJournalMode(SQLiteConfig.JournalMode.WAL)
             apply(connection)
         }
     }
