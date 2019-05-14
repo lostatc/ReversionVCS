@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.gui
 
 import com.jfoenix.controls.JFXCheckBox
 import com.jfoenix.controls.JFXListView
+import com.jfoenix.controls.JFXTextArea
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.cli.format
@@ -32,6 +33,8 @@ import javafx.fxml.FXMLLoader
 import javafx.fxml.Initializable
 import javafx.scene.Node
 import javafx.scene.control.Label
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyEvent
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
@@ -93,7 +96,7 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
      * The text area containing the description of the tag.
      */
     @FXML
-    private lateinit var versionDescriptionField: JFXTextField
+    private lateinit var versionDescriptionField: JFXTextArea
 
     /**
      * The label displaying the last modified time of the version.
@@ -136,6 +139,14 @@ class VersionSelectController : Initializable, CoroutineScope by MainScope() {
 
         // Make the version info invisible until a version is selected.
         versionInfoPane.isVisible = false
+
+        // Save the text area and don't add a newline when the enter key is pressed.
+        versionDescriptionField.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
+            if (event.code == KeyCode.ENTER) {
+                saveVersionInfo()
+                event.consume()
+            }
+        }
     }
 
     /**
