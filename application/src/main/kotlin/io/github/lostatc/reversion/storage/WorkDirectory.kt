@@ -27,8 +27,10 @@ import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.UnsupportedFormatException
+import io.github.lostatc.reversion.api.Version
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.awt.Desktop
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -218,6 +220,35 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     fun getStatus(): Status = Status(
         filterModified(walkDirectory(listOf(path))).toSet()
     )
+
+    /**
+     * [Commits][commit] the given [paths] and then [updates][update] them to the given [revision].
+     *
+     * This commits any uncommitted changes that would be overwritten and then restores those files. Passing the path of
+     * a directory restores all the files contained in it.
+     *
+     * @param [paths] The paths of files to update.
+     * @param [revision] The revision number. If `null`, use the most recent revision.
+     */
+    fun restore(paths: Iterable<Path>, revision: Int? = null) {
+        commit(
+            paths = paths,
+            description = "This version was created to save a file before it was overwritten by a restore."
+        )
+        update(paths = paths, revision = revision)
+    }
+
+    /**
+     * Opens the given [version] in the default application for its file type.
+     *
+     * This opens the file in a temporary directory and does not attempt to clean it up afterwards.
+     */
+    fun openInApplication(version: Version) {
+        val tempDirectory = Files.createTempDirectory("reversion-")
+        val targetPath = tempDirectory.resolve(version.path.fileName)
+        version.checkout(targetPath)
+        Desktop.getDesktop().open(targetPath.toFile())
+    }
 
     /**
      * The status of the working directory.
