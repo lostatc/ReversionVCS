@@ -61,6 +61,12 @@ class VersionListModel : CoroutineScope by MainScope() {
      */
     var workDirectory: WorkDirectory? by workDirectoryProperty
 
+    /**
+     * The absolute path of the [selectedVersion].
+     */
+    val versionPath: Path?
+        get() = selectedVersion?.let { workDirectory?.path?.resolve(it.path) }
+
     init {
         // Clear the selected version when the selected working directory changes.
         workDirectoryProperty.addListener { _, oldValue, newValue ->
@@ -86,6 +92,49 @@ class VersionListModel : CoroutineScope by MainScope() {
 
             workDirectory = newWorkDirectory
             versions.setAll(newVersions)
+        }
+    }
+
+    /**
+     * Sets the values of [versions] and [workDirectory] for the [selectedVersion].
+     */
+    fun reload() {
+        versionPath?.let { load(it) }
+    }
+
+    fun deleteVersion() {
+        val workDirectory = workDirectory ?: return
+        val version = selectedVersion ?: return
+
+        launch {
+            withContext(Dispatchers.IO) {
+                version.snapshot.removeVersion(version.path)
+            }
+
+            reload()
+        }
+    }
+
+    fun restoreVersion() {
+        val workDirectory = workDirectory ?: return
+        val version = selectedVersion ?: return
+        val versionPath = versionPath ?: return
+
+        launch {
+            withContext(Dispatchers.IO) {
+                workDirectory.restore(listOf(versionPath), revision = version.snapshot.revision)
+            }
+
+            reload()
+        }
+    }
+
+    fun openVersion() {
+        val workDirectory = workDirectory ?: return
+        val version = selectedVersion ?: return
+
+        launch(Dispatchers.IO) {
+            workDirectory.openInApplication(version)
         }
     }
 }

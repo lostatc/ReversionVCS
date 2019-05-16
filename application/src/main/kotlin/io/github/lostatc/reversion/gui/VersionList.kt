@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.gui
 
 import com.jfoenix.controls.JFXListView
+import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.cli.format
 import javafx.fxml.FXML
 import javafx.scene.Node
@@ -32,7 +33,7 @@ class VersionList {
     /**
      * The model for storing information about selected versions.
      */
-    private val model: VersionListModel = VersionListModel()
+    val model: VersionListModel = VersionListModel()
 
     @FXML
     fun initialize() {
@@ -52,5 +53,12 @@ class VersionList {
         versionList.items = MappedList(model.versions) {
             ListItem(it.snapshot.displayName, it.snapshot.timeCreated.format(FormatStyle.MEDIUM))
         }
+    }
+
+    /**
+     * Refresh the version list view to reflect changes in the state of the underlying [Version].
+     */
+    fun refresh() {
+        versionList.refresh()
     }
 }

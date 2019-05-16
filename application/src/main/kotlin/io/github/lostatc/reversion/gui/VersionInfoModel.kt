@@ -21,7 +21,9 @@ package io.github.lostatc.reversion.gui
 
 import io.github.lostatc.reversion.api.Version
 import javafx.beans.property.Property
+import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -35,7 +37,7 @@ class VersionInfoModel : CoroutineScope by MainScope() {
     /**
      * A property for [name].
      */
-    val nameProperty: Property<String?> = SimpleObjectProperty(null)
+    val nameProperty: Property<String?> = SimpleStringProperty(null)
 
     /**
      * The name of the version.
@@ -45,7 +47,7 @@ class VersionInfoModel : CoroutineScope by MainScope() {
     /**
      * A property for [description].
      */
-    val descriptionProperty: Property<String?> = SimpleObjectProperty(null)
+    val descriptionProperty: Property<String?> = SimpleStringProperty(null)
 
     /**
      * The description of the version.
@@ -55,12 +57,12 @@ class VersionInfoModel : CoroutineScope by MainScope() {
     /**
      * A property for [pinned].
      */
-    val pinnedProperty: Property<Boolean?> = SimpleObjectProperty(null)
+    val pinnedProperty: Property<Boolean> = SimpleBooleanProperty()
 
     /**
      * Whether the version is pinned.
      */
-    var pinned: Boolean? by pinnedProperty
+    var pinned: Boolean by pinnedProperty
 
     /**
      * A property for [lastModified].
@@ -82,6 +84,7 @@ class VersionInfoModel : CoroutineScope by MainScope() {
      */
     var size: Long? by sizeProperty
 
+
     /**
      * Sets the values of the properties in this model from the given [version].
      */
@@ -97,14 +100,14 @@ class VersionInfoModel : CoroutineScope by MainScope() {
      * Saves the values of the properties in this model to the given [version].
      */
     fun save(version: Version) {
-        val name = name
-        val description = description
+        val name = name?.let { if (it.isEmpty()) null else it }
+        val description = description ?: ""
         val pinned = pinned
 
         launch(Dispatchers.IO) {
             version.snapshot.name = name
-            description?.let { version.snapshot.description = it }
-            pinned?.let { version.snapshot.pinned = it }
+            version.snapshot.description = description
+            version.snapshot.pinned = pinned
         }
     }
 }
