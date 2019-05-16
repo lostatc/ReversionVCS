@@ -21,27 +21,27 @@ package io.github.lostatc.reversion.gui
 
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
+import javafx.scene.control.Label
 import javafx.scene.layout.VBox
-import javafx.scene.text.Text
 
 data class ListItem(val title: String, val subtitle: String) : VBox() {
     @FXML
-    private lateinit var titleNode: Text
+    private lateinit var titleText: Label
 
     @FXML
-    private lateinit var subtitleNode: Text
+    private lateinit var subtitleText: Label
 
     init {
         FXMLLoader(this::class.java.getResource("/fxml/ListItem.fxml")).apply {
-            setRoot(this)
-            setController(this)
+            setRoot(this@ListItem)
+            setController(this@ListItem)
             load()
         }
     }
 
     @FXML
     fun initialize() {
-        titleNode.text = title
-        subtitleNode.text = subtitle
+        titleText.text = title
+        subtitleText.text = subtitle
     }
 }

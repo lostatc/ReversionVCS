@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.jfoenix.controls.JFXButton?>
-<?import com.jfoenix.controls.JFXTextField?>
-<?import com.jfoenix.controls.JFXToolbar?>
-<?import javafx.geometry.Insets?>
+<?import com.jfoenix.controls.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import java.lang.String?>
-<?import java.net.URL?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
       prefWidth="640.0" styleClass="grey-200" xmlns="http://javafx.com/javafx/11.0.1"
-      fx:controller="io.github.lostatc.reversion.gui.VersionSelectController">
+      fx:controller="io.github.lostatc.reversion.gui.VersionManagerController">
     <children>
         <JFXToolbar styleClass="grey-50">
             <top>
@@ -40,9 +38,62 @@
                 <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
             </padding>
             <children>
-                <StackPane id="versionListPane" minWidth="200.0" prefWidth="400.0" styleClass="card-list-view"/>
-                <StackPane id="versionInfoPane" minHeight="200.0" minWidth="400.0" prefWidth="600.0"
-                           HBox.hgrow="SOMETIMES">
+                <JFXListView fx:id="versionList" depth="1" minWidth="200.0" prefWidth="400.0"
+                             styleClass="card-list-view"/>
+                <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" HBox.hgrow="SOMETIMES">
+                    <children>
+                        <VBox fx:id="infoPane" spacing="50.0">
+                            <children>
+                                <FlowPane hgap="50.0" vgap="25.0">
+                                    <children>
+                                        <VBox>
+                                            <children>
+                                                <Label styleClass="info-key" text="Keep Forever"/>
+                                                <JFXCheckBox fx:id="pinnedCheckBox" styleClass="info-value"
+                                                             text="Pinned"/>
+                                            </children>
+                                        </VBox>
+                                        <VBox>
+                                            <children>
+                                                <Label styleClass="info-key" text="Last Modified"/>
+                                                <Label fx:id="lastModifiedLabel" styleClass="info-value"/>
+                                            </children>
+                                        </VBox>
+                                        <VBox>
+                                            <children>
+                                                <Label styleClass="info-key" text="Size"/>
+                                                <Label fx:id="sizeLabel" styleClass="info-value"/>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </FlowPane>
+                                <VBox>
+                                    <children>
+                                        <Label styleClass="info-key" text="Name"/>
+                                        <JFXTextField fx:id="nameField"/>
+                                    </children>
+                                </VBox>
+                                <VBox>
+                                    <children>
+                                        <Label styleClass="info-key" text="Description"/>
+                                        <JFXTextArea fx:id="descriptionField" maxHeight="1.7976931348623157E308"
+                                                     wrapText="true"/>
+                                    </children>
+                                </VBox>
+                                <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
+                                    <children>
+                                        <JFXButton onAction="#deleteVersion" styleClass="button-danger" text="Delete"/>
+                                        <JFXButton onAction="#restoreVersion" styleClass="button-default"
+                                                   text="Restore"/>
+                                        <JFXButton onAction="#openVersion" styleClass="button-default" text="Open"/>
+                                    </children>
+                                </FlowPane>
+                            </children>
+                            <padding>
+                                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+                            </padding>
+                        </VBox>
+                    </children>
                     <styleClass>
                         <String fx:value="grey-50"/>
                         <String fx:value="depth-1"/>
@@ -51,9 +102,4 @@
             </children>
         </HBox>
     </children>
-    <stylesheets>
-        <URL value="@../css/jfoenix-fonts.css"/>
-        <URL value="@../css/jfoenix-design.css"/>
-        <URL value="@../css/application.css"/>
-    </stylesheets>
 </VBox>

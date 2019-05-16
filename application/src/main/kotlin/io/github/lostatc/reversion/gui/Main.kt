@@ -29,17 +29,18 @@ import javafx.stage.Stage
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
         // TODO: Change
-        val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/VersionSelect.fxml"))
+        val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/VersionManager.fxml"))
         val rootNode = rootLoader.load<Parent>()
-        val rootControl = rootLoader.getController<VersionSelectController>()
+        // TODO: Remove if auto-saving works out.
+        // val rootControl = rootLoader.getController<VersionSelectController>()
 
         primaryStage.apply {
             title = "Reversion"
             scene = Scene(rootNode).apply {
                 stylesheets.addAll(
-                    this::class.java.getResource("/css/application.css").toExternalForm(),
+                    JFoenixResources.load("css/jfoenix-fonts.css").toExternalForm(),
                     JFoenixResources.load("css/jfoenix-design.css").toExternalForm(),
-                    JFoenixResources.load("css/jfoenix-fonts.css").toExternalForm()
+                    this::class.java.getResource("/css/application.css").toExternalForm()
                 )
             }
             width = 900.0
@@ -47,8 +48,8 @@ class Reversion : Application() {
             minWidth = 450.0
             minHeight = 300.0
             setOnCloseRequest {
-                // TODO: Change
-                rootControl.saveVersionInfo()
+                // TODO: Remove if auto-saving works out.
+                // rootControl.saveVersionInfo()
             }
             show()
         }

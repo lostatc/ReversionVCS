@@ -84,7 +84,6 @@ class VersionInfoModel : CoroutineScope by MainScope() {
      */
     var size: Long? by sizeProperty
 
-
     /**
      * Sets the values of the properties in this model from the given [version].
      */
