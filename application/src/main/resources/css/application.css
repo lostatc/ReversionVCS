@@ -80,12 +80,12 @@
     -fx-text-fill: white;
 }
 
-.card-title {
+.list-item-title {
     -fx-font-family: "Roboto Medium";
     -fx-font-size: 16;
 }
 
-.card-subtitle {
+.list-item-subtitle {
     -fx-font-size: 14;
     -fx-text-fill: -grey-600;
 }
