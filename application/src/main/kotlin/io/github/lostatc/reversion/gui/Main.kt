@@ -31,8 +31,7 @@ class Reversion : Application() {
         // TODO: Change
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/VersionManager.fxml"))
         val rootNode = rootLoader.load<Parent>()
-        // TODO: Remove if auto-saving works out.
-        // val rootControl = rootLoader.getController<VersionSelectController>()
+        val rootControl = rootLoader.getController<VersionManagerController>()
 
         primaryStage.apply {
             title = "Reversion"
@@ -48,8 +47,7 @@ class Reversion : Application() {
             minWidth = 450.0
             minHeight = 300.0
             setOnCloseRequest {
-                // TODO: Remove if auto-saving works out.
-                // rootControl.saveVersionInfo()
+                rootControl.cleanup()
             }
             show()
         }
