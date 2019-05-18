@@ -121,8 +121,9 @@ class VersionManagerController {
         infoPane.isVisible = false
 
         // Save the current version info and load the new version info whenever a version is selected or de-selected.
-        listModel.selectedVersionProperty.addListener { _, _, newValue ->
-            // TODO: Re-add this if saving in real time doesn't work.
+        listModel.selectedVersionProperty.addListener { _, oldValue, newValue ->
+            oldValue?.let { infoModel.save(it) }
+
             if (newValue == null) {
                 infoPane.isVisible = false
             } else {
@@ -143,23 +144,20 @@ class VersionManagerController {
         infoModel.sizeProperty.addListener { _, _, newValue ->
             sizeLabel.text = newValue?.let { FileUtils.byteCountToDisplaySize(it) }
         }
+    }
 
-        // TODO: Test performance.
-        // Automatically save changes to the version info when it is edited.
-        infoModel.nameProperty.addListener { _, _, _ ->
-            listModel.selectedVersion?.let { infoModel.save(it) }
-        }
-        infoModel.descriptionProperty.addListener { _, _, _ ->
-            listModel.selectedVersion?.let { infoModel.save(it) }
-        }
-        infoModel.pinnedProperty.addListener { _, _, _ ->
-            listModel.selectedVersion?.let { infoModel.save(it) }
-        }
+    /**
+     * This function is run before the program exits.
+     */
+    fun cleanup() {
+        // Save the information for the currently selected version.
+        listModel.selectedVersion?.let { infoModel.save(it) }
     }
 
     @FXML
     fun setPath() {
         val file = Paths.get(pathField.text)
+        listModel.selectedVersion?.let { infoModel.save(it) }
         listModel.load(file)
     }
 
@@ -171,6 +169,7 @@ class VersionManagerController {
         }
 
         pathField.text = file.toString()
+        listModel.selectedVersion?.let { infoModel.save(it) }
         listModel.load(file)
     }
 

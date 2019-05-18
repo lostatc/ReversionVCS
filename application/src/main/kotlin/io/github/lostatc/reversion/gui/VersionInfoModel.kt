@@ -25,9 +25,7 @@ import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 import java.nio.file.attribute.FileTime
 
 /**
@@ -103,10 +101,11 @@ class VersionInfoModel : CoroutineScope by MainScope() {
         val description = description ?: ""
         val pinned = pinned
 
-        launch(Dispatchers.IO) {
+        // TODO: Undo changes
+        // launch(Dispatchers.IO) {
             version.snapshot.name = name
             version.snapshot.description = description
             version.snapshot.pinned = pinned
-        }
+        // }
     }
 }
