@@ -29,9 +29,10 @@ import kotlinx.coroutines.MainScope
 import java.nio.file.attribute.FileTime
 
 /**
- * A model for storing information about an in individual version.
+ * A model for storing information about the currently selected version.
  */
-class VersionInfoModel : CoroutineScope by MainScope() {
+class VersionModel(val version: Version) : CoroutineScope by MainScope() {
+
     /**
      * A property for [name].
      */
@@ -83,9 +84,11 @@ class VersionInfoModel : CoroutineScope by MainScope() {
     var size: Long? by sizeProperty
 
     /**
-     * Sets the values of the properties in this model from the given [version].
+     * Sets the values of the properties in this model from the [version].
+     *
+     * This sets the values of [name], [description], [pinned], [lastModified] and [size].
      */
-    fun load(version: Version) {
+    fun loadInfo() {
         name = version.snapshot.name
         description = version.snapshot.description
         pinned = version.snapshot.pinned
@@ -94,18 +97,12 @@ class VersionInfoModel : CoroutineScope by MainScope() {
     }
 
     /**
-     * Saves the values of the properties in this model to the given [version].
+     * Saves the values of the properties in this model to the [version].
      */
-    fun save(version: Version) {
-        val name = name?.let { if (it.isEmpty()) null else it }
-        val description = description ?: ""
-        val pinned = pinned
-
-        // TODO: Undo changes
-        // launch(Dispatchers.IO) {
-            version.snapshot.name = name
-            version.snapshot.description = description
-            version.snapshot.pinned = pinned
-        // }
+    fun saveInfo() {
+        // TODO: Don't block the UI thread when saving info.
+        version.snapshot.name = name?.let { if (it.isEmpty()) null else it }
+        version.snapshot.description = description ?: ""
+        version.snapshot.pinned = pinned
     }
 }

@@ -35,21 +35,33 @@ import java.nio.file.Path
 /**
  * A model for storing information about which versions are displayed in the UI.
  */
-class VersionListModel : CoroutineScope by MainScope() {
+class VersionManagerModel : CoroutineScope by MainScope() {
+    /**
+     * A property for [selected].
+     */
+    val selectedProperty: Property<VersionModel?> = SimpleObjectProperty(null)
+
+    /**
+     * Information about the currently selected version, or `null` if there is no version selected.
+     */
+    var selected: VersionModel? by selectedProperty
+
+    /**
+     * The currently selected version or `null` if there is no version selected.
+     */
+    val selectedVersion: Version?
+        get() = selected?.version
+
+    /**
+     * The absolute path of the currently selected version or `null` if there is no version selected.
+     */
+    val selectedPath: Path?
+        get() = selectedVersion?.path?.let { workDirectory?.path?.resolve(it) }
+
     /**
      * The versions currently being displayed in the UI.
      */
     val versions: ObservableList<Version> = FXCollections.observableArrayList()
-
-    /**
-     * A [Property] for [selectedVersion].
-     */
-    val selectedVersionProperty: Property<Version?> = SimpleObjectProperty(null)
-
-    /**
-     * The currently-selected version, or `null` if no version is selected.
-     */
-    var selectedVersion: Version? by selectedVersionProperty
 
     /**
      * A property for [workDirectory].
@@ -57,30 +69,18 @@ class VersionListModel : CoroutineScope by MainScope() {
     val workDirectoryProperty: Property<WorkDirectory?> = SimpleObjectProperty(null)
 
     /**
-     * The currently-selected working directory.
+     * The currently-selected working directory, or `null` if none is selected.
      */
     var workDirectory: WorkDirectory? by workDirectoryProperty
 
     /**
-     * The absolute path of the [selectedVersion].
-     */
-    val versionPath: Path?
-        get() = selectedVersion?.let { workDirectory?.path?.resolve(it.path) }
-
-    init {
-        // Clear the selected version when the selected working directory changes.
-        workDirectoryProperty.addListener { _, oldValue, newValue ->
-            if (newValue != oldValue) {
-                selectedVersion = null
-            }
-        }
-    }
-
-    /**
      * Sets the values of [versions] and [workDirectory] for the file with the given [path].
      */
-    fun load(path: Path) {
+    fun loadVersions(path: Path) {
         launch {
+            // TODO: Find an alternative solution that's more obvious and less easy to forget.
+            selected = null
+
             val newWorkDirectory = withContext(Dispatchers.IO) {
                 WorkDirectory.openFromDescendant(path)
             }
@@ -96,14 +96,16 @@ class VersionListModel : CoroutineScope by MainScope() {
     }
 
     /**
-     * Sets the values of [versions] and [workDirectory] for the [selectedVersion].
+     * Sets the values of [versions] and [workDirectory] for the [selected].
      */
-    fun reload() {
-        versionPath?.let { load(it) }
+    fun reloadVersions() {
+        selectedPath?.let { loadVersions(it) }
     }
 
+    /**
+     * Deletes the currently selected version.
+     */
     fun deleteVersion() {
-        val workDirectory = workDirectory ?: return
         val version = selectedVersion ?: return
 
         launch {
@@ -111,27 +113,33 @@ class VersionListModel : CoroutineScope by MainScope() {
                 version.snapshot.removeVersion(version.path)
             }
 
-            reload()
+            reloadVersions()
         }
     }
 
+    /**
+     * Restores the currently selected version.
+     */
     fun restoreVersion() {
         val workDirectory = workDirectory ?: return
         val version = selectedVersion ?: return
-        val versionPath = versionPath ?: return
+        val versionPath = selectedPath ?: return
 
         launch {
             withContext(Dispatchers.IO) {
                 workDirectory.restore(listOf(versionPath), revision = version.snapshot.revision)
             }
 
-            reload()
+            reloadVersions()
         }
     }
 
+    /**
+     * Opens the currently selected version in its default application.
+     */
     fun openVersion() {
         val workDirectory = workDirectory ?: return
-        val version = selectedVersion ?: return
+        val version = selected?.version ?: return
 
         launch(Dispatchers.IO) {
             workDirectory.openInApplication(version)
