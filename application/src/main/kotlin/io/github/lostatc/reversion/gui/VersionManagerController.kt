@@ -24,6 +24,7 @@ import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTextArea
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.cli.format
+import javafx.beans.value.ChangeListener
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.Node
@@ -32,6 +33,7 @@ import javafx.scene.layout.Pane
 import javafx.stage.FileChooser
 import org.apache.commons.io.FileUtils
 import java.nio.file.Paths
+import java.nio.file.attribute.FileTime
 import java.time.format.FormatStyle
 
 class VersionManagerController {
@@ -86,24 +88,19 @@ class VersionManagerController {
     /**
      * A model for storing information about selected versions.
      */
-    private val listModel: VersionListModel = VersionListModel()
-
-    /**
-     * A model for storing information about the currently selected version.
-     */
-    private val infoModel: VersionInfoModel = VersionInfoModel()
+    private val model: VersionManagerModel = VersionManagerModel()
 
     @FXML
     fun initialize() {
         // Bind the selected version in the [listModel] to the selected version in the view.
         versionList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
             val index = newValue.toInt()
-            listModel.selectedVersion = if (index < 0) null else listModel.versions[index]
+            model.selected = if (index < 0) null else VersionModel(model.versions[index])
         }
 
         // Bind the selected version in the view to the selected version in the [listModel].
-        listModel.selectedVersionProperty.addListener { _, _, newValue ->
-            val index = listModel.versions.indexOf(newValue)
+        model.selectedProperty.addListener { _, _, newValue ->
+            val index = model.versions.indexOf(newValue?.version)
             versionList.selectionModel.select(index)
         }
 
@@ -113,36 +110,48 @@ class VersionManagerController {
         )
 
         // Bind the list of versions to the [versionList].
-        versionList.items = MappedList(listModel.versions) {
+        versionList.items = MappedList(model.versions) {
             ListItem(it.snapshot.displayName, it.snapshot.timeCreated.format(FormatStyle.MEDIUM))
         }
 
         // Make the version information pane initially invisible.
         infoPane.isVisible = false
 
-        // Save the current version info and load the new version info whenever a version is selected or de-selected.
-        listModel.selectedVersionProperty.addListener { _, oldValue, newValue ->
-            oldValue?.let { infoModel.save(it) }
-
-            if (newValue == null) {
-                infoPane.isVisible = false
-            } else {
-                infoPane.isVisible = true
-                infoModel.load(newValue)
-            }
-        }
-
-        // Bind properties bidirectionally between the [infoModel] and view.
-        nameField.textProperty().bindBidirectional(infoModel.nameProperty)
-        descriptionField.textProperty().bindBidirectional(infoModel.descriptionProperty)
-        pinnedCheckBox.selectedProperty().bindBidirectional(infoModel.pinnedProperty)
-
-        // Bind properties in the view to properties in the [infoModel].
-        infoModel.lastModifiedProperty.addListener { _, _, newValue ->
+        val lastModifiedListener = ChangeListener<FileTime?> { _, _, newValue ->
             lastModifiedLabel.text = newValue?.toInstant()?.format(FormatStyle.MEDIUM)
         }
-        infoModel.sizeProperty.addListener { _, _, newValue ->
+
+        val sizeListener = ChangeListener<Long?> { _, _, newValue ->
             sizeLabel.text = newValue?.let { FileUtils.byteCountToDisplaySize(it) }
+        }
+
+        model.selectedProperty.addListener { _, oldValue, newValue ->
+            if (oldValue != null) {
+                // Remove bindings between the old [VersionModel] and the view.
+                nameField.textProperty().unbindBidirectional(oldValue.nameProperty)
+                descriptionField.textProperty().unbindBidirectional(oldValue.descriptionProperty)
+                pinnedCheckBox.textProperty().unbindBidirectional(oldValue.pinnedProperty)
+                oldValue.lastModifiedProperty.removeListener(lastModifiedListener)
+                oldValue.sizeProperty.removeListener(sizeListener)
+
+                // Save the current version info.
+                oldValue.saveInfo()
+            }
+
+            if (newValue != null) {
+                // Add bindings between the new [VersionModel] and the view.
+                nameField.textProperty().bindBidirectional(newValue.nameProperty)
+                descriptionField.textProperty().bindBidirectional(newValue.descriptionProperty)
+                pinnedCheckBox.selectedProperty().bindBidirectional(newValue.pinnedProperty)
+                newValue.lastModifiedProperty.addListener(lastModifiedListener)
+                newValue.sizeProperty.addListener(sizeListener)
+
+                // Load the new version info.
+                newValue.loadInfo()
+                infoPane.isVisible = true
+            } else {
+                infoPane.isVisible = false
+            }
         }
     }
 
@@ -151,16 +160,21 @@ class VersionManagerController {
      */
     fun cleanup() {
         // Save the information for the currently selected version.
-        listModel.selectedVersion?.let { infoModel.save(it) }
+        model.selected?.saveInfo()
     }
 
+    /**
+     * Load versions from the path in the [pathField].
+     */
     @FXML
     fun setPath() {
         val file = Paths.get(pathField.text)
-        listModel.selectedVersion?.let { infoModel.save(it) }
-        listModel.load(file)
+        model.loadVersions(file)
     }
 
+    /**
+     * Load versions by browsing for a file.
+     */
     @FXML
     fun browsePath() {
         val file = FileChooser().run {
@@ -169,22 +183,30 @@ class VersionManagerController {
         }
 
         pathField.text = file.toString()
-        listModel.selectedVersion?.let { infoModel.save(it) }
-        listModel.load(file)
+        model.loadVersions(file)
     }
 
+    /**
+     * Delete the currently selected version.
+     */
     @FXML
     fun deleteVersion() {
-        listModel.deleteVersion()
+        model.deleteVersion()
     }
 
+    /**
+     * Restore the currently selected version.
+     */
     @FXML
     fun restoreVersion() {
-        listModel.restoreVersion()
+        model.restoreVersion()
     }
 
+    /**
+     * Open the currently selected version in its default application.
+     */
     @FXML
     fun openVersion() {
-        listModel.openVersion()
+        model.openVersion()
     }
 }
