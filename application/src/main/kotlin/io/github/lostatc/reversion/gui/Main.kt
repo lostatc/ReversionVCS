@@ -28,7 +28,6 @@ import javafx.stage.Stage
 
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
-        // TODO: Change
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/VersionManager.fxml"))
         val rootNode = rootLoader.load<Parent>()
         val rootControl = rootLoader.getController<VersionManagerController>()
