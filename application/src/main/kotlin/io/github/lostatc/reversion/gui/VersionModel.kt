@@ -20,18 +20,44 @@
 package io.github.lostatc.reversion.gui
 
 import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.channels.SendChannel
+import java.nio.file.Path
 import java.nio.file.attribute.FileTime
+
+/**
+ * An operation to apply to a [Version] and [WorkDirectory].
+ */
+typealias VersionOperation = (Version, WorkDirectory) -> Unit
 
 /**
  * A model for storing information about the currently selected version.
  */
-class VersionModel(val version: Version) : CoroutineScope by MainScope() {
+class VersionModel(
+    private val version: Version,
+    private val workDirectory: WorkDirectory
+) : CoroutineScope by MainScope() {
+
+    /**
+     * A channel to send database operations to.
+     */
+    private val operationChannel: SendChannel<ActorAction<VersionOperation>> =
+        flushableActor(context = Dispatchers.IO) { operation ->
+            operation(version, workDirectory)
+        }
+
+    /**
+     * The absolute path of the [version].
+     */
+    val path: Path
+        get() = workDirectory.path.resolve(version.path)
 
     /**
      * A property for [name].
@@ -84,6 +110,20 @@ class VersionModel(val version: Version) : CoroutineScope by MainScope() {
     var size: Long? by sizeProperty
 
     /**
+     * Queue up a change to the version to be completed asynchronously.
+     */
+    fun execute(operation: VersionOperation) {
+        operationChannel.sendBlocking(operation)
+    }
+
+    /**
+     * Suspend and wait for changes applied with [execute] to commit.
+     */
+    suspend fun flush() {
+        operationChannel.flush()
+    }
+
+    /**
      * Sets the values of the properties in this model from the [version].
      *
      * This sets the values of [name], [description], [pinned], [lastModified] and [size].
@@ -100,9 +140,14 @@ class VersionModel(val version: Version) : CoroutineScope by MainScope() {
      * Saves the values of the properties in this model to the [version].
      */
     fun saveInfo() {
-        // TODO: Don't block the UI thread when saving info.
-        version.snapshot.name = name?.let { if (it.isEmpty()) null else it }
-        version.snapshot.description = description ?: ""
-        version.snapshot.pinned = pinned
+        val name = name?.let { if (it.isEmpty()) null else it }
+        val description = description ?: ""
+        val pinned = pinned
+
+        execute { version, _ ->
+            version.snapshot.name = name
+            version.snapshot.description = description
+            version.snapshot.pinned = pinned
+        }
     }
 }

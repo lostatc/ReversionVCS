@@ -31,6 +31,7 @@ import javafx.scene.Node
 import javafx.scene.control.Label
 import javafx.scene.layout.Pane
 import javafx.stage.FileChooser
+import kotlinx.coroutines.runBlocking
 import org.apache.commons.io.FileUtils
 import java.nio.file.Paths
 import java.nio.file.attribute.FileTime
@@ -94,14 +95,7 @@ class VersionManagerController {
     fun initialize() {
         // Bind the selected version in the [listModel] to the selected version in the view.
         versionList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
-            val index = newValue.toInt()
-            model.selected = if (index < 0) null else VersionModel(model.versions[index])
-        }
-
-        // Bind the selected version in the view to the selected version in the [listModel].
-        model.selectedProperty.addListener { _, _, newValue ->
-            val index = model.versions.indexOf(newValue?.version)
-            versionList.selectionModel.select(index)
+            model.select(newValue.toInt())
         }
 
         // Set a placeholder node for when the version list is empty.
@@ -148,6 +142,7 @@ class VersionManagerController {
 
                 // Load the new version info.
                 newValue.loadInfo()
+
                 infoPane.isVisible = true
             } else {
                 infoPane.isVisible = false
@@ -160,7 +155,10 @@ class VersionManagerController {
      */
     fun cleanup() {
         // Save the information for the currently selected version.
-        model.selected?.saveInfo()
+        model.selected?.run {
+            saveInfo()
+            runBlocking { flush() }
+        }
     }
 
     /**

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("jvm")
     application
@@ -55,4 +57,8 @@ tasks {
 
     startScripts.dependsOn("cliScript")
     startScripts.dependsOn("daemonScript")
+
+    withType<KotlinCompile> {
+        kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
+    }
 }
