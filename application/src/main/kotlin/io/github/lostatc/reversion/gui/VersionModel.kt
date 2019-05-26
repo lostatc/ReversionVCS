@@ -28,7 +28,6 @@ import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.SendChannel
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 
@@ -46,12 +45,11 @@ class VersionModel(
 ) : CoroutineScope by MainScope() {
 
     /**
-     * A channel to send database operations to.
+     * An actor to send database operations to.
      */
-    private val operationChannel: SendChannel<ActorAction<VersionOperation>> =
-        flushableActor(context = Dispatchers.IO) { operation ->
-            operation(version, workDirectory)
-        }
+    private val actor: FlushableActor<VersionOperation> = flushableActor(context = Dispatchers.IO) { operation ->
+        operation(version, workDirectory)
+    }
 
     /**
      * The absolute path of the [version].
@@ -113,14 +111,14 @@ class VersionModel(
      * Queue up a change to the version to be completed asynchronously.
      */
     fun execute(operation: VersionOperation) {
-        operationChannel.sendBlocking(operation)
+        actor.sendBlocking(operation)
     }
 
     /**
      * Suspend and wait for changes applied with [execute] to commit.
      */
     suspend fun flush() {
-        operationChannel.flush()
+        actor.flush()
     }
 
     /**
