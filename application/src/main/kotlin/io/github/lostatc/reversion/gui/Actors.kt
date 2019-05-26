@@ -19,17 +19,17 @@
 
 package io.github.lostatc.reversion.gui
 
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
-import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.sendBlocking
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * An action to be taken by an actor.
@@ -50,41 +50,81 @@ data class SendAction<T>(val element: T) : ActorAction<T>()
 data class FlushAction<T>(val acknowledgment: CompletableDeferred<Boolean>) : ActorAction<T>()
 
 /**
- * An actor that can be flushed using the [flush] method.
+ * An actor which encapsulates a coroutine and a channel.
+ *
+ * This actor can have messages sent to it through a channel.
  */
-@UseExperimental(ObsoleteCoroutinesApi::class)
-fun <T> CoroutineScope.flushableActor(
-    context: CoroutineContext = Dispatchers.Default,
-    capacity: Int = Channel.UNLIMITED,
-    block: suspend (T) -> Unit
-): SendChannel<ActorAction<T>> {
-    return actor(context = context, capacity = capacity) {
-        for (action in channel) {
-            when (action) {
-                is SendAction -> block(action.element)
-                is FlushAction -> action.acknowledgment.complete(true)
-            }
+data class FlushableActor<T>(private val job: Job, private val channel: Channel<ActorAction<T>>) : Job by job {
+    /**
+     * Closes the channel associated with this actor.
+     *
+     * @see [SendChannel.close]
+     */
+    fun close(cause: Throwable? = null): Boolean = channel.close(cause)
+
+    /**
+     * Sends [element] to this actor if it is possible to do so immediately.
+     *
+     * @see [SendChannel.offer]
+     */
+    fun offer(element: T): Boolean = channel.offer(SendAction(element))
+
+    /**
+     * Sends [element] to this actor.
+     *
+     * @see [SendChannel.send]
+     */
+    suspend fun send(element: T) {
+        channel.send(SendAction(element))
+    }
+
+    /**
+     * Sends [element] to this actor, blocking the caller if its channel is full.
+     *
+     * @see [SendChannel.sendBlocking]
+     */
+    fun sendBlocking(element: T) {
+        channel.sendBlocking(SendAction(element))
+    }
+
+    /**
+     * Suspends until all elements sent to this actor have been processed.
+     */
+    suspend fun flush() {
+        val acknowledgement = CompletableDeferred<Boolean>()
+        channel.send(FlushAction(acknowledgement))
+
+        select<Unit> {
+            acknowledgement.onAwait { }
+            onJoin { }
         }
     }
 }
 
 /**
- * Adds the given [element] to the channel as a [SendAction] with [sendBlocking].
+ * Creates a new [FlushableActor].
+ *
+ * @param [context] Context to use in addition to [CoroutineScope.coroutineContext].
+ * @param [capacity] The capacity of the channel associated with this actor.
+ * @param [start] How to start the coroutine.
+ * @param [block] A function which processes each element sent to the actor.
  */
-fun <T> SendChannel<ActorAction<T>>.sendBlocking(element: T) {
-    sendBlocking(SendAction(element))
-}
+fun <T> CoroutineScope.flushableActor(
+    context: CoroutineContext = EmptyCoroutineContext,
+    capacity: Int = Channel.UNLIMITED,
+    start: CoroutineStart = CoroutineStart.DEFAULT,
+    block: suspend CoroutineScope.(T) -> Unit
+): FlushableActor<T> {
+    val channel = Channel<ActorAction<T>>(capacity = capacity)
 
-/**
- * Waits for the actor to finish processing all previously received actions.
- */
-@UseExperimental(ExperimentalCoroutinesApi::class)
-suspend fun <T> SendChannel<ActorAction<T>>.flush() {
-    val acknowledgement = CompletableDeferred<Boolean>()
-    // TODO: Fix [IllegalStateException] when a handler has already been registered.
-    invokeOnClose { cause ->
-        acknowledgement.cancel(CancellationException("The actor's channel closed.", cause))
+    val job = launch(context = context, start = start) {
+        for (action in channel) {
+            when (action) {
+                is FlushAction -> action.acknowledgment.complete(true)
+                is SendAction -> block(action.element)
+            }
+        }
     }
-    send(FlushAction(acknowledgement))
-    acknowledgement.await()
+
+    return FlushableActor(job, channel)
 }

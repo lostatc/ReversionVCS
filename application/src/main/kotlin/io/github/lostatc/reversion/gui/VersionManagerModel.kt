@@ -67,14 +67,6 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      */
     private var workDirectory: WorkDirectory? by workDirectoryProperty
 
-    init {
-        workDirectoryProperty.addListener { _, oldValue, newValue ->
-            if (oldValue != newValue) {
-                selected = null
-            }
-        }
-    }
-
     /**
      * Select the version with the given [index] in [versions].
      *
@@ -104,6 +96,7 @@ class VersionManagerModel : CoroutineScope by MainScope() {
                 newWorkDirectory.timeline.listVersions(relativePath)
             }
 
+            selected = null
             workDirectory = newWorkDirectory
             _versions.setAll(newVersions)
         }
