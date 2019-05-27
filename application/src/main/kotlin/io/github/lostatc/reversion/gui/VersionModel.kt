@@ -21,7 +21,9 @@ package io.github.lostatc.reversion.gui
 
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.storage.WorkDirectory
+import javafx.beans.property.BooleanProperty
 import javafx.beans.property.Property
+import javafx.beans.property.ReadOnlyProperty
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
@@ -84,7 +86,7 @@ class VersionModel(
     /**
      * A property for [pinned].
      */
-    val pinnedProperty: Property<Boolean> = SimpleBooleanProperty(version.snapshot.pinned)
+    val pinnedProperty: BooleanProperty = SimpleBooleanProperty(version.snapshot.pinned)
 
     /**
      * Whether the version is pinned.
@@ -102,9 +104,15 @@ class VersionModel(
     val size: Long = version.size
 
     /**
+     * A property for [displayName].
+     */
+    val displayNameProperty: ReadOnlyProperty<String> =
+        nameProperty.toMappedProperty { if (it.isNullOrEmpty()) version.snapshot.defaultName else it }
+
+    /**
      * The name of the snapshot to display to the user.
      */
-    val displayName: String = version.snapshot.displayName
+    val displayName: String by displayNameProperty
 
     /**
      * The time the snapshot was created.

@@ -41,7 +41,7 @@ fun Instant.format(style: FormatStyle = FormatStyle.MEDIUM): String = DateTimeFo
 val Snapshot.info: String
     get() = """
         Revision: $revision
-        Name: $displayName
+        Name: ${name ?: defaultName}
         Description: $description
         Pinned: ${if (pinned) "Yes" else "No"}
         Created: ${timeCreated.format()}
