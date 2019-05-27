@@ -23,13 +23,14 @@ import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
+import java.time.Instant
 
 /**
  * An operation to apply to a [Version] and [WorkDirectory].
@@ -39,6 +40,9 @@ typealias VersionOperation = (Version, WorkDirectory) -> Unit
 /**
  * A model for storing information about the currently selected version.
  */
+// TODO: Don't allow for changing values which should not be changed externally.
+// For those, don't use [Property] objects. If you need to add a listener, add a listener to the [VersionModel]
+// property itself. You can then add [displayName] and [timeCreated] as properties.
 class VersionModel(
     private val version: Version,
     private val workDirectory: WorkDirectory
@@ -60,7 +64,7 @@ class VersionModel(
     /**
      * A property for [name].
      */
-    val nameProperty: Property<String?> = SimpleStringProperty(null)
+    val nameProperty: Property<String?> = SimpleStringProperty(version.snapshot.name)
 
     /**
      * The name of the version.
@@ -70,7 +74,7 @@ class VersionModel(
     /**
      * A property for [description].
      */
-    val descriptionProperty: Property<String?> = SimpleStringProperty(null)
+    val descriptionProperty: Property<String?> = SimpleStringProperty(version.snapshot.description)
 
     /**
      * The description of the version.
@@ -80,7 +84,7 @@ class VersionModel(
     /**
      * A property for [pinned].
      */
-    val pinnedProperty: Property<Boolean> = SimpleBooleanProperty()
+    val pinnedProperty: Property<Boolean> = SimpleBooleanProperty(version.snapshot.pinned)
 
     /**
      * Whether the version is pinned.
@@ -88,28 +92,29 @@ class VersionModel(
     var pinned: Boolean by pinnedProperty
 
     /**
-     * A property for [lastModified].
-     */
-    val lastModifiedProperty: Property<FileTime?> = SimpleObjectProperty(null)
-
-    /**
      * The time the version was last modified.
      */
-    var lastModified: FileTime? by lastModifiedProperty
-
-    /**
-     * A property for [size].
-     */
-    val sizeProperty: Property<Long?> = SimpleObjectProperty(null)
+    val lastModified: FileTime = version.lastModifiedTime
 
     /**
      * The size of the version.
      */
-    var size: Long? by sizeProperty
+    val size: Long = version.size
+
+    /**
+     * The name of the snapshot to display to the user.
+     */
+    val displayName: String = version.snapshot.displayName
+
+    /**
+     * The time the snapshot was created.
+     */
+    val timeCreated: Instant = version.snapshot.timeCreated
 
     /**
      * Queue up a change to the version to be completed asynchronously.
      */
+    // TODO: Use a function with receiver instead of arguments.
     fun execute(operation: VersionOperation) {
         actor.sendBlocking(operation)
     }
@@ -119,19 +124,6 @@ class VersionModel(
      */
     suspend fun flush() {
         actor.flush()
-    }
-
-    /**
-     * Sets the values of the properties in this model from the [version].
-     *
-     * This sets the values of [name], [description], [pinned], [lastModified] and [size].
-     */
-    fun loadInfo() {
-        name = version.snapshot.name
-        description = version.snapshot.description
-        pinned = version.snapshot.pinned
-        lastModified = version.lastModifiedTime
-        size = version.size
     }
 
     /**
@@ -146,6 +138,19 @@ class VersionModel(
             version.snapshot.name = name
             version.snapshot.description = description
             version.snapshot.pinned = pinned
+        }
+    }
+
+    companion object {
+        /**
+         * Creates a list of [VersionModel] objects for all the versions of the file with the given [path].
+         */
+        suspend fun listVersions(path: Path): List<VersionModel> = withContext(Dispatchers.IO) {
+            val workDirectory = WorkDirectory.openFromDescendant(path)
+            val relativePath = workDirectory.path.relativize(path)
+            val versions = workDirectory.timeline.listVersions(relativePath)
+
+            versions.map { VersionModel(it, workDirectory) }
         }
     }
 }

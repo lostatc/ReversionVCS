@@ -19,17 +19,13 @@
 
 package io.github.lostatc.reversion.gui
 
-import io.github.lostatc.reversion.api.Version
-import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.nio.file.Path
 
 /**
@@ -45,41 +41,19 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      * A model representing the currently selected version, or `null` if there is no version selected.
      */
     var selected: VersionModel? by selectedProperty
-        private set
 
     /**
      * The mutable backing property of [versions].
      */
-    private val _versions: ObservableList<Version> = FXCollections.observableArrayList()
+    private val _versions: ObservableList<VersionModel> = FXCollections.observableArrayList()
 
     /**
      * A read-only list of the versions currently being displayed in the UI.
      */
-    val versions: ObservableList<Version> = FXCollections.unmodifiableObservableList(_versions)
+    val versions: ObservableList<VersionModel> = FXCollections.unmodifiableObservableList(_versions)
 
     /**
-     * A property for [workDirectory].
-     */
-    private val workDirectoryProperty: Property<WorkDirectory?> = SimpleObjectProperty(null)
-
-    /**
-     * The currently selected working directory, or `null` if none is selected.
-     */
-    private var workDirectory: WorkDirectory? by workDirectoryProperty
-
-    /**
-     * Select the version with the given [index] in [versions].
-     *
-     * If the [index] is out of bounds, [selected] is set to `null`.
-     */
-    fun select(index: Int) {
-        val workDirectory = workDirectory ?: return
-        val version = versions.getOrNull(index) ?: return
-        selected = VersionModel(version, workDirectory)
-    }
-
-    /**
-     * Sets the value of [versions] for the file with the given [path].
+     * Loads the [versions] of the file with the given [path].
      */
     fun loadVersions(path: Path) {
         launch {
@@ -87,23 +61,13 @@ class VersionManagerModel : CoroutineScope by MainScope() {
             selected?.saveInfo()
             selected?.flush()
 
-            val newWorkDirectory = withContext(Dispatchers.IO) {
-                WorkDirectory.openFromDescendant(path)
-            }
-
-            val newVersions = withContext(Dispatchers.IO) {
-                val relativePath = newWorkDirectory.path.relativize(path)
-                newWorkDirectory.timeline.listVersions(relativePath)
-            }
-
             selected = null
-            workDirectory = newWorkDirectory
-            _versions.setAll(newVersions)
+            _versions.setAll(VersionModel.listVersions(path))
         }
     }
 
     /**
-     * Sets the values of [versions] and [workDirectory] for the [selected].
+     * Reloads the [versions] of the [selected] file.
      */
     fun reloadVersions() {
         selected?.let { loadVersions(it.path) }

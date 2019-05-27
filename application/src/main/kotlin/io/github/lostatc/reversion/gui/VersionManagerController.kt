@@ -24,7 +24,6 @@ import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTextArea
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.cli.format
-import javafx.beans.value.ChangeListener
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.Node
@@ -34,7 +33,6 @@ import javafx.stage.FileChooser
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.io.FileUtils
 import java.nio.file.Paths
-import java.nio.file.attribute.FileTime
 import java.time.format.FormatStyle
 
 class VersionManagerController {
@@ -95,7 +93,7 @@ class VersionManagerController {
     fun initialize() {
         // Bind the selected version in the [listModel] to the selected version in the view.
         versionList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
-            model.select(newValue.toInt())
+            model.selected = model.versions.getOrNull(newValue.toInt())
         }
 
         // Set a placeholder node for when the version list is empty.
@@ -105,28 +103,24 @@ class VersionManagerController {
 
         // Bind the list of versions to the [versionList].
         versionList.items = MappedList(model.versions) {
-            ListItem(it.snapshot.displayName, it.snapshot.timeCreated.format(FormatStyle.MEDIUM))
+            // TODO: Update the display name with the model.
+            ListItem(it.displayName, it.timeCreated.format(FormatStyle.MEDIUM))
         }
 
         // Make the version information pane initially invisible.
         infoPane.isVisible = false
 
-        val lastModifiedListener = ChangeListener<FileTime?> { _, _, newValue ->
-            lastModifiedLabel.text = newValue?.toInstant()?.format(FormatStyle.MEDIUM)
-        }
-
-        val sizeListener = ChangeListener<Long?> { _, _, newValue ->
-            sizeLabel.text = newValue?.let { FileUtils.byteCountToDisplaySize(it) }
-        }
-
         model.selectedProperty.addListener { _, oldValue, newValue ->
+
+            lastModifiedLabel.text = newValue?.lastModified?.toInstant()?.format(FormatStyle.MEDIUM)
+
+            sizeLabel.text = newValue?.size?.let { FileUtils.byteCountToDisplaySize(it) }
+
             if (oldValue != null) {
                 // Remove bindings between the old [VersionModel] and the view.
                 nameField.textProperty().unbindBidirectional(oldValue.nameProperty)
                 descriptionField.textProperty().unbindBidirectional(oldValue.descriptionProperty)
-                pinnedCheckBox.textProperty().unbindBidirectional(oldValue.pinnedProperty)
-                oldValue.lastModifiedProperty.removeListener(lastModifiedListener)
-                oldValue.sizeProperty.removeListener(sizeListener)
+                pinnedCheckBox.selectedProperty().unbindBidirectional(oldValue.pinnedProperty)
 
                 // Save the current version info.
                 oldValue.saveInfo()
@@ -137,11 +131,6 @@ class VersionManagerController {
                 nameField.textProperty().bindBidirectional(newValue.nameProperty)
                 descriptionField.textProperty().bindBidirectional(newValue.descriptionProperty)
                 pinnedCheckBox.selectedProperty().bindBidirectional(newValue.pinnedProperty)
-                newValue.lastModifiedProperty.addListener(lastModifiedListener)
-                newValue.sizeProperty.addListener(sizeListener)
-
-                // Load the new version info.
-                newValue.loadInfo()
 
                 infoPane.isVisible = true
             } else {
