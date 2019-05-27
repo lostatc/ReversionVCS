@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.gui
 
 import javafx.beans.property.Property
+import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.property.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -29,3 +30,11 @@ operator fun <T> Property<T>.setValue(thisRef: Any?, property: KProperty<*>, val
     this.value = value
 }
 
+/**
+ * Returns a read-only property with a value equal to this property with the given [transform] function applied.
+ */
+fun <T, R> Property<T>.toMappedProperty(transform: (T) -> R): ReadOnlyProperty<R> {
+    val wrapper = ReadOnlyObjectWrapper<R>(transform(value))
+    addListener { _, _, newValue -> wrapper.value = transform(newValue) }
+    return wrapper.readOnlyProperty
+}

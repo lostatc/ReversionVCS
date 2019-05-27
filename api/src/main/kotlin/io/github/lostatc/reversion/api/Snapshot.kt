@@ -40,12 +40,10 @@ interface Snapshot {
     var name: String?
 
     /**
-     * The name to display to the user.
-     *
-     * If [name] is not `null`, this is equal to [name].
+     * The name to show the user if [name] is `null`.
      */
-    val displayName: String
-        get() = name ?: "Revision $revision"
+    val defaultName: String
+        get() = "Revision $revision"
 
     /**
      * The user-provided description of the snapshot.

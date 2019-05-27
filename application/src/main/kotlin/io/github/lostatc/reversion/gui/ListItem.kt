@@ -19,12 +19,13 @@
 
 package io.github.lostatc.reversion.gui
 
+import javafx.beans.property.ReadOnlyProperty
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
 import javafx.scene.layout.VBox
 
-data class ListItem(val title: String, val subtitle: String) : VBox() {
+data class ListItem(val title: ReadOnlyProperty<String>, val subtitle: String) : VBox() {
     @FXML
     private lateinit var titleText: Label
 
@@ -41,7 +42,7 @@ data class ListItem(val title: String, val subtitle: String) : VBox() {
 
     @FXML
     fun initialize() {
-        titleText.text = title
+        titleText.textProperty().bind(title)
         subtitleText.text = subtitle
     }
 }
