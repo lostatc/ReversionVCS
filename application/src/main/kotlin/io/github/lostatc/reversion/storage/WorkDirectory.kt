@@ -233,7 +233,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     fun restore(paths: Iterable<Path>, revision: Int? = null) {
         commit(
             paths = paths,
-            description = "This version was created to save a file before it was overwritten by a restore."
+            description = "This version was created to save the file before it was overwritten by a restore."
         )
         update(paths = paths, revision = revision)
     }
