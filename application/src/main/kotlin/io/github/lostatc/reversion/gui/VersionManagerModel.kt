@@ -77,7 +77,7 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      * Deletes the currently selected version.
      */
     fun deleteVersion() {
-        selected?.execute { version, _ ->
+        selected?.execute {
             version.snapshot.removeVersion(version.path)
             reloadVersions()
         }
@@ -87,9 +87,8 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      * Restores the currently selected version.
      */
     fun restoreVersion() {
-        val versionPath = selected?.path ?: return
-        selected?.execute { version, workDirectory ->
-            workDirectory.restore(listOf(versionPath), revision = version.snapshot.revision)
+        selected?.execute {
+            workDirectory.restore(listOf(path), revision = version.snapshot.revision)
             reloadVersions()
         }
     }
@@ -98,7 +97,7 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      * Opens the currently selected version in its default application.
      */
     fun openVersion() {
-        selected?.execute { version, workDirectory ->
+        selected?.execute {
             workDirectory.openInApplication(version)
         }
     }

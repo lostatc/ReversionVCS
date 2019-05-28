@@ -35,16 +35,22 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 
 /**
- * An operation to apply to a [Version] and [WorkDirectory].
+ * The receiver for a [StorageOperation].
+ *
+ * @param [version] The version to modify.
+ * @param [workDirectory] The working directory that the [version] is a part of.
+ * @param [path] The absolute path of the [version].
  */
-typealias VersionOperation = (Version, WorkDirectory) -> Unit
+data class StorageOperationContext(val version: Version, val workDirectory: WorkDirectory, val path: Path)
+
+/**
+ * An operation to store or retrieve data.
+ */
+typealias StorageOperation = StorageOperationContext.() -> Unit
 
 /**
  * A model for storing information about the currently selected version.
  */
-// TODO: Don't allow for changing values which should not be changed externally.
-// For those, don't use [Property] objects. If you need to add a listener, add a listener to the [VersionModel]
-// property itself. You can then add [displayName] and [timeCreated] as properties.
 class VersionModel(
     private val version: Version,
     private val workDirectory: WorkDirectory
@@ -53,8 +59,8 @@ class VersionModel(
     /**
      * An actor to send database operations to.
      */
-    private val actor: FlushableActor<VersionOperation> = flushableActor(context = Dispatchers.IO) { operation ->
-        operation(version, workDirectory)
+    private val actor: FlushableActor<StorageOperation> = flushableActor(context = Dispatchers.IO) { operation ->
+        StorageOperationContext(version, workDirectory, path).operation()
     }
 
     /**
@@ -122,8 +128,7 @@ class VersionModel(
     /**
      * Queue up a change to the version to be completed asynchronously.
      */
-    // TODO: Use a function with receiver instead of arguments.
-    fun execute(operation: VersionOperation) {
+    fun execute(operation: StorageOperation) {
         actor.sendBlocking(operation)
     }
 
@@ -142,7 +147,7 @@ class VersionModel(
         val description = description ?: ""
         val pinned = pinned
 
-        execute { version, _ ->
+        execute {
             version.snapshot.name = name
             version.snapshot.description = description
             version.snapshot.pinned = pinned
