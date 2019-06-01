@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXRippler?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+<fx:root xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER_LEFT" prefWidth="500.0" spacing="15.0"
+         styleClass="notification" type="HBox" xmlns="http://javafx.com/javafx/11.0.1">
+    <padding>
+        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+    </padding>
+    <Label fx:id="messageLabel" text="Something bad happened." wrapText="true"/>
+    <Region HBox.hgrow="ALWAYS"/>
+    <JFXRippler onMouseClicked="#close">
+        <StackPane>
+            <padding>
+                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+            </padding>
+            <FontIcon iconLiteral="gmi-close"/>
+        </StackPane>
+    </JFXRippler>
+</fx:root>

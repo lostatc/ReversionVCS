@@ -20,17 +20,30 @@
 package io.github.lostatc.reversion.gui
 
 import com.jfoenix.assets.JFoenixResources
+import com.jfoenix.controls.JFXSnackbar
 import javafx.application.Application
 import javafx.fxml.FXMLLoader
-import javafx.scene.Parent
 import javafx.scene.Scene
+import javafx.scene.layout.Pane
 import javafx.stage.Stage
+import javafx.util.Duration
+import org.slf4j.LoggerFactory
 
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/VersionManager.fxml"))
-        val rootNode = rootLoader.load<Parent>()
+        val rootNode = rootLoader.load<Pane>()
         val rootControl = rootLoader.getController<VersionManagerController>()
+        val snackbar = JFXSnackbar(rootNode)
+
+        Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
+            val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.gui")
+            logger.error(throwable.message, throwable)
+
+            System.err.println("Error: ${throwable.message}")
+
+            throwable.message?.let { snackbar.sendNotification(it, Duration.seconds(5.0)) }
+        }
 
         primaryStage.apply {
             title = "Reversion"
