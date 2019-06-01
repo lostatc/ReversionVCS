@@ -26,15 +26,15 @@
     -fx-min-height: 50;
 }
 
-.jfx-button {
-    -jfx-button-type: RAISED;
-    -fx-min-height: 30;
-    -fx-min-width: 80;
-}
-
 .jfx-check-box {
     -jfx-checked-color: -blue-grey-400;
     -fx-font-size: 14;
+}
+
+.button-text {
+    -jfx-button-type: RAISED;
+    -fx-min-height: 30;
+    -fx-min-width: 80;
 }
 
 .button-default {
@@ -98,3 +98,22 @@
 .info-value {
     -fx-font-size: 16;
 }
+
+.notification {
+    -fx-background-color: -grey-800;
+}
+
+.notification .label {
+    -fx-text-fill: -grey-200;
+    -fx-font-size: 10pt;
+}
+
+.notification .jfx-rippler {
+    -jfx-mask-type: CIRCLE;
+}
+
+.notification .ikonli-font-icon {
+    -fx-icon-color: -grey-200;
+    -fx-icon-size: 24px;
+}
+

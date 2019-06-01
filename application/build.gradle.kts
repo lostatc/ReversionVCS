@@ -21,6 +21,8 @@ dependencies {
     implementation(group = "ch.qos.logback", name = "logback-core", version = "1.2.3")
     implementation(group = "ch.qos.logback", name = "logback-classic", version = "1.2.3")
     implementation(group = "com.jfoenix", name = "jfoenix", version = "9.0.8")
+    implementation(group = "org.kordamp.ikonli", name = "ikonli-javafx", version = "11.3.4")
+    implementation(group = "org.kordamp.ikonli", name = "ikonli-material-pack", version = "11.3.4")
 
     testImplementation(group = "org.junit.jupiter", name = "junit-jupiter", version = "5.4.2")
 }
