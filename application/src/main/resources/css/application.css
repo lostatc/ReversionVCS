@@ -31,27 +31,6 @@
     -fx-font-size: 14;
 }
 
-.button-text {
-    -jfx-button-type: RAISED;
-    -fx-min-height: 30;
-    -fx-min-width: 80;
-}
-
-.button-default {
-    -fx-background-color: -blue-grey-400;
-    -fx-text-fill: white;
-}
-
-.button-confirm {
-    -fx-background-color: -green-400;
-    -fx-text-fill: white;
-}
-
-.button-danger {
-    -fx-background-color: -red-400;
-    -fx-text-fill: white;
-}
-
 .jfx-text-field {
     -jfx-unfocus-color: -grey-600;
     -jfx-focus-color: -blue-grey-400;
@@ -66,39 +45,80 @@
     -jfx-rippler-fill: white;
 }
 
+/* The background of the window. */
+.background {
+    -fx-background-color: -grey-200;
+}
+
+/* A pane that floats above the background. */
+.pane {
+    -fx-background-color: -grey-50;
+}
+
+/* A button containing text. */
+.button-text {
+    -jfx-button-type: RAISED;
+    -fx-min-height: 30;
+    -fx-min-width: 80;
+}
+
+/* A regular button. */
+.button-regular {
+    -fx-background-color: -blue-grey-400;
+    -fx-text-fill: white;
+}
+
+/* A button for confirming/applying an action. */
+.button-confirm {
+    -fx-background-color: -green-400;
+    -fx-text-fill: white;
+}
+
+/* A button for doing something that the user should be cautious about. */
+.button-danger {
+    -fx-background-color: -red-400;
+    -fx-text-fill: white;
+}
+
+/* A card-style list. */
 .card-list-view {
     -fx-background-color: transparent;
     -jfx-vertical-gap: 10px;
     -jfx-expanded: true;
 }
 
-.list-view .list-cell:selected {
+.card-list-view .list-cell:selected {
     -fx-background-color: -blue-grey-400;
 }
 
-.list-view .list-cell:selected .label {
+.card-list-view .list-cell:selected .label {
     -fx-text-fill: white;
 }
 
+/* The title for a card-style list item. */
 .card-title {
     -fx-font-family: "Roboto Medium";
     -fx-font-size: 16;
 }
 
+/* The subtitle for a card-style list item. */
 .card-subtitle {
     -fx-font-size: 14;
     -fx-text-fill: -grey-600;
 }
 
+/* A label for a value to display. */
 .info-key {
     -fx-font-size: 12;
     -fx-text-fill: -grey-600;
 }
 
+/* A labeled value to display. */
 .info-value {
     -fx-font-size: 16;
 }
 
+/* A popup notification. */
 .notification {
     -fx-background-color: -grey-800;
 }
@@ -116,4 +136,3 @@
     -fx-icon-color: -grey-200;
     -fx-icon-size: 24px;
 }
-

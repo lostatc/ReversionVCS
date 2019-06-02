@@ -6,9 +6,9 @@
 <?import javafx.scene.layout.*?>
 <?import java.lang.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
-      prefWidth="640.0" styleClass="grey-200" xmlns="http://javafx.com/javafx/11.0.1"
+      prefWidth="640.0" styleClass="background" xmlns="http://javafx.com/javafx/11.0.1"
       fx:controller="io.github.lostatc.reversion.gui.VersionManagerController">
-    <JFXToolbar styleClass="grey-50">
+    <JFXToolbar styleClass="pane">
         <top>
             <HBox alignment="CENTER" minHeight="50.0" nodeOrientation="RIGHT_TO_LEFT" BorderPane.alignment="CENTER">
                 <padding>
@@ -17,7 +17,7 @@
                 <JFXButton buttonType="RAISED" onAction="#browsePath" text="Browse">
                     <styleClass>
                         <String fx:value="button-text"/>
-                        <String fx:value="button-default"/>
+                        <String fx:value="button-regular"/>
                     </styleClass>
                 </JFXButton>
                 <JFXButton onAction="#setPath" text="OK">
@@ -29,8 +29,8 @@
                         <String fx:value="button-confirm"/>
                     </styleClass>
                 </JFXButton>
-                <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#setPath"
-                              promptText="Path" HBox.hgrow="ALWAYS">
+                <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#setPath" promptText="Path"
+                              HBox.hgrow="ALWAYS">
                     <HBox.margin>
                         <Insets left="15.0"/>
                     </HBox.margin>
@@ -42,13 +42,8 @@
         <padding>
             <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
         </padding>
-        <JFXListView fx:id="versionList" depth="1" minWidth="200.0" prefWidth="400.0"
-                     styleClass="card-list-view"/>
+        <JFXListView fx:id="versionList" depth="1" minWidth="200.0" prefWidth="400.0" styleClass="card-list-view"/>
         <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" HBox.hgrow="SOMETIMES">
-            <styleClass>
-                <String fx:value="grey-50"/>
-                <String fx:value="depth-1"/>
-            </styleClass>
             <VBox fx:id="infoPane" spacing="50.0">
                 <padding>
                     <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
@@ -56,8 +51,7 @@
                 <FlowPane hgap="50.0" vgap="25.0">
                     <VBox>
                         <Label styleClass="info-key" text="Keep Forever"/>
-                        <JFXCheckBox fx:id="pinnedCheckBox" styleClass="info-value"
-                                     text="Pinned"/>
+                        <JFXCheckBox fx:id="pinnedCheckBox" styleClass="info-value" text="Pinned"/>
                     </VBox>
                     <VBox>
                         <Label styleClass="info-key" text="Last Modified"/>
@@ -74,8 +68,7 @@
                 </VBox>
                 <VBox>
                     <Label styleClass="info-key" text="Description"/>
-                    <JFXTextArea fx:id="descriptionField" maxHeight="1.7976931348623157E308"
-                                 wrapText="true"/>
+                    <JFXTextArea fx:id="descriptionField" maxHeight="1.7976931348623157E308" wrapText="true"/>
                 </VBox>
                 <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
                     <JFXButton onAction="#deleteVersion" text="Delete">
@@ -87,17 +80,21 @@
                     <JFXButton onAction="#restoreVersion" text="Restore">
                         <styleClass>
                             <String fx:value="button-text"/>
-                            <String fx:value="button-default"/>
+                            <String fx:value="button-regular"/>
                         </styleClass>
                     </JFXButton>
                     <JFXButton onAction="#openVersion" text="Open">
                         <styleClass>
                             <String fx:value="button-text"/>
-                            <String fx:value="button-default"/>
+                            <String fx:value="button-regular"/>
                         </styleClass>
                     </JFXButton>
                 </FlowPane>
             </VBox>
+            <styleClass>
+                <String fx:value="pane"/>
+                <String fx:value="depth-2"/>
+            </styleClass>
         </StackPane>
     </HBox>
 </VBox>
