@@ -103,7 +103,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * @return A list of distinct paths relative to the working directory.
      */
     private fun walkDirectory(paths: Iterable<Path>): List<Path> = paths
-        .map { it.toAbsolutePath() }
+        .map { it.toAbsolutePath().normalize() }
         .flattenPaths()
         .flatMap { Files.walk(it).toList() }
         .filterNot { ignoreMatcher.matches(it) }
@@ -119,7 +119,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * @return A list of distinct paths relative to the working directory.
      */
     private fun walkTimeline(paths: Iterable<Path>): List<Path> = paths
-        .map { it.toAbsolutePath() }
+        .map { it.toAbsolutePath().normalize() }
         .flattenPaths()
         .flatMap { parent -> timeline.paths.filter { path.resolve(it).startsWith(parent) } }
         .map { path.resolve(it) }
