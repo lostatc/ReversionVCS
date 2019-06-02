@@ -3,8 +3,6 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.VBox?>
 <fx:root xmlns:fx="http://javafx.com/fxml/1" type="VBox" xmlns="http://javafx.com/javafx/11.0.1">
-    <children>
-        <Label fx:id="titleText" styleClass="card-title"/>
-        <Label fx:id="subtitleText" styleClass="card-subtitle"/>
-    </children>
+    <Label fx:id="titleText" styleClass="card-title"/>
+    <Label fx:id="subtitleText" styleClass="card-subtitle"/>
 </fx:root>
