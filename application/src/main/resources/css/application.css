@@ -68,10 +68,18 @@
     -fx-text-fill: white;
 }
 
+.button-regular:hover {
+    -fx-background-color: -blue-grey-300;
+}
+
 /* A button for confirming/applying an action. */
 .button-confirm {
     -fx-background-color: -green-400;
     -fx-text-fill: white;
+}
+
+.button-confirm:hover {
+    -fx-background-color: -green-300;
 }
 
 /* A button for doing something that the user should be cautious about. */
@@ -80,11 +88,23 @@
     -fx-text-fill: white;
 }
 
+.button-danger:hover {
+    -fx-background-color: -red-300;
+}
+
 /* A card-style list. */
 .card-list-view {
     -fx-background-color: transparent;
     -jfx-vertical-gap: 10px;
     -jfx-expanded: true;
+}
+
+.card-list-view .list-cell {
+    -fx-background-color: -grey-50;
+}
+
+.card-list-view .list-cell:hover {
+    -fx-background-color: -grey-200;
 }
 
 .card-list-view .list-cell:selected {
