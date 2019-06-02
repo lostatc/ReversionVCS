@@ -116,6 +116,18 @@ interface WorkDirectoryTest {
     }
 
     @Test
+    fun `ignored files are not committed when using special file names`() {
+        Files.writeString(workPath.resolve(".rvignore"), workPath.resolve("b").toString())
+        workDirectory.commit(listOf(workPath.resolve(".")))
+
+        assertEquals(1, workDirectory.timeline.snapshots.size)
+
+        val snapshot = workDirectory.timeline.latestSnapshot!!
+
+        assertEquals(setOf(Paths.get("a"), Paths.get("c", "a"), Paths.get(".rvignore")), snapshot.versions.keys)
+    }
+
+    @Test
     fun `modified files are considered changed`() {
         workDirectory.commit(listOf(workPath.resolve("a"), workPath.resolve("b"), workPath.resolve("c", "a")))
 
