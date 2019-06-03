@@ -32,6 +32,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.ValueConvertException
+import io.github.lostatc.reversion.storage.FuseFileSystem
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -58,10 +59,10 @@ class ReversionCommand : CliktCommand(name = "reversion") {
             UpdateCommand(this),
             CleanCommand(this),
             VerifyCommand(this),
-            RepairCommand(this)
+            RepairCommand(this),
+            MountCommand(this)
         )
     }
-
 
     override fun run() = Unit
 }
@@ -240,5 +241,25 @@ class RepairCommand(val parent: ReversionCommand) : CliktCommand(
     override fun run() {
         val workDirectory = WorkDirectory.open(parent.workPath)
         workDirectory.repository.repair(workDirectory.path)
+    }
+}
+
+class MountCommand(val parent: ReversionCommand) : CliktCommand(
+    name = "mount", help = """
+    Mount a snapshot to a directory.
+"""
+) {
+    val revision: Int by argument("REVISION", help = "The revision number of the snapshot to mount.")
+        .int()
+
+    val path: Path by argument("PATH", help = "The path of the directory to mount the snapshot to.")
+        .path(folderOkay = true, fileOkay = false)
+
+    override fun run() {
+        val workDirectory = WorkDirectory.open(parent.workPath)
+        val snapshot = getSnapshot(workDirectory, revision)
+
+        val fileSystem = FuseFileSystem(workDirectory.path, snapshot)
+        fileSystem.mount(path, true)
     }
 }

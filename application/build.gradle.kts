@@ -23,6 +23,7 @@ dependencies {
     implementation(group = "com.jfoenix", name = "jfoenix", version = "9.0.8")
     implementation(group = "org.kordamp.ikonli", name = "ikonli-javafx", version = "11.3.4")
     implementation(group = "org.kordamp.ikonli", name = "ikonli-material-pack", version = "11.3.4")
+    implementation(group = "com.github.serceman", name = "jnr-fuse", version = "0.5.3")
 
     testImplementation(group = "org.junit.jupiter", name = "junit-jupiter", version = "5.4.2")
 }
