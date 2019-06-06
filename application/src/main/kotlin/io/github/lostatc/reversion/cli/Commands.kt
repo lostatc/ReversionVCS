@@ -259,7 +259,7 @@ class MountCommand(val parent: ReversionCommand) : CliktCommand(
         val workDirectory = WorkDirectory.open(parent.workPath)
         val snapshot = getSnapshot(workDirectory, revision)
 
-        val fileSystem = FuseFileSystem(workDirectory.path, snapshot)
+        val fileSystem = FuseFileSystem(snapshot)
         fileSystem.mount(path, true)
     }
 }
