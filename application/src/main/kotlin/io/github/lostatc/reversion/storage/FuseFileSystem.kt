@@ -205,10 +205,9 @@ private fun Timespec.set(time: FileTime) {
 /**
  * A read-only FUSE file system implementation for reading data from a snapshot.
  *
- * @param [workDirectory] The path of the working directory the snapshot was taken from.
  * @param [snapshot] The path of the snapshot to show versions from.
  */
-data class FuseFileSystem(val workDirectory: Path, val snapshot: Snapshot) : FuseStubFS() {
+data class FuseFileSystem(val snapshot: Snapshot) : FuseStubFS() {
 
     /**
      * A map of open files and their data sources.
