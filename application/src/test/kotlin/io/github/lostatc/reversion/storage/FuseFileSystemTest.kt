@@ -25,6 +25,8 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledOnOs
+import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.io.TempDir
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -43,6 +45,7 @@ private fun ByteBuffer.decodeAsString(charset: Charset = Charset.defaultCharset(
     return array.toString(charset)
 }
 
+@EnabledOnOs(OS.LINUX)
 interface FuseFileSystemTest {
     val provider: StorageProvider
 
