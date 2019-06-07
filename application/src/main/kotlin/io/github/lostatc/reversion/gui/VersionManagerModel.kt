@@ -62,6 +62,7 @@ class VersionManagerModel : CoroutineScope by MainScope() {
             selected?.flush()
 
             selected = null
+            _versions.clear()
             _versions.setAll(VersionModel.listVersions(path))
         }
     }
