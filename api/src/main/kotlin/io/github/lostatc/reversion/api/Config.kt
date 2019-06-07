@@ -223,17 +223,19 @@ data class ConfigProperty<T>(
  *
  * @param [properties] Properties to initialize the config with which are mapped to their default values.
  */
-class Config(vararg properties: ConfigProperty<*>) {
+class Config(properties: Set<ConfigProperty<*>>) {
     /**
      * A map of properties to their values.
      */
     private val valueByProperty: MutableMap<ConfigProperty<*>, String> =
-        properties.associate { it to it.default }.toMutableMap()
+        properties.associateWith { it.default }.toMutableMap()
 
     /**
      * The set of properties contained in this config.
      */
     val properties: Set<ConfigProperty<*>> = valueByProperty.keys
+
+    constructor(vararg properties: ConfigProperty<*>) : this(properties.toSet())
 
     /**
      * Sets the [value] of the given [property] in this config.

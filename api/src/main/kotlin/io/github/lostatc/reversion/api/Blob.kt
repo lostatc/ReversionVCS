@@ -65,7 +65,7 @@ private abstract class AbstractBlob(private val algorithm: String) : Blob {
  */
 interface Blob {
     /**
-     * An input stream for reading the data in this blob.
+     * Returns an input stream for reading the data in this blob.
      */
     fun newInputStream(): InputStream
 
