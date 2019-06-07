@@ -50,7 +50,11 @@ class Checksum(private val bytes: ByteArray) {
     val hex: String
         get() = Hex.encodeHexString(bytes)
 
-    override fun equals(other: Any?): Boolean = if (other is Checksum) bytes contentEquals other.bytes else false
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Checksum) return false
+        return bytes contentEquals other.bytes
+    }
 
     override fun hashCode(): Int = bytes.contentHashCode()
 
@@ -71,7 +75,8 @@ class Checksum(private val bytes: ByteArray) {
         /**
          * Calculates a [Checksum] of the data from the given [inputStream].
          *
-         * This accepts any [algorithm] accepted by [MessageDigest].
+         * This accepts any [algorithm] accepted by [MessageDigest]. It is the caller's responsibility to close this
+         * stream.
          *
          * @param [inputStream] The source of the data to calculate the checksum of.
          * @param [algorithm] The name of the hash algorithm to use.
