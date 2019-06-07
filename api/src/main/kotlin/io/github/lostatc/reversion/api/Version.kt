@@ -135,7 +135,7 @@ interface Version {
 
         // Set metadata.
         Files.setLastModifiedTime(target, lastModifiedTime)
-        if (permissions != null) Files.setPosixFilePermissions(target, permissions)
+        permissions.trySetPermissions(target)
 
         logger.debug("Checked out $this to '$target'.")
 

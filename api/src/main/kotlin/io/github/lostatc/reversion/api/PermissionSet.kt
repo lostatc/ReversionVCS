@@ -56,3 +56,19 @@ data class PermissionSet(private val permissions: Set<PosixFilePermission>) : Se
         }
     }
 }
+
+/**
+ * Attempt to set these permissions on the file with the given [path].
+ *
+ * @return `true` if the permissions were set, `false` if this value is `null` or POSIX file permissions are not
+ * supported on the given [path].
+ */
+fun PermissionSet?.trySetPermissions(path: Path): Boolean {
+    if (this == null) return false
+    return try {
+        Files.setPosixFilePermissions(path, this)
+        true
+    } catch (e: UnsupportedOperationException) {
+        false
+    }
+}
