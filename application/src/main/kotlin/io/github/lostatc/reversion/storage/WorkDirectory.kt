@@ -70,7 +70,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     private val hiddenPath: Path = path.resolve(relativeHiddenPath)
 
     /**
-     * The path of the file containing ignore patterns.
+     * The path of the file containing paths to ignore.
      */
     private val ignorePath: Path = path.resolve(relativeIgnorePath)
 
@@ -85,8 +85,12 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
                 emptyList<String>()
             }
 
-            val matchers = patterns.map { path.fileSystem.getPathMatcher("glob:$it") }
-            return MultiPathMatcher(matchers + PathMatcher { it.startsWith(hiddenPath) })
+            val matchers = patterns
+                .map { Paths.get(it) }
+                .let { it.plusElement(hiddenPath) }
+                .map { path -> PathMatcher { it.startsWith(path) } }
+
+            return MultiPathMatcher(matchers)
         }
 
     /**
@@ -282,7 +286,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         private val relativeHiddenPath: Path = Paths.get(".reversion")
 
         /**
-         * The relative path of the file containing ignore patterns.
+         * The relative path of the file containing paths to ignore.
          */
         private val relativeIgnorePath: Path = Paths.get(".rvignore")
 
