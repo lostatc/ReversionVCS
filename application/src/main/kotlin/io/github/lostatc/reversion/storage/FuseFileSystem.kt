@@ -21,7 +21,7 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Snapshot
 import jnr.ffi.Pointer
-import org.apache.commons.io.input.TeeInputStream
+import org.apache.commons.io.input.BoundedInputStream
 import ru.serce.jnrfuse.ErrorCodes
 import ru.serce.jnrfuse.FuseFillDir
 import ru.serce.jnrfuse.FuseStubFS
@@ -30,9 +30,8 @@ import ru.serce.jnrfuse.struct.FuseFileInfo
 import ru.serce.jnrfuse.struct.Timespec
 import java.io.Closeable
 import java.io.InputStream
-import java.nio.Buffer
+import java.io.OutputStream
 import java.nio.ByteBuffer
-import java.nio.channels.Channels
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.Files
@@ -43,37 +42,10 @@ import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 
 /**
- * The size of the buffer used when reading and discarding bytes.
+ * The number of bytes between the current position and the end of the channel.
  */
-private const val SKIP_BUFFER_SIZE: Int = 2048
-
-/**
- * Sets this buffer's limit, not exceeding its capacity.
- */
-private fun Buffer.limitOrCapacity(newLimit: Int): Buffer = apply {
-    limit(minOf(newLimit, capacity()))
-}
-
-/**
- * Reads and discards [bytes] bytes from the channel.
- */
-private fun ReadableByteChannel.skip(bytes: Int) {
-    val skipBuffer = ByteBuffer.allocate(SKIP_BUFFER_SIZE)
-    var remaining = bytes
-
-    while (remaining > 0) {
-        skipBuffer.clear()
-        skipBuffer.limitOrCapacity(remaining)
-        remaining -= read(skipBuffer)
-    }
-}
-
-/**
- * Advances the [position][SeekableByteChannel.position] by the given number of [bytes].
- */
-private fun SeekableByteChannel.advance(bytes: Int) {
-    position(position() + bytes)
-}
+val SeekableByteChannel.remaining: Long
+    get() = size() - position()
 
 /**
  * A seekable source of data that wraps an [InputStream].
@@ -82,21 +54,19 @@ private fun SeekableByteChannel.advance(bytes: Int) {
  * to re-open the stream and re-read data. It caches data which has already been read in the file system and allows for
  * seeking on that data. New data is lazily read from the given [inputStream] as it is needed.
  */
-private class SeekableDataSource(inputStream: InputStream) : Closeable {
+private class SeekableDataSource(private val inputStream: InputStream) : Closeable {
     /**
      * The temporary file which data is cached to.
      */
     private val cacheFile: Path = Files.createTempFile("reversion-", "")
 
     /**
-     * The channel which new data is read from.
+     * The channel which is used to write input data to the cache.
      */
-    private val inputChannel: ReadableByteChannel = Channels.newChannel(
-        TeeInputStream(inputStream, Files.newOutputStream(cacheFile), true)
-    )
+    private val cacheStream: OutputStream = Files.newOutputStream(cacheFile, StandardOpenOption.APPEND)
 
     /**
-     * The channel which cached data is read from.
+     * The channel which is used to read data from the cache.
      */
     private val cacheChannel: SeekableByteChannel = Files.newByteChannel(cacheFile, StandardOpenOption.READ)
 
@@ -109,6 +79,15 @@ private class SeekableDataSource(inputStream: InputStream) : Closeable {
         get() = cacheChannel.position()
 
     /**
+     * Write read [bytes] bytes of input and write it to the cache.
+     *
+     * @return The number of bytes read.
+     */
+    private fun readInput(bytes: Long): Long {
+        return BoundedInputStream(inputStream, bytes).transferTo(cacheStream)
+    }
+
+    /**
      * Sets the [position] to [newPosition].
      *
      * @see [SeekableByteChannel.position]
@@ -118,8 +97,8 @@ private class SeekableDataSource(inputStream: InputStream) : Closeable {
 
         // If the new position is past the end of the cache, read more data from the input stream.
         if (newPosition > cacheSize) {
-            val remaining = (newPosition - cacheSize).toInt()
-            inputChannel.skip(remaining)
+            val remaining = newPosition - cacheSize
+            readInput(remaining)
         }
 
         cacheChannel.position(newPosition)
@@ -131,14 +110,12 @@ private class SeekableDataSource(inputStream: InputStream) : Closeable {
      * @see [ReadableByteChannel.read]
      */
     fun read(buffer: ByteBuffer) {
-        // Read data from the cache first and then the input stream once the end of the cache is reached.
+        readInput(buffer.remaining() - cacheChannel.remaining)
         cacheChannel.read(buffer)
-        val bytesRead = inputChannel.read(buffer)
-        if (bytesRead > 0) cacheChannel.advance(bytesRead)
     }
 
     override fun close() {
-        inputChannel.close()
+        cacheStream.close()
         cacheChannel.close()
         Files.deleteIfExists(cacheFile)
     }
