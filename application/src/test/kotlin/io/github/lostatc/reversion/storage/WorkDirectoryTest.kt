@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.StorageProvider
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -32,6 +33,8 @@ import java.nio.file.Paths
 
 interface WorkDirectoryTest {
     val provider: StorageProvider
+
+    val config: Config
 
     var workPath: Path
 
@@ -49,7 +52,7 @@ interface WorkDirectoryTest {
             }
         }
 
-        workDirectory = WorkDirectory.init(workPath, provider)
+        workDirectory = WorkDirectory.init(workPath, provider, config)
     }
 
     @Test
