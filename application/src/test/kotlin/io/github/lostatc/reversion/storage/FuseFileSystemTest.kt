@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.PermissionSet
 import io.github.lostatc.reversion.api.StorageProvider
 import org.junit.jupiter.api.AfterAll
@@ -49,6 +50,8 @@ private fun ByteBuffer.decodeAsString(charset: Charset = Charset.defaultCharset(
 interface FuseFileSystemTest {
     val provider: StorageProvider
 
+    val config: Config
+
     var workPath: Path
 
     var mountPath: Path
@@ -69,7 +72,7 @@ interface FuseFileSystemTest {
             }
         }
 
-        val workDirectory = WorkDirectory.init(workPath, provider)
+        val workDirectory = WorkDirectory.init(workPath, provider, config)
         val snapshot = workDirectory.commit(listOf(workPath))
 
         fileSystem = FuseFileSystem(snapshot).apply {

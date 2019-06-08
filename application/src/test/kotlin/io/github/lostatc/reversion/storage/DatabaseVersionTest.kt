@@ -38,3 +38,22 @@ class DatabaseVersionTest : VersionTest {
         timeline = repository.createTimeline()
     }
 }
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class BlockDeduplicatedDatabaseVersionTest : VersionTest {
+    override lateinit var workPath: Path
+
+    override lateinit var timeline: Timeline
+
+    @BeforeEach
+    fun createTimeline(@TempDir tempPath: Path) {
+        val repoPath = tempPath.resolve("repository")
+        val repository = DatabaseStorageProvider().run {
+            val config = getConfig()
+            config[DatabaseRepository.blockSizeProperty] = "2"
+            createRepository(repoPath, config)
+        }
+
+        timeline = repository.createTimeline()
+    }
+}
