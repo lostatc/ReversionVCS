@@ -17,8 +17,10 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui
+package io.github.lostatc.reversion.gui.mvc
 
+import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.setValue
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections

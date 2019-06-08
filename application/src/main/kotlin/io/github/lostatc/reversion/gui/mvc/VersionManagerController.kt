@@ -17,13 +17,15 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui
+package io.github.lostatc.reversion.gui.mvc
 
 import com.jfoenix.controls.JFXCheckBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTextArea
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.cli.format
+import io.github.lostatc.reversion.gui.MappedList
+import io.github.lostatc.reversion.gui.controls.ListItem
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.Node
@@ -87,7 +89,8 @@ class VersionManagerController {
     /**
      * A model for storing information about selected versions.
      */
-    private val model: VersionManagerModel = VersionManagerModel()
+    private val model: VersionManagerModel =
+        VersionManagerModel()
 
     @FXML
     fun initialize() {
@@ -103,7 +106,10 @@ class VersionManagerController {
 
         // Bind the list of versions to the [versionList].
         versionList.items = MappedList(model.versions) {
-            ListItem(it.displayNameProperty, it.timeCreated.format(FormatStyle.MEDIUM))
+            ListItem(
+                it.displayNameProperty,
+                it.timeCreated.format(FormatStyle.MEDIUM)
+            )
         }
 
         // Make the version information pane initially invisible.

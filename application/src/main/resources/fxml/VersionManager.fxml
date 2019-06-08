@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.jfoenix.controls.*?>
-<?import javafx.geometry.*?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import java.lang.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
       prefWidth="640.0" styleClass="background" xmlns="http://javafx.com/javafx/11.0.1"
-      fx:controller="io.github.lostatc.reversion.gui.VersionManagerController">
+      fx:controller="io.github.lostatc.reversion.gui.mvc.VersionManagerController">
     <JFXToolbar styleClass="pane">
         <top>
             <HBox alignment="CENTER" minHeight="50.0" nodeOrientation="RIGHT_TO_LEFT" BorderPane.alignment="CENTER">
@@ -38,12 +38,9 @@
             </HBox>
         </top>
     </JFXToolbar>
-    <HBox prefHeight="100.0" prefWidth="640.0" spacing="15.0" VBox.vgrow="ALWAYS">
-        <padding>
-            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
-        </padding>
+    <HBox prefHeight="100.0" prefWidth="640.0" styleClass="pane-box" VBox.vgrow="ALWAYS">
         <JFXListView fx:id="versionList" depth="1" minWidth="200.0" prefWidth="400.0" styleClass="card-list-view"/>
-        <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" HBox.hgrow="SOMETIMES">
+        <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" styleClass="pane" HBox.hgrow="SOMETIMES">
             <VBox fx:id="infoPane" spacing="50.0">
                 <padding>
                     <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
@@ -91,10 +88,6 @@
                     </JFXButton>
                 </FlowPane>
             </VBox>
-            <styleClass>
-                <String fx:value="pane"/>
-                <String fx:value="depth-2"/>
-            </styleClass>
         </StackPane>
     </HBox>
 </VBox>
