@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui
+package io.github.lostatc.reversion.gui.controls
 
 import javafx.beans.property.ReadOnlyProperty
 import javafx.fxml.FXML

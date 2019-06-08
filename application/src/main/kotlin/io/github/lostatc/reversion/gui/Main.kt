@@ -21,6 +21,8 @@ package io.github.lostatc.reversion.gui
 
 import com.jfoenix.assets.JFoenixResources
 import com.jfoenix.controls.JFXSnackbar
+import io.github.lostatc.reversion.gui.controls.sendNotification
+import io.github.lostatc.reversion.gui.mvc.VersionManagerController
 import javafx.application.Application
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene

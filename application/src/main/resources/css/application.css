@@ -53,6 +53,14 @@
 /* A pane that floats above the background. */
 .pane {
     -fx-background-color: -grey-50;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 15, 0.16, 0, 4);
+}
+
+/* An HBox or VBox containing spaced panes. */
+.pane-box {
+    -fx-margin: 0;
+    -fx-padding: 15;
+    -fx-spacing: 15;
 }
 
 /* A button containing text. */
