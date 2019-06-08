@@ -4,6 +4,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 <fx:root xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER_LEFT" prefWidth="500.0" spacing="15.0"
          styleClass="notification" type="HBox" xmlns="http://javafx.com/javafx/11.0.1">
@@ -12,12 +13,10 @@
     </padding>
     <Label fx:id="messageLabel" text="Something bad happened." wrapText="true"/>
     <Region HBox.hgrow="ALWAYS"/>
-    <JFXRippler onMouseClicked="#close">
+    <JFXRippler styleClass="icon-button">
         <StackPane>
-            <padding>
-                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-            </padding>
             <FontIcon iconLiteral="gmi-close"/>
+            <Circle fill="TRANSPARENT" onMouseClicked="#close" radius="20.0" stroke="TRANSPARENT" strokeType="INSIDE"/>
         </StackPane>
     </JFXRippler>
 </fx:root>

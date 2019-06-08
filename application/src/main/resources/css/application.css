@@ -138,6 +138,21 @@
     -fx-font-size: 16;
 }
 
+/* A button with an icon label. */
+.icon-button {
+    -jfx-mask-type: CIRCLE;
+}
+
+.icon-button .ikonli-font-icon {
+    -fx-icon-size: 24px;
+    -fx-icon-color: -grey-200;
+}
+
+.icon-button Circle:hover {
+    -fx-fill: white;
+    -fx-opacity: 0.2;
+}
+
 /* A popup notification. */
 .notification {
     -fx-background-color: -grey-800;
@@ -146,13 +161,4 @@
 .notification .label {
     -fx-text-fill: -grey-200;
     -fx-font-size: 10pt;
-}
-
-.notification .jfx-rippler {
-    -jfx-mask-type: CIRCLE;
-}
-
-.notification .ikonli-font-icon {
-    -fx-icon-color: -grey-200;
-    -fx-icon-size: 24px;
 }
