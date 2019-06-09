@@ -19,54 +19,26 @@
 
 package io.github.lostatc.reversion.gui.controls
 
-import io.github.lostatc.reversion.gui.getValue
-import io.github.lostatc.reversion.gui.setValue
-import javafx.beans.property.Property
-import javafx.beans.property.SimpleObjectProperty
-import javafx.fxml.FXML
-import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
-import javafx.scene.layout.VBox
+import javafx.scene.control.ListView
+import java.util.Objects
 
-class ListItem : VBox() {
-    @FXML
-    private lateinit var titleText: Label
-
-    @FXML
-    private lateinit var subtitleText: Label
-
-    /**
-     * A property for [title].
-     */
-    val titleProperty: Property<String> = SimpleObjectProperty()
-
-    /**
-     * The title of the list item.
-     */
-    var title: String by titleProperty
-
-    /**
-     * A property for [subtitle].
-     */
-    val subtitleProperty: Property<String> = SimpleObjectProperty()
-
-    /**
-     * The subtitle of the list item.
-     */
-    var subtitle: String by subtitleProperty
+/**
+ * A [Label] for use in a [ListView].
+ *
+ * @param [text] The text display in the label.
+ */
+class ListItem(text: String) : Label(text) {
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/ListItem.fxml")).apply {
-            classLoader = this@ListItem::class.java.classLoader
-            setRoot(this@ListItem)
-            setController(this@ListItem)
-            load()
-        }
+        styleClass += "list-item"
     }
 
-    @FXML
-    fun initialize() {
-        titleText.textProperty().bind(titleProperty)
-        subtitleText.textProperty().bind(subtitleProperty)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Label) return false
+        return text == other.text
     }
+
+    override fun hashCode(): Int = Objects.hash(text)
 }

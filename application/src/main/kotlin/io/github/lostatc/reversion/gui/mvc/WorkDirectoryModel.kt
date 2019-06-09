@@ -19,13 +19,111 @@
 
 package io.github.lostatc.reversion.gui.mvc
 
+import io.github.lostatc.reversion.DEFAULT_PROVIDER
+import io.github.lostatc.reversion.api.CleanupPolicy
+import io.github.lostatc.reversion.gui.FlushableActor
+import io.github.lostatc.reversion.gui.flushableActor
 import io.github.lostatc.reversion.storage.WorkDirectory
+import javafx.collections.FXCollections
+import javafx.collections.ListChangeListener
+import javafx.collections.ObservableList
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.withContext
+import java.nio.file.Path
+import java.time.temporal.TemporalUnit
+
+/**
+ * The receiver for a [WorkDirectoryOperation].
+ *
+ * @param [workDirectory] The working directory to modify.
+ */
+data class WorkDirectoryOperationContext(val workDirectory: WorkDirectory)
+
+/**
+ * An operation to store or retrieve data about a [WorkDirectory].
+ */
+typealias WorkDirectoryOperation = WorkDirectoryOperationContext.() -> Unit
 
 /**
  * The model for storing information about the currently selected working directory.
  */
 class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineScope by MainScope() {
+    /**
+     * An actor to send storage operations to.
+     */
+    private val actor: FlushableActor<WorkDirectoryOperation> = flushableActor(context = Dispatchers.IO) { operation ->
+        WorkDirectoryOperationContext(workDirectory).operation()
+    }
 
+    /**
+     * The path of the working directory.
+     */
+    val path: Path = workDirectory.path
+
+    /**
+     * The [CleanupPolicy] objects associated with this [WorkDirectory].
+     */
+    val cleanupPolicies: ObservableList<CleanupPolicy> =
+        FXCollections.observableArrayList(workDirectory.timeline.cleanupPolicies)
+
+    init {
+        // Update the working directory whenever a cleanup policy is added or removed.
+        cleanupPolicies.addListener(
+            ListChangeListener<CleanupPolicy> { change ->
+                execute { workDirectory.timeline.cleanupPolicies = change.list.toSet() }
+            }
+        )
+    }
+
+    /**
+     * Queue up a change to the working directory to be completed asynchronously.
+     */
+    fun execute(operation: WorkDirectoryOperation) {
+        actor.sendBlocking(operation)
+    }
+
+    /**
+     * Adds a [CleanupPolicy] to this working directory.
+     *
+     * @throws [IllegalArgumentException] The [amount] is specified without a [unit] of vice versa.
+     */
+    fun addCleanupPolicy(versions: Int?, amount: Long?, unit: TemporalUnit?) {
+        val policyFactory = workDirectory.repository.policyFactory
+
+        val policy = if (unit == null && amount == null) {
+            if (versions == null) {
+                policyFactory.forever()
+            } else {
+                policyFactory.ofVersions(versions)
+            }
+        } else if (unit != null && amount != null) {
+            if (versions == null) {
+                policyFactory.ofDuration(amount, unit)
+            } else {
+                policyFactory.ofUnit(amount, unit, versions)
+            }
+        } else {
+            throw IllegalArgumentException("The amount of time and unit of time must be specified together.")
+        }
+
+        cleanupPolicies.add(policy)
+        execute { workDirectory.timeline.cleanupPolicies += policy }
+    }
+
+    companion object {
+        /**
+         * Returns a new [WorkDirectoryModel] for the working directory with the given [path].
+         *
+         * If there is not working directory at [path], a new one is created.
+         */
+        suspend fun fromPath(path: Path): WorkDirectoryModel = withContext(Dispatchers.IO) {
+            if (WorkDirectory.isWorkDirectory(path)) {
+                WorkDirectoryModel(WorkDirectory.open(path))
+            } else {
+                WorkDirectoryModel(WorkDirectory.init(path, DEFAULT_PROVIDER))
+            }
+        }
+    }
 }

@@ -151,16 +151,27 @@
     -fx-text-fill: white;
 }
 
-/* The title for a card-style list item. */
+/* The title for a card-style node. */
 .card-title {
     -fx-font-family: "Roboto Medium";
     -fx-font-size: 16;
 }
 
-/* The subtitle for a card-style list item. */
+/* The subtitle for a card-style node. */
 .card-subtitle {
     -fx-font-size: 14;
     -fx-text-fill: -grey-600;
+}
+
+/* A node to display in place of an empty list view. */
+.placeholder {
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+/* The title of a small list item. */
+.list-item {
+    -fx-font-size: 14;
 }
 
 /* A label for a value to display. */
