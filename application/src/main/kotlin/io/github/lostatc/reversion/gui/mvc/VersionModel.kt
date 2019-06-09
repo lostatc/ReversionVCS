@@ -40,18 +40,18 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 
 /**
- * The receiver for a [StorageOperation].
+ * The receiver for a [VersionOperation].
  *
  * @param [version] The version to modify.
  * @param [workDirectory] The working directory that the [version] is a part of.
  * @param [path] The absolute path of the [version].
  */
-data class StorageOperationContext(val version: Version, val workDirectory: WorkDirectory, val path: Path)
+data class VersionOperationContext(val version: Version, val workDirectory: WorkDirectory, val path: Path)
 
 /**
- * An operation to store or retrieve data.
+ * An operation to store or retrieve data about a [Version].
  */
-typealias StorageOperation = StorageOperationContext.() -> Unit
+typealias VersionOperation = VersionOperationContext.() -> Unit
 
 /**
  * The model for storing information about the currently selected version.
@@ -62,10 +62,10 @@ class VersionModel(
 ) : CoroutineScope by MainScope() {
 
     /**
-     * An actor to send database operations to.
+     * An actor to send storage operations to.
      */
-    private val actor: FlushableActor<StorageOperation> = flushableActor(context = Dispatchers.IO) { operation ->
-        StorageOperationContext(version, workDirectory, path).operation()
+    private val actor: FlushableActor<VersionOperation> = flushableActor(context = Dispatchers.IO) { operation ->
+        VersionOperationContext(version, workDirectory, path).operation()
     }
 
     /**
@@ -133,7 +133,7 @@ class VersionModel(
     /**
      * Queue up a change to the version to be completed asynchronously.
      */
-    fun execute(operation: StorageOperation) {
+    fun execute(operation: VersionOperation) {
         actor.sendBlocking(operation)
     }
 

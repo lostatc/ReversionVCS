@@ -25,9 +25,8 @@ import com.jfoenix.controls.JFXTextArea
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MappedList
-import io.github.lostatc.reversion.gui.controls.ListItem
+import io.github.lostatc.reversion.gui.controls.Card
 import javafx.fxml.FXML
-import javafx.fxml.FXMLLoader
 import javafx.scene.Node
 import javafx.scene.control.Label
 import javafx.scene.layout.Pane
@@ -97,19 +96,14 @@ class VersionManagerController {
 
     @FXML
     fun initialize() {
-        // Bind the selected version in the [listModel] to the selected version in the view.
+        // Bind the selected version in the model to the selected version in the view.
         versionList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
             model.selected = model.versions.getOrNull(newValue.toInt())
         }
 
-        // Set a placeholder node for when the version list is empty.
-        versionList.placeholder = FXMLLoader.load(
-            this::class.java.getResource("/fxml/NoVersionsPlaceholder.fxml")
-        )
-
-        // Bind the list of versions to the [versionList].
+        // Bind the list of versions in the view to the model.
         versionList.items = MappedList(model.versions) {
-            ListItem().apply {
+            Card().apply {
                 titleProperty.bind(it.displayNameProperty)
                 subtitle = it.timeCreated.format(FormatStyle.MEDIUM)
             }
