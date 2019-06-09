@@ -24,11 +24,17 @@
 
 .jfx-tool-bar {
     -fx-min-height: 50;
+    -fx-background-color: -grey-50;
 }
 
 .jfx-check-box {
     -jfx-checked-color: -blue-grey-400;
     -fx-font-size: 14;
+}
+
+.jfx-combo-box {
+    -jfx-unfocus-color: -grey-600;
+    -jfx-focus-color: -blue-grey-400;
 }
 
 .jfx-text-field {
@@ -43,6 +49,28 @@
 
 .jfx-rippler {
     -jfx-rippler-fill: white;
+}
+
+/* A tab pane for navigating between windows. */
+.navigation-tab-bar {
+    -fx-tab-min-height: 45;
+}
+
+.navigation-tab-bar .tab-header-area .tab-header-background {
+    -fx-background-color: -grey-800;
+}
+
+.navigation-tab-bar .tab-header-area .tab-selected-line {
+    -fx-background-color: -grey-50;
+}
+
+.navigation-tab-bar .tab-header-area .tab .tab-label {
+    -fx-text-fill: -grey-400;
+    -fx-font-weight: normal;
+}
+
+.navigation-tab-bar .tab-header-area .tab:selected .tab-label {
+    -fx-text-fill: -grey-50;
 }
 
 /* The background of the window. */
@@ -146,18 +174,33 @@
     -fx-font-size: 16;
 }
 
-/* A button with an icon label. */
-.icon-button {
+/* A button with an icon label for use on a dark background. */
+.icon-button-dark {
     -jfx-mask-type: CIRCLE;
 }
 
-.icon-button .ikonli-font-icon {
+.icon-button-dark .ikonli-font-icon {
     -fx-icon-size: 24px;
     -fx-icon-color: -grey-200;
 }
 
-.icon-button Circle:hover {
-    -fx-fill: white;
+.icon-button-dark Circle:hover {
+    -fx-fill: -grey-50;
+    -fx-opacity: 0.2;
+}
+
+/* A button with an icon label for use on a light background. */
+.icon-button-light {
+    -jfx-mask-type: CIRCLE;
+}
+
+.icon-button-light .ikonli-font-icon {
+    -fx-icon-size: 24px;
+    -fx-icon-color: -grey-800;
+}
+
+.icon-button-light Circle:hover {
+    -fx-fill: -grey-600;
     -fx-opacity: 0.2;
 }
 

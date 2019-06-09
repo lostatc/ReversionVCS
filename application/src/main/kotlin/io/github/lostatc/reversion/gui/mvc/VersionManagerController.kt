@@ -37,6 +37,9 @@ import org.apache.commons.io.FileUtils
 import java.nio.file.Paths
 import java.time.format.FormatStyle
 
+/**
+ * The controller for the view that is used to manage versions of a file.
+ */
 class VersionManagerController {
     /**
      * The field for getting the path of the file to manage versions of.

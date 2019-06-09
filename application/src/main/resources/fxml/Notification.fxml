@@ -6,11 +6,12 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <fx:root xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER_LEFT" prefWidth="500.0" spacing="15.0"
-         styleClass="notification" type="HBox" xmlns="http://javafx.com/javafx/11.0.1">
+         styleClass="notification"
+         type="HBox" xmlns="http://javafx.com/javafx/11.0.1">
     <padding>
         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
     </padding>
     <Label fx:id="messageLabel" text="Something bad happened." wrapText="true"/>
     <Region HBox.hgrow="ALWAYS"/>
-    <IconButton icon="gmi-close" onAction="#close"/>
+    <IconButton icon="gmi-close" onAction="#close" styleClass="icon-button-dark"/>
 </fx:root>

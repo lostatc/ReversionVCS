@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 import java.nio.file.Path
 
 /**
- * A model for storing information about which versions are displayed in the UI.
+ * The model for storing information for the [VersionManagerController].
  */
 class VersionManagerModel : CoroutineScope by MainScope() {
     /**
