@@ -23,6 +23,12 @@ import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
 
+/**
+ * An [ObservableList] which applies a transformation to each element.
+ *
+ * @param [source] The list to get elements from.
+ * @param [transform] The function to apply to each element.
+ */
 class MappedList<E, F>(source: ObservableList<F>, val transform: (F) -> E) : TransformationList<E, F>(source) {
     override val size: Int
         get() = source.size

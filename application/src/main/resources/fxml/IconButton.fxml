@@ -4,10 +4,9 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.shape.Circle?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
-<fx:root xmlns:fx="http://javafx.com/fxml/1" type="JFXRippler" xmlns="http://javafx.com/javafx/11.0.1"
-         styleClass="icon-button">
+<fx:root xmlns:fx="http://javafx.com/fxml/1" type="JFXRippler" xmlns="http://javafx.com/javafx/11.0.1">
     <StackPane>
         <FontIcon fx:id="fontIcon"/>
-        <Circle fx:id="circle" fill="TRANSPARENT" radius="20.0" stroke="TRANSPARENT" strokeType="INSIDE"/>
+        <Circle fx:id="circle" fill="TRANSPARENT" radius="18.0" stroke="TRANSPARENT" strokeType="INSIDE"/>
     </StackPane>
 </fx:root>

@@ -54,7 +54,7 @@ data class StorageOperationContext(val version: Version, val workDirectory: Work
 typealias StorageOperation = StorageOperationContext.() -> Unit
 
 /**
- * A model for storing information about the currently selected version.
+ * The model for storing information about the currently selected version.
  */
 class VersionModel(
     private val version: Version,
