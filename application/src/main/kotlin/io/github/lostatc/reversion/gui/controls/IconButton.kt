@@ -70,11 +70,15 @@ class IconButton : JFXRippler() {
 
     init {
         FXMLLoader(this::class.java.getResource("/fxml/IconButton.fxml")).apply {
+            classLoader = this@IconButton::class.java.classLoader
             setRoot(this@IconButton)
             setController(this@IconButton)
             load()
         }
+    }
 
+    @FXML
+    fun initialize() {
         iconProperty.addListener { _, _, newValue ->
             fontIcon.iconLiteral = newValue
         }

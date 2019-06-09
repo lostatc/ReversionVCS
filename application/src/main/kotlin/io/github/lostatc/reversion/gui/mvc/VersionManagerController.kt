@@ -106,10 +106,10 @@ class VersionManagerController {
 
         // Bind the list of versions to the [versionList].
         versionList.items = MappedList(model.versions) {
-            ListItem(
-                it.displayNameProperty,
-                it.timeCreated.format(FormatStyle.MEDIUM)
-            )
+            ListItem().apply {
+                titleProperty.bind(it.displayNameProperty)
+                subtitle = it.timeCreated.format(FormatStyle.MEDIUM)
+            }
         }
 
         // Make the version information pane initially invisible.
