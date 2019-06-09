@@ -19,21 +19,45 @@
 
 package io.github.lostatc.reversion.gui.controls
 
-import javafx.beans.property.ReadOnlyProperty
+import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.setValue
+import javafx.beans.property.Property
+import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
 import javafx.scene.layout.VBox
 
-data class ListItem(val title: ReadOnlyProperty<String>, val subtitle: String) : VBox() {
+class ListItem : VBox() {
     @FXML
     private lateinit var titleText: Label
 
     @FXML
     private lateinit var subtitleText: Label
 
+    /**
+     * A property for [title].
+     */
+    val titleProperty: Property<String> = SimpleObjectProperty()
+
+    /**
+     * The title of the list item.
+     */
+    var title: String by titleProperty
+
+    /**
+     * A property for [subtitle].
+     */
+    val subtitleProperty: Property<String> = SimpleObjectProperty()
+
+    /**
+     * The subtitle of the list item.
+     */
+    var subtitle: String by subtitleProperty
+
     init {
         FXMLLoader(this::class.java.getResource("/fxml/ListItem.fxml")).apply {
+            classLoader = this@ListItem::class.java.classLoader
             setRoot(this@ListItem)
             setController(this@ListItem)
             load()
@@ -42,7 +66,7 @@ data class ListItem(val title: ReadOnlyProperty<String>, val subtitle: String) :
 
     @FXML
     fun initialize() {
-        titleText.textProperty().bind(title)
-        subtitleText.text = subtitle
+        titleText.textProperty().bind(titleProperty)
+        subtitleText.textProperty().bind(subtitleProperty)
     }
 }

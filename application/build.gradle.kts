@@ -2,12 +2,14 @@ plugins {
     kotlin("jvm")
     application
     id("org.openjfx.javafxplugin") version "0.0.7"
+    id("com.github.johnrengelman.shadow") version "5.0.0"
 }
 
 version = "0.1.0"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
+    implementation(kotlin("reflect"))
     implementation(group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version = "1.2.1")
     implementation(group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-javafx", version = "1.2.1")
     implementation(project(":api"))

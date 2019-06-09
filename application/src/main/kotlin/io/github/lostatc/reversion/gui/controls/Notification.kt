@@ -20,6 +20,10 @@
 package io.github.lostatc.reversion.gui.controls
 
 import com.jfoenix.controls.JFXSnackbar
+import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.setValue
+import javafx.beans.property.Property
+import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
@@ -29,24 +33,36 @@ import javafx.util.Duration
 
 /**
  * A popup notification.
- *
- * @param [message] The message to display.
  */
-abstract class Notification(val message: String) : HBox() {
+abstract class Notification : HBox() {
     /**
      * The label which displays the message.
      */
     @FXML
     private lateinit var messageLabel: Label
 
+    /**
+     * A property for [message].
+     */
+    val messageProperty: Property<String> = SimpleObjectProperty()
+
+    /**
+     * The message to display in the notification.
+     */
+    var message by messageProperty
+
     init {
         FXMLLoader(this::class.java.getResource("/fxml/Notification.fxml")).apply {
+            classLoader = this@Notification::class.java.classLoader
             setRoot(this@Notification)
             setController(this@Notification)
             load()
         }
+    }
 
-        messageLabel.text = message
+    @FXML
+    fun initialize() {
+        messageLabel.textProperty().bind(messageProperty)
     }
 
     /**
@@ -63,10 +79,11 @@ abstract class Notification(val message: String) : HBox() {
  * @param [timeout] The amount of time before the notification automatically dismisses itself.
  */
 fun JFXSnackbar.sendNotification(message: String, timeout: Duration = Duration.INDEFINITE) {
-    val notification = object : Notification(message) {
+    val notification = object : Notification() {
         override fun close(event: MouseEvent) {
             close()
         }
     }
+    notification.message = message
     enqueue(JFXSnackbar.SnackbarEvent(notification, timeout, null))
 }
