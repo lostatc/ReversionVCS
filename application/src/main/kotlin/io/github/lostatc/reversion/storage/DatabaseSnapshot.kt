@@ -31,6 +31,7 @@ import io.github.lostatc.reversion.schema.SnapshotEntity
 import io.github.lostatc.reversion.schema.SnapshotTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
+import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -47,11 +48,16 @@ import java.util.Objects
  * This must be instantiated inside a [transaction] block.
  */
 data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository: DatabaseRepository) : Snapshot {
+    /**
+     * The connection to the repository's database.
+     */
+    val db: Database = repository.db
+
     override val revision: Int = entity.revision
 
     override var name: String? = entity.name
         set(value) {
-            transaction {
+            transaction(db) {
                 entity.name = value
             }
 
@@ -60,7 +66,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
 
     override var description: String = entity.description
         set(value) {
-            transaction {
+            transaction(db) {
                 entity.description = value
             }
 
@@ -69,7 +75,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
 
     override var pinned: Boolean = entity.pinned
         set(value) {
-            transaction {
+            transaction(db) {
                 entity.pinned = value
             }
 
@@ -80,7 +86,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
 
     override val versions: Map<Path, DatabaseVersion> = object : AbstractMap<Path, DatabaseVersion>() {
         override val entries: Set<Map.Entry<Path, DatabaseVersion>>
-            get() = transaction {
+            get() = transaction(db) {
                 VersionEntity
                     .find { VersionTable.snapshot eq entity.id }
                     .map { SimpleEntry(it.path, DatabaseVersion(it, repository)) }
@@ -89,7 +95,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
 
         override fun containsKey(key: Path): Boolean = get(key) != null
 
-        override fun get(key: Path): DatabaseVersion? = transaction {
+        override fun get(key: Path): DatabaseVersion? = transaction(db) {
             VersionEntity
                 .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq key) }
                 .firstOrNull()
@@ -98,7 +104,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
     }
 
     override val cumulativeVersions: Map<Path, DatabaseVersion>
-        get() = transaction {
+        get() = transaction(db) {
             SnapshotEntity
                 .find { (SnapshotTable.timeline eq timeline.entity.id) and (SnapshotTable.revision lessEq revision) }
                 .orderBy(SnapshotTable.revision to SortOrder.ASC)
@@ -107,14 +113,14 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         }
 
     override val timeline: DatabaseTimeline
-        get() = transaction { DatabaseTimeline(entity.timeline, repository) }
+        get() = transaction(db) { DatabaseTimeline(entity.timeline, repository) }
 
     fun createVersion(path: Path, workDirectory: Path): DatabaseVersion {
         if (path in versions) {
             throw RecordAlreadyExistsException("A version with the path '$path' already exists in this snapshot.")
         }
 
-        val version = transaction {
+        val version = transaction(db) {
             val absolutePath = workDirectory.resolve(path)
 
             // Record file metadata in the database.
@@ -159,7 +165,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         val version = versions[path] ?: return false
 
         // Remove the version from the database.
-        transaction {
+        transaction(db) {
             version.entity.delete()
         }
 

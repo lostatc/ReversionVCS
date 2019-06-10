@@ -25,6 +25,7 @@ import io.github.lostatc.reversion.api.PermissionSet
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.schema.BlockTable
 import io.github.lostatc.reversion.schema.VersionEntity
+import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Files
@@ -38,6 +39,11 @@ import java.util.Objects
  * This must be instantiated inside a [transaction] block.
  */
 class DatabaseVersion(val entity: VersionEntity, override val repository: DatabaseRepository) : Version {
+    /**
+     * The connection to the repository's database.
+     */
+    val db: Database = repository.db
+
     override val path: Path = entity.path
 
     override val lastModifiedTime: FileTime = entity.lastModifiedTime
@@ -51,7 +57,7 @@ class DatabaseVersion(val entity: VersionEntity, override val repository: Databa
     override val snapshot: DatabaseSnapshot = DatabaseSnapshot(entity.snapshot, repository)
 
     override val data: Blob by lazy {
-        transaction {
+        transaction(db) {
             // If a blob is missing, skip over it. It is the responsibility of the caller to check for corruption.
             entity.blocks
                 .orderBy(BlockTable.index to SortOrder.ASC)

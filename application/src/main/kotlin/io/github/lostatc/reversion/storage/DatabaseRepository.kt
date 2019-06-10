@@ -116,7 +116,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
     override val timelines: Map<UUID, DatabaseTimeline> = object : AbstractMap<UUID, DatabaseTimeline>() {
         override val entries: Set<Map.Entry<UUID, DatabaseTimeline>>
-            get() = transaction {
+            get() = transaction(db) {
                 TimelineEntity
                     .all()
                     .map { SimpleEntry(it.id.value, DatabaseTimeline(it, this@DatabaseRepository)) }
@@ -125,7 +125,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
         override fun containsKey(key: UUID): Boolean = get(key) != null
 
-        override fun get(key: UUID): DatabaseTimeline? = transaction {
+        override fun get(key: UUID): DatabaseTimeline? = transaction(db) {
             TimelineEntity
                 .find { TimelineTable.id eq key }
                 .firstOrNull()
@@ -159,7 +159,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     val blockSize: Long by blockSizeProperty
 
     override fun createTimeline(policies: Set<CleanupPolicy>): DatabaseTimeline {
-        val timeline = transaction {
+        val timeline = transaction(db) {
             val timelineEntity = TimelineEntity.new {
                 this.timeCreated = Instant.now()
             }
@@ -180,7 +180,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         val timeline = timelines[id] ?: return false
 
         // Remove the timeline and all its snapshots, versions and tags from the database.
-        transaction {
+        transaction(db) {
             timeline.entity.delete()
         }
 
@@ -192,14 +192,14 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         return true
     }
 
-    private fun getCorruptBlobs(): Set<BlobEntity> = transaction {
+    private fun getCorruptBlobs(): Set<BlobEntity> = transaction(db) {
         BlobEntity
             .all()
             .filter { getBlob(it.checksum)?.checksum != it.checksum }
             .toSet()
     }
 
-    override fun verify(): IntegrityReport = transaction {
+    override fun verify(): IntegrityReport = transaction(db) {
         IntegrityReport(
             getCorruptBlobs()
                 .flatMap { it.blocks }
@@ -211,7 +211,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     override fun repair(workDirectory: Path) {
         val versionsToDelete = mutableSetOf<DatabaseVersion>()
 
-        transaction {
+        transaction(db) {
             val corruptBlobs = getCorruptBlobs()
 
             // Iterate over each corrupt blob.
@@ -273,7 +273,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             blob.newInputStream().use { Files.copy(it, blobPath) }
         }
 
-        transaction {
+        transaction(db) {
             // Add the blob to the database if it doesn't already exist.
             if (BlobTable.select { BlobTable.checksum eq blob.checksum }.empty()) {
                 BlobEntity.new {
@@ -292,7 +292,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     fun removeBlob(checksum: Checksum): Boolean {
         // Remove the record from the database before removing the blob from the file system to avoid corruption in case
         // this operation is interrupted.
-        transaction {
+        transaction(db) {
             BlobTable.deleteWhere { BlobTable.checksum eq checksum }
         }
 
@@ -326,7 +326,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      */
     fun clean() {
         // Get the checksums of blobs which are being referenced by at least one version.
-        val usedChecksums = transaction {
+        val usedChecksums = transaction(db) {
             BlockEntity.all().map { it.blob.checksum }.toSet()
         }
 
@@ -453,9 +453,9 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             Files.createDirectory(blobsPath)
 
             // Create the database.
-            DatabaseFactory.connect(databasePath)
+            val db = DatabaseFactory.connect(databasePath)
 
-            transaction {
+            transaction(db) {
                 SchemaUtils.create(
                     TimelineTable,
                     CleanupPolicyTable,
