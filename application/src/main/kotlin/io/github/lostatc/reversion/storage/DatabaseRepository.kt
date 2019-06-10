@@ -77,6 +77,11 @@ private object DatabaseFactory {
     private val databases: MutableMap<Path, Database> = mutableMapOf()
 
     /**
+     * A logger for logging errors.
+     */
+    private val logger: Logger = LoggerFactory.getLogger(this::class.java)
+
+    /**
      * Configure the connection.
      */
     private fun configure(connection: Connection) {
@@ -97,6 +102,7 @@ private object DatabaseFactory {
             setupConnection = { configure(it) }
         )
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
+        logger.debug("Connecting to database at '$path'.")
         connection
     }
 }
