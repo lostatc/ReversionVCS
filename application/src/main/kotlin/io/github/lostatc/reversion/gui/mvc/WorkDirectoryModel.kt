@@ -23,6 +23,7 @@ import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.gui.FlushableActor
 import io.github.lostatc.reversion.gui.flushableActor
+import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
@@ -86,15 +87,13 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
 
     /**
      * Adds a [CleanupPolicy] to this working directory.
-     *
-     * @throws [IllegalArgumentException] The [amount] is specified without a [unit] of vice versa.
      */
     fun addCleanupPolicy(versions: Int?, amount: Long?, unit: TemporalUnit?) {
         val policyFactory = workDirectory.repository.policyFactory
 
         val policy = if (unit == null && amount == null) {
             if (versions == null) {
-                policyFactory.forever()
+                return
             } else {
                 policyFactory.ofVersions(versions)
             }
@@ -105,7 +104,8 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
                 policyFactory.ofUnit(amount, unit, versions)
             }
         } else {
-            throw IllegalArgumentException("The amount of time and unit of time must be specified together.")
+            sendNotification("The amount of time and unit of time must be specified together.")
+            return
         }
 
         cleanupPolicies.add(policy)
