@@ -31,12 +31,22 @@ import javafx.stage.Stage
 import javafx.util.Duration
 import org.slf4j.LoggerFactory
 
+/**
+ * A snack bar which displays notifications across the program.
+ */
+val notificationBar: JFXSnackbar = JFXSnackbar()
+
+/**
+ * Send a notification to be displayed.
+ */
+fun sendNotification(message: String) = notificationBar.sendNotification(message, Duration.seconds(5.0))
+
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/MainScene.fxml"))
         val rootNode = rootLoader.load<Pane>()
         val rootControl = rootLoader.getController<MainSceneController>()
-        val snackbar = JFXSnackbar(rootNode)
+        notificationBar.registerSnackbarContainer(rootNode)
 
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.gui")
@@ -44,7 +54,7 @@ class Reversion : Application() {
 
             System.err.println("Error: ${throwable.message}")
 
-            throwable.message?.let { snackbar.sendNotification(it, Duration.seconds(5.0)) }
+            throwable.message?.let { sendNotification(it) }
         }
 
         primaryStage.apply {

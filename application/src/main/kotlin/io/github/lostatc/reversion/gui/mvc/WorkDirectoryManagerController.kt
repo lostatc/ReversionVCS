@@ -75,7 +75,7 @@ class WorkDirectoryManagerController {
 
     @FXML
     fun initialize() {
-        unitComboBox.items.setAll("Seconds", "Minutes", "Hours", "Days", "Weeks", "Months")
+        unitComboBox.items.setAll("", "Seconds", "Minutes", "Hours", "Days", "Weeks", "Months")
 
         // Bind the selected working directory in the model to the selected working directory in the view.
         workDirectoryList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
@@ -127,8 +127,8 @@ class WorkDirectoryManagerController {
     @FXML
     fun addCleanupPolicy() {
         model.selected?.addCleanupPolicy(
-            versionsTextField.text.toIntOrNull(),
-            timeField.text.toLongOrNull(),
+            versionsTextField.text?.toIntOrNull(),
+            timeField.text?.toLongOrNull(),
             when (unitComboBox.selectionModel.selectedItem) {
                 "Seconds" -> ChronoUnit.SECONDS
                 "Minutes" -> ChronoUnit.MINUTES
@@ -152,6 +152,7 @@ class WorkDirectoryManagerController {
     @FXML
     fun removeCleanupPolicy() {
         val selectedIndex = cleanupPolicyList.selectionModel.selectedIndex
+        if (selectedIndex < 0) return
         model.selected?.cleanupPolicies?.removeAt(selectedIndex)
     }
 
