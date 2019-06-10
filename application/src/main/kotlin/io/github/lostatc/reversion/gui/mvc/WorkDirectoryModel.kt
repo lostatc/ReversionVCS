@@ -119,11 +119,13 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
          * If there is not working directory at [path], a new one is created.
          */
         suspend fun fromPath(path: Path): WorkDirectoryModel = withContext(Dispatchers.IO) {
-            if (WorkDirectory.isWorkDirectory(path)) {
-                WorkDirectoryModel(WorkDirectory.open(path))
+            val workDirectory = if (WorkDirectory.isWorkDirectory(path)) {
+                WorkDirectory.open(path)
             } else {
-                WorkDirectoryModel(WorkDirectory.init(path, DEFAULT_PROVIDER))
+                WorkDirectory.init(path, DEFAULT_PROVIDER)
             }
+
+            WorkDirectoryModel(workDirectory)
         }
     }
 }
