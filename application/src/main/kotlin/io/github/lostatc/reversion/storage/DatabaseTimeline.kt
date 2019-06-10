@@ -29,6 +29,7 @@ import io.github.lostatc.reversion.schema.SnapshotTable
 import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
+import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SizedCollection
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
@@ -52,6 +53,11 @@ private const val STARTING_REVISION: Int = 1
  * This must be instantiated inside a [transaction] block.
  */
 class DatabaseTimeline(val entity: TimelineEntity, override val repository: DatabaseRepository) : Timeline {
+    /**
+     * The connection to the repository's database.
+     */
+    val db: Database = repository.db
+
     override val id: UUID = entity.id.value
 
     override val timeCreated: Instant = entity.timeCreated
@@ -67,9 +73,9 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
         }.toSet()
         set(value) {
             // This must be a separate transaction.
-            val policyEntities = transaction { entity.cleanupPolicies }
+            val policyEntities = transaction(db) { entity.cleanupPolicies }
 
-            transaction {
+            transaction(db) {
                 for (policyEntity in policyEntities) {
                     policyEntity.delete()
                 }
@@ -91,7 +97,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
 
     override val snapshots: Map<Int, DatabaseSnapshot> = object : AbstractMap<Int, DatabaseSnapshot>() {
         override val entries: Set<Map.Entry<Int, DatabaseSnapshot>>
-            get() = transaction {
+            get() = transaction(db) {
                 SnapshotEntity
                     .find { SnapshotTable.timeline eq entity.id }
                     .map { SimpleEntry(it.revision, DatabaseSnapshot(it, repository)) }
@@ -100,7 +106,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
 
         override fun containsKey(key: Int): Boolean = get(key) != null
 
-        override fun get(key: Int): DatabaseSnapshot? = transaction {
+        override fun get(key: Int): DatabaseSnapshot? = transaction(db) {
             SnapshotEntity
                 .find { (SnapshotTable.timeline eq entity.id) and (SnapshotTable.revision eq key) }
                 .firstOrNull()
@@ -109,7 +115,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
     }
 
     override val latestSnapshot: DatabaseSnapshot?
-        get() = transaction {
+        get() = transaction(db) {
             entity.snapshots
                 .orderBy(SnapshotTable.revision to SortOrder.DESC)
                 .limit(1)
@@ -119,7 +125,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
 
 
     override val paths: Set<Path>
-        get() = transaction {
+        get() = transaction(db) {
             entity
                 .snapshots
                 .flatMap { it.versions }
@@ -134,7 +140,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
         description: String,
         pinned: Boolean
     ): Snapshot {
-        val snapshot = transaction {
+        val snapshot = transaction(db) {
             val snapshotEntity = SnapshotEntity.new {
                 this.revision = snapshots.keys.max()?.let { it + 1 } ?: STARTING_REVISION
                 this.name = name
@@ -165,7 +171,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
         val snapshot = snapshots[revision] ?: return false
 
         // Remove the snapshot and all its versions and tags from the database.
-        transaction {
+        transaction(db) {
             snapshot.entity.delete()
         }
 
@@ -177,7 +183,7 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
         return true
     }
 
-    override fun listVersions(path: Path): List<Version> = transaction {
+    override fun listVersions(path: Path): List<Version> = transaction(db) {
         val query = VersionTable.innerJoin(SnapshotTable)
             .slice(VersionTable.columns)
             .select { (SnapshotTable.timeline eq entity.id) and (VersionTable.path eq path) }
