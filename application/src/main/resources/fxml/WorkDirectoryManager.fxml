@@ -38,7 +38,7 @@
                 <JFXListView fx:id="cleanupPolicyList" depth="2" styleClass="card-list-view" VBox.vgrow="ALWAYS">
                     <placeholder>
                         <Card styleClass="placeholder" subtitle="Add a rule to automatically clean up old versions"
-                              title="No cleanup rules"/>
+                              title="There are no cleanup rules"/>
                     </placeholder>
                 </JFXListView>
                 <HBox alignment="CENTER" spacing="10.0">
@@ -66,6 +66,7 @@
                         </Label>
                         <JFXComboBox fx:id="unitComboBox" prefWidth="120.0"/>
                     </VBox>
+                    <Region prefWidth="20.0"/>
                     <IconButton icon="gmi-add" onAction="#addCleanupPolicy" styleClass="icon-button-light"/>
                     <IconButton icon="gmi-remove" onAction="#removeCleanupPolicy" styleClass="icon-button-light"/>
                 </HBox>
