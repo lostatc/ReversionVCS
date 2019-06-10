@@ -73,6 +73,10 @@
     -fx-text-fill: -grey-50;
 }
 
+.navigation-tab-bar .tab-header-area .tab:hover .tab-label {
+    -fx-text-fill: -grey-50;
+}
+
 /* The background of the window. */
 .background {
     -fx-background-color: -grey-200;
