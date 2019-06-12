@@ -21,15 +21,27 @@ package io.github.lostatc.reversion.gui.mvc
 
 import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXListView
+import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXTextField
-import io.github.lostatc.reversion.gui.MappedList
+import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.controls.Card
 import io.github.lostatc.reversion.gui.controls.ListItem
 import javafx.fxml.FXML
 import javafx.scene.control.Label
-import javafx.scene.layout.Pane
+import javafx.scene.control.TabPane
 import javafx.stage.DirectoryChooser
+import javafx.stage.FileChooser
 import java.time.temporal.ChronoUnit
+
+/**
+ * Set the visibility of the contents of the tab pane.
+ */
+private fun TabPane.setContentsVisible(visible: Boolean) {
+    for (tab in tabs) {
+        tab.content.isVisible = visible
+    }
+}
+
 
 /**
  * The controller for the view that is used to manage working directories.
@@ -66,10 +78,16 @@ class WorkDirectoryManagerController {
     private lateinit var cleanupPolicyList: JFXListView<Label>
 
     /**
-     * The pane containing information about the working directory.
+     * The list view that displays the files being ignored.
      */
     @FXML
-    private lateinit var infoPane: Pane
+    private lateinit var ignorePathList: JFXListView<Label>
+
+    /**
+     * The tab pane used for managing the currently selected working directory.
+     */
+    @FXML
+    private lateinit var workDirectoryTabPane: JFXTabPane
 
     private val model: WorkDirectoryManagerModel = WorkDirectoryManagerModel()
 
@@ -83,7 +101,7 @@ class WorkDirectoryManagerController {
         }
 
         // Bind the list of working directories in the view to the model.
-        workDirectoryList.items = MappedList(model.workDirectories) {
+        workDirectoryList.items = MappedObservableList(model.workDirectories) {
             Card().apply {
                 title = it.path.fileName.toString()
                 subtitle = it.path.toString()
@@ -92,19 +110,24 @@ class WorkDirectoryManagerController {
 
         model.loadWorkDirectories()
 
-        // Make the version information pane initially invisible.
-        infoPane.isVisible = false
+        // Make the working directory information pane initially invisible.
+        workDirectoryTabPane.setContentsVisible(false)
 
         model.selectedProperty.addListener { _, _, newValue ->
             if (newValue == null) {
-                infoPane.isVisible = false
+                workDirectoryTabPane.setContentsVisible(false)
             } else {
                 // Bind the list of cleanup policies it the view to the model.
-                cleanupPolicyList.items = MappedList(newValue.cleanupPolicies) {
+                cleanupPolicyList.items = MappedObservableList(newValue.cleanupPolicies) {
                     ListItem(it.description)
                 }
 
-                infoPane.isVisible = true
+                // Bind the list of ignored paths in the view to the model.
+                ignorePathList.items = MappedObservableList(newValue.ignoredPaths) {
+                    ListItem(it.toString())
+                }
+
+                workDirectoryTabPane.setContentsVisible(true)
             }
         }
     }
@@ -153,7 +176,47 @@ class WorkDirectoryManagerController {
     fun removeCleanupPolicy() {
         val selectedIndex = cleanupPolicyList.selectionModel.selectedIndex
         if (selectedIndex < 0) return
+
         model.selected?.cleanupPolicies?.removeAt(selectedIndex)
+    }
+
+    /**
+     * Add new files to be ignored.
+     */
+    @FXML
+    fun addIgnoreFile() {
+        val newPath = FileChooser().run {
+            title = "Select files to ignore"
+            initialDirectory = model.selected?.path?.toFile()
+            showOpenMultipleDialog(workDirectoryTabPane.scene.window)?.map { it.toPath() } ?: return
+        }
+
+        model.selected?.ignoredPaths?.addAll(newPath)
+    }
+
+    /**
+     * Add a new directory to be ignored.
+     */
+    @FXML
+    fun addIgnoreDirectory() {
+        val newPath = DirectoryChooser().run {
+            title = "Select directory to ignore"
+            initialDirectory = model.selected?.path?.toFile()
+            showDialog(workDirectoryTabPane.scene.window)?.toPath() ?: return
+        }
+
+        model.selected?.ignoredPaths?.add(newPath)
+    }
+
+    /**
+     * Remove a file from the list of ignored files.
+     */
+    @FXML
+    fun removeIgnorePath() {
+        val selectedIndex = ignorePathList.selectionModel.selectedIndex
+        if (selectedIndex < 0) return
+
+        model.selected?.ignoredPaths?.removeAt(selectedIndex)
     }
 
     /**

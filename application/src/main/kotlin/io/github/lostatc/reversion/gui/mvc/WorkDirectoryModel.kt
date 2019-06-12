@@ -69,11 +69,24 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
     val cleanupPolicies: ObservableList<CleanupPolicy> =
         FXCollections.observableArrayList(workDirectory.timeline.cleanupPolicies)
 
+    /**
+     * The ignored paths being displayed in the UI.
+     */
+    val ignoredPaths: ObservableList<Path> =
+        FXCollections.observableArrayList(workDirectory.ignoredPaths)
+
     init {
         // Update the working directory whenever a cleanup policy is added or removed.
         cleanupPolicies.addListener(
             ListChangeListener<CleanupPolicy> { change ->
                 execute { workDirectory.timeline.cleanupPolicies = change.list.toSet() }
+            }
+        )
+
+        // Update the working directory whenever an ignored path is added or removed.
+        ignoredPaths.addListener(
+            ListChangeListener<Path> { change ->
+                execute { workDirectory.ignoredPaths = change.list }
             }
         )
     }
@@ -109,7 +122,6 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
         }
 
         cleanupPolicies.add(policy)
-        execute { workDirectory.timeline.cleanupPolicies += policy }
     }
 
     companion object {
