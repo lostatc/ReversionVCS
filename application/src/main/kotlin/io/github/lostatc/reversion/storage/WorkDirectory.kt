@@ -58,6 +58,15 @@ private data class MultiPathMatcher(val matchers: Iterable<PathMatcher>) : PathM
 }
 
 /**
+ * Returns a list of lines from the file or an empty list if the file doesn't exist.
+ */
+private fun readAllLinesIfExists(file: Path): List<String> = try {
+    Files.readAllLines(file)
+} catch (e: NoSuchFileException) {
+    emptyList()
+}
+
+/**
  * A working directory.
  *
  * @param [path] The absolute path of the working directory.
@@ -72,26 +81,32 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     /**
      * The path of the file containing paths to ignore.
      */
-    private val ignorePath: Path = path.resolve(relativeIgnorePath)
+    private val ignoreFile: Path = path.resolve(relativeIgnorePath)
+
+    /**
+     * The list of paths currently being ignored.
+     *
+     * This is a list that is backed by the ignore pattern file. Getting this list returns values from the file and
+     * setting the list sets the contents of the file.
+     *
+     * This list includes only the paths in the ignore pattern file and does not include paths ignored by the program
+     * by default.
+     */
+    var ignoredPaths: List<Path>
+        get() = readAllLinesIfExists(ignoreFile).map { Paths.get(it) }
+        set(value) {
+            Files.write(ignoreFile, value.map { it.toString() })
+        }
 
     /**
      * The [PathMatcher] used to match paths to ignore.
      */
     private val ignoreMatcher: PathMatcher
-        get() {
-            val patterns = try {
-                Files.readAllLines(ignorePath)
-            } catch (e: NoSuchFileException) {
-                emptyList<String>()
-            }
-
-            val matchers = patterns
-                .map { Paths.get(it) }
-                .let { it.plusElement(hiddenPath) }
+        get() = MultiPathMatcher(
+            ignoredPaths
+                .plusElement(hiddenPath)
                 .map { path -> PathMatcher { it.startsWith(path) } }
-
-            return MultiPathMatcher(matchers)
-        }
+        )
 
     /**
      * The repository associated with this working directory.

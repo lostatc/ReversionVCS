@@ -77,6 +77,36 @@
     -fx-text-fill: -grey-50;
 }
 
+/* A tab pane for navigating between sections. */
+.section-tab-bar {
+    -fx-tab-min-height: 40;
+}
+
+.section-tab-bar .tab-header-area .jfx-rippler {
+    -jfx-rippler-fill: -grey-800;
+}
+
+.section-tab-bar .tab-header-area .tab-header-background {
+    -fx-background-color: -grey-50;
+}
+
+.section-tab-bar .tab-header-area .tab-selected-line {
+    -fx-background-color: -grey-800;
+}
+
+.section-tab-bar .tab-header-area .tab .tab-label {
+    -fx-text-fill: -grey-600;
+    -fx-font-weight: normal;
+}
+
+.section-tab-bar .tab-header-area .tab:selected .tab-label {
+    -fx-text-fill: -grey-800;
+}
+
+.section-tab-bar .tab-header-area .tab:hover .tab-label {
+    -fx-text-fill: -grey-800;
+}
+
 /* The background of the window. */
 .background {
     -fx-background-color: -grey-200;

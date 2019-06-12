@@ -24,7 +24,7 @@ import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTextArea
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.cli.format
-import io.github.lostatc.reversion.gui.MappedList
+import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.controls.Card
 import javafx.fxml.FXML
 import javafx.scene.Node
@@ -102,7 +102,7 @@ class VersionManagerController {
         }
 
         // Bind the list of versions in the view to the model.
-        versionList.items = MappedList(model.versions) {
+        versionList.items = MappedObservableList(model.versions) {
             Card().apply {
                 titleProperty.bind(it.displayNameProperty)
                 subtitle = it.timeCreated.format(FormatStyle.MEDIUM)
