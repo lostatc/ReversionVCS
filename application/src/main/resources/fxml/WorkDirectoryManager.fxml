@@ -80,7 +80,7 @@
                         <Region prefHeight="40.0"/>
                     </VBox>
                 </Tab>
-                <Tab text="Ignore Files">
+                <Tab text="Ignored Files">
                     <VBox xmlns:fx="http://javafx.com/fxml/1" spacing="25.0" xmlns="http://javafx.com/javafx/11.0.1">
                         <JFXListView fx:id="ignorePathList" depth="2" styleClass="card-list-view" VBox.vgrow="ALWAYS">
                             <placeholder>
