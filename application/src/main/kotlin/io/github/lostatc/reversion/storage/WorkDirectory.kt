@@ -67,6 +67,18 @@ private fun readAllLinesIfExists(file: Path): List<String> = try {
 }
 
 /**
+ * Returns a relative path between this path and [other] if possible or `null` otherwise.
+ */
+private fun Path.relativizedOrNull(other: Path): Path? =
+    if (isAbsolute == other.isAbsolute && other.startsWith(this)) relativize(other) else null
+
+/**
+ * Returns [other] resolved against this path if possible or `null` otherwise.
+ */
+private fun Path.resolvedOrNull(other: Path): Path? =
+    if (!other.isAbsolute || startsWith(other)) resolve(other) else null
+
+/**
  * A working directory.
  *
  * @param [path] The absolute path of the working directory.
@@ -91,11 +103,21 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      *
      * This list includes only the paths in the ignore pattern file and does not include paths ignored by the program
      * by default.
+     *
+     * This list does not include paths from the ignore pattern file which are absolute and not descendants of this
+     * working directory. All paths are converted to relative paths before being written to the ignore pattern file and
+     * converted back to absolute paths when read from it.
      */
     var ignoredPaths: List<Path>
-        get() = readAllLinesIfExists(ignoreFile).map { Paths.get(it) }
+        get() = readAllLinesIfExists(ignoreFile)
+            .map { Paths.get(it) }
+            .mapNotNull { path.resolvedOrNull(it) }
+
         set(value) {
-            Files.write(ignoreFile, value.map { it.toString() })
+            val lines = value
+                .mapNotNull { path.relativizedOrNull(it) }
+                .map { it.toString() }
+            Files.write(ignoreFile, lines)
         }
 
     /**
