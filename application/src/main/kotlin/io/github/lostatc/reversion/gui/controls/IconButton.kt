@@ -27,6 +27,7 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.event.EventHandler
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
+import javafx.scene.control.Tooltip
 import javafx.scene.input.MouseEvent
 import javafx.scene.shape.Shape
 import org.kordamp.ikonli.javafx.FontIcon
@@ -35,6 +36,7 @@ import org.kordamp.ikonli.javafx.FontIcon
  * A circular button that displays an icon.
  */
 class IconButton : JFXRippler() {
+
     /**
      * The icon top display on the button.
      */
@@ -45,7 +47,7 @@ class IconButton : JFXRippler() {
      * The click box of the button.
      */
     @FXML
-    private lateinit var background: Shape
+    private lateinit var foreground: Shape
 
     /**
      * A property for [icon].
@@ -67,6 +69,16 @@ class IconButton : JFXRippler() {
      */
     var onAction: EventHandler<MouseEvent> by onActionProperty
 
+    /**
+     * A property for [tooltip].
+     */
+    val tooltipProperty: Property<Tooltip?> = SimpleObjectProperty()
+
+    /**
+     * The tooltip to display on this button.
+     */
+    var tooltip: Tooltip? by tooltipProperty
+
     init {
         FXMLLoader(this::class.java.getResource("/fxml/IconButton.fxml")).apply {
             classLoader = this@IconButton::class.java.classLoader
@@ -82,6 +94,10 @@ class IconButton : JFXRippler() {
             fontIcon.iconLiteral = newValue
         }
 
-        background.setOnMouseClicked { event -> onAction.handle(event) }
+        tooltipProperty.addListener { _, _, newValue ->
+            Tooltip.install(foreground, newValue)
+        }
+
+        foreground.setOnMouseClicked { event -> onAction.handle(event) }
     }
 }

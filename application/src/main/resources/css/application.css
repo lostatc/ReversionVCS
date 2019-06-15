@@ -229,7 +229,7 @@
     -fx-icon-color: -grey-200;
 }
 
-.icon-button-dark .button-background:hover {
+.icon-button-dark .button-foreground:hover {
     -fx-fill: -grey-50;
     -fx-opacity: 0.2;
 }
@@ -249,7 +249,7 @@
     -fx-icon-color: -grey-800;
 }
 
-.icon-button-light .button-background:hover {
+.icon-button-light .button-foreground:hover {
     -fx-fill: -grey-600;
     -fx-opacity: 0.2;
 }
@@ -257,6 +257,26 @@
 .icon-button-light .button-label {
     -fx-text-alignment: center;
     -fx-text-fill: -grey-800;
+}
+
+/* A floating action button. */
+.fab-light {
+    -jfx-mask-type: CIRCLE;
+}
+
+.fab-light .button-icon {
+    -fx-icon-size: 24px;
+    -fx-icon-color: -grey-800;
+}
+
+.fab-light .button-background {
+    -fx-fill: -grey-50;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 15, 0.16, 0, 4);
+}
+
+.fab-light .button-foreground:hover {
+    -fx-fill: -grey-600;
+    -fx-opacity: 0.2;
 }
 
 /* A popup notification. */

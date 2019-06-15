@@ -28,6 +28,7 @@ import javafx.event.EventHandler
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
+import javafx.scene.control.Tooltip
 import javafx.scene.input.MouseEvent
 import javafx.scene.shape.Shape
 import org.kordamp.ikonli.javafx.FontIcon
@@ -46,7 +47,7 @@ class LabeledIconButton : JFXRippler() {
      * The click box of the button.
      */
     @FXML
-    private lateinit var background: Shape
+    private lateinit var foreground: Shape
 
     /**
      * The label to display for the button.
@@ -75,6 +76,16 @@ class LabeledIconButton : JFXRippler() {
     var onAction: EventHandler<MouseEvent> by onActionProperty
 
     /**
+     * A property for [tooltip].
+     */
+    val tooltipProperty: Property<Tooltip?> = SimpleObjectProperty()
+
+    /**
+     * The tooltip to display on this button.
+     */
+    var tooltip: Tooltip? by tooltipProperty
+
+    /**
      * A property for [label].
      */
     val labelProperty: Property<String> = SimpleObjectProperty("Label")
@@ -101,6 +112,11 @@ class LabeledIconButton : JFXRippler() {
 
         buttonLabel.textProperty().bind(labelProperty)
 
-        background.setOnMouseClicked { event -> onAction.handle(event) }
+        tooltipProperty.addListener { _, _, newValue ->
+            Tooltip.install(foreground, newValue)
+            Tooltip.install(buttonLabel, newValue)
+        }
+
+        foreground.setOnMouseClicked { event -> onAction.handle(event) }
     }
 }
