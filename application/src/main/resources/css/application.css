@@ -224,14 +224,18 @@
     -jfx-mask-type: CIRCLE;
 }
 
-.icon-button-dark .ikonli-font-icon {
+.icon-button-dark .button-icon {
     -fx-icon-size: 24px;
     -fx-icon-color: -grey-200;
 }
 
-.icon-button-dark Circle:hover {
+.icon-button-dark .button-background:hover {
     -fx-fill: -grey-50;
     -fx-opacity: 0.2;
+}
+
+.icon-button-dark .button-label {
+    -fx-text-fill: -grey-200;
 }
 
 /* A button with an icon label for use on a light background. */
@@ -239,14 +243,18 @@
     -jfx-mask-type: CIRCLE;
 }
 
-.icon-button-light .ikonli-font-icon {
+.icon-button-light .button-icon {
     -fx-icon-size: 24px;
     -fx-icon-color: -grey-800;
 }
 
-.icon-button-light Circle:hover {
+.icon-button-light .button-background:hover {
     -fx-fill: -grey-600;
     -fx-opacity: 0.2;
+}
+
+.icon-button-light .button-label {
+    -fx-text-fill: -grey-800;
 }
 
 /* A popup notification. */
