@@ -10,7 +10,7 @@
     <VBox alignment="center">
         <StackPane>
             <FontIcon fx:id="fontIcon" styleClass="button-icon"/>
-            <Circle fx:id="background" styleClass="button-background" fill="TRANSPARENT" radius="18.0"
+            <Circle fx:id="foreground" styleClass="button-foreground" fill="TRANSPARENT" radius="18.0"
                     stroke="TRANSPARENT" strokeType="INSIDE"/>
         </StackPane>
         <Label fx:id="buttonLabel" styleClass="button-label"/>

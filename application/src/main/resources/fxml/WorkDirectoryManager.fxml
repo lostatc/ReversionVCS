@@ -15,23 +15,56 @@
             <String fx:value="background"/>
             <String fx:value="pane-box"/>
         </styleClass>
-        <VBox minWidth="200.0" prefWidth="400.0" spacing="15.0">
-            <JFXListView fx:id="workDirectoryList" depth="2" styleClass="card-list-view" VBox.vgrow="ALWAYS">
-                <placeholder>
-                    <Card styleClass="placeholder" subtitle="Add a directory to start tracking changes"
-                          title="No tracked directories"/>
-                </placeholder>
-            </JFXListView>
-            <HBox alignment="CENTER_LEFT" spacing="5.0" styleClass="pane">
-                <IconButton icon="gmi-add" onAction="#addWorkDirectory" styleClass="icon-button-light"/>
-                <Label text="Track new directory"/>
-                <padding>
-                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                </padding>
-            </HBox>
-        </VBox>
+        <StackPane alignment="BOTTOM_CENTER" minWidth="200.0" prefWidth="400.0">
+            <children>
+                <JFXListView fx:id="workDirectoryList" depth="2" styleClass="card-list-view">
+                    <placeholder>
+                        <Card styleClass="placeholder" subtitle="Add a directory to start tracking changes"
+                              title="No tracked directories"/>
+                    </placeholder>
+                </JFXListView>
+                <IconButton icon="gmi-add" maxHeight="-Infinity" maxWidth="-Infinity" onAction="#addWorkDirectory"
+                            styleClass="fab-light">
+                    <tooltip>
+                        <Tooltip text="Add a new directory to track changes in."/>
+                    </tooltip>
+                </IconButton>
+            </children>
+        </StackPane>
         <StackPane minWidth="400.0" prefWidth="600.0" styleClass="pane" HBox.hgrow="ALWAYS">
             <JFXTabPane fx:id="workDirectoryTabPane" styleClass="section-tab-bar">
+                <Tab text="Status">
+                    <VBox xmlns:fx="http://javafx.com/fxml/1" spacing="25.0" xmlns="http://javafx.com/javafx/11.0.1">
+                        <padding>
+                            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+                        </padding>
+                        <Region prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS"/>
+                        <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0">
+                            <LabeledIconButton icon="gmi-pause" label="Pause" styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Start/stop tracking changes in this directory."/>
+                                </tooltip>
+                            </LabeledIconButton>
+                            <LabeledIconButton icon="gmi-check-circle" label="Verify"
+                                               styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Check this directory for corruption."/>
+                                </tooltip>
+                            </LabeledIconButton>
+                            <LabeledIconButton icon="gmi-build" label="Repair" styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Repair corrupt data in this directory."/>
+                                </tooltip>
+                            </LabeledIconButton>
+                            <LabeledIconButton icon="gmi-delete-forever" label="Delete"
+                                               styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Delete all versions in this directory."/>
+                                </tooltip>
+                            </LabeledIconButton>
+                        </FlowPane>
+                    </VBox>
+                </Tab>
                 <Tab text="Cleanup Rules">
                     <VBox xmlns:fx="http://javafx.com/fxml/1" spacing="25.0" xmlns="http://javafx.com/javafx/11.0.1">
                         <padding>
@@ -72,9 +105,17 @@
                                 <JFXComboBox fx:id="unitComboBox" prefWidth="120.0"/>
                             </VBox>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <IconButton icon="gmi-add" onAction="#addCleanupPolicy" styleClass="icon-button-light"/>
+                            <IconButton icon="gmi-add" onAction="#addCleanupPolicy" styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Add a new cleanup rule."/>
+                                </tooltip>
+                            </IconButton>
                             <IconButton icon="gmi-remove" onAction="#removeCleanupPolicy"
-                                        styleClass="icon-button-light"/>
+                                        styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Remove the selected cleanup rule."/>
+                                </tooltip>
+                            </IconButton>
                             <Region HBox.hgrow="ALWAYS"/>
                         </HBox>
                         <Region prefHeight="40.0"/>
@@ -90,19 +131,27 @@
                             </placeholder>
                         </JFXListView>
                         <HBox alignment="CENTER" spacing="10.0">
-                            <IconButton icon="gmi-note-add" onAction="#addIgnoreFile" styleClass="icon-button-light"/>
+                            <IconButton icon="gmi-note-add" onAction="#addIgnoreFile" styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Select a file to ignore."/>
+                                </tooltip>
+                            </IconButton>
                             <IconButton icon="gmi-create-new-folder" onAction="#addIgnoreDirectory"
-                                        styleClass="icon-button-light"/>
-                            <IconButton icon="gmi-remove" onAction="#removeIgnorePath" styleClass="icon-button-light"/>
+                                        styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Select a directory to ignore."/>
+                                </tooltip>
+                            </IconButton>
+                            <IconButton icon="gmi-remove" onAction="#removeIgnorePath" styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Stop ignoring the selected file/directory."/>
+                                </tooltip>
+                            </IconButton>
                         </HBox>
                         <Region prefHeight="40.0"/>
                         <padding>
                             <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                         </padding>
-                    </VBox>
-                </Tab>
-                <Tab text="Repair">
-                    <VBox xmlns:fx="http://javafx.com/fxml/1" spacing="25.0" xmlns="http://javafx.com/javafx/11.0.1">
                     </VBox>
                 </Tab>
             </JFXTabPane>
