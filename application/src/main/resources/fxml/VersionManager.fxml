@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.jfoenix.controls.*?>
-<?import io.github.lostatc.reversion.gui.controls.Card?>
+<?import io.github.lostatc.reversion.gui.controls.*?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import java.lang.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
-      prefWidth="640.0"
-      styleClass="background" xmlns="http://javafx.com/javafx/11.0.1"
+      prefWidth="640.0" styleClass="background" xmlns="http://javafx.com/javafx/11.0.1"
       fx:controller="io.github.lostatc.reversion.gui.mvc.VersionManagerController">
     <JFXToolbar>
         <top>
@@ -16,21 +14,7 @@
                 <padding>
                     <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                 </padding>
-                <JFXButton buttonType="RAISED" onAction="#browsePath" text="Browse">
-                    <styleClass>
-                        <String fx:value="button-text"/>
-                        <String fx:value="button-regular"/>
-                    </styleClass>
-                </JFXButton>
-                <JFXButton onAction="#setPath" text="OK">
-                    <HBox.margin>
-                        <Insets left="15.0"/>
-                    </HBox.margin>
-                    <styleClass>
-                        <String fx:value="button-text"/>
-                        <String fx:value="button-confirm"/>
-                    </styleClass>
-                </JFXButton>
+                <IconButton icon="gmi-folder-open" onAction="#browsePath" styleClass="icon-button-light"/>
                 <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#setPath" promptText="Path"
                               HBox.hgrow="ALWAYS">
                     <HBox.margin>
@@ -43,7 +27,7 @@
     <HBox prefHeight="100.0" prefWidth="640.0" styleClass="pane-box" VBox.vgrow="ALWAYS">
         <JFXListView fx:id="versionList" depth="2" minWidth="200.0" prefWidth="400.0" styleClass="card-list-view">
             <placeholder>
-                <Card title="No versions" subtitle="Choose a file to show versions" styleClass="placeholder"/>
+                <Card styleClass="placeholder" subtitle="Choose a file to show versions" title="No versions"/>
             </placeholder>
         </JFXListView>
         <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" styleClass="pane" HBox.hgrow="SOMETIMES">
@@ -71,24 +55,12 @@
                     <JFXTextArea fx:id="descriptionField" maxHeight="1.7976931348623157E308" wrapText="true"/>
                 </VBox>
                 <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
-                    <JFXButton onAction="#deleteVersion" text="Delete">
-                        <styleClass>
-                            <String fx:value="button-text"/>
-                            <String fx:value="button-danger"/>
-                        </styleClass>
-                    </JFXButton>
-                    <JFXButton onAction="#restoreVersion" text="Restore">
-                        <styleClass>
-                            <String fx:value="button-text"/>
-                            <String fx:value="button-regular"/>
-                        </styleClass>
-                    </JFXButton>
-                    <JFXButton onAction="#openVersion" text="Open">
-                        <styleClass>
-                            <String fx:value="button-text"/>
-                            <String fx:value="button-regular"/>
-                        </styleClass>
-                    </JFXButton>
+                    <LabeledIconButton icon="gmi-delete-forever" label="Delete" onAction="#deleteVersion"
+                                       styleClass="icon-button-light"/>
+                    <LabeledIconButton icon="gmi-restore" label="Restore" onAction="#restoreVersion"
+                                       styleClass="icon-button-light"/>
+                    <LabeledIconButton icon="gmi-open-in-new" label="Open" onAction="#openVersion"
+                                       styleClass="icon-button-light"/>
                 </FlowPane>
                 <padding>
                     <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>

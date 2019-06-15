@@ -235,6 +235,7 @@
 }
 
 .icon-button-dark .button-label {
+    -fx-text-alignment: center;
     -fx-text-fill: -grey-200;
 }
 
@@ -254,6 +255,7 @@
 }
 
 .icon-button-light .button-label {
+    -fx-text-alignment: center;
     -fx-text-fill: -grey-800;
 }
 
