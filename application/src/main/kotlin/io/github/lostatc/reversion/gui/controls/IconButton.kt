@@ -28,14 +28,13 @@ import javafx.event.EventHandler
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.input.MouseEvent
-import javafx.scene.shape.Circle
+import javafx.scene.shape.Shape
 import org.kordamp.ikonli.javafx.FontIcon
 
 /**
  * A circular button that displays an icon.
  */
 class IconButton : JFXRippler() {
-
     /**
      * The icon top display on the button.
      */
@@ -43,10 +42,10 @@ class IconButton : JFXRippler() {
     private lateinit var fontIcon: FontIcon
 
     /**
-     * The circular click box of the button.
+     * The click box of the button.
      */
     @FXML
-    private lateinit var circle: Circle
+    private lateinit var background: Shape
 
     /**
      * A property for [icon].
@@ -83,6 +82,6 @@ class IconButton : JFXRippler() {
             fontIcon.iconLiteral = newValue
         }
 
-        circle.setOnMouseClicked { event -> onAction.handle(event) }
+        background.setOnMouseClicked { event -> onAction.handle(event) }
     }
 }
