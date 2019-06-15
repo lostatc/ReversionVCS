@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
+import java.time.Instant
 import java.time.temporal.TemporalUnit
 
 /**
@@ -46,6 +47,22 @@ data class WorkDirectoryOperationContext(val workDirectory: WorkDirectory)
  * An operation to store or retrieve data about a [WorkDirectory].
  */
 typealias WorkDirectoryOperation = WorkDirectoryOperationContext.() -> Unit
+
+/**
+ * Statistics about a working directory.
+ *
+ * @param [snapshots] The number of snapshots in the timeline.
+ * @param [latestVersion] The time the most recent version was created, or `null` if there are no versions.
+ * @param [storageUsed] The amount of space the repository takes up in bytes.
+ * @param [storageSaved] The difference between the total size of all the versions stored in the repository and the
+ * amount of space taken up by the repository.
+ */
+data class WorkDirectoryStatistics(
+    val snapshots: Int,
+    val latestVersion: Instant?,
+    val storageUsed: Long,
+    val storageSaved: Long
+)
 
 /**
  * The model for storing information about the currently selected working directory.
@@ -122,6 +139,23 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
         }
 
         cleanupPolicies.add(policy)
+    }
+
+    /**
+     * Returns statistics for the working directory.
+     */
+    fun getStatistics(): WorkDirectoryStatistics {
+        val totalSize = workDirectory.timeline.snapshots.values
+            .flatMap { it.versions.values }
+            .map { it.size }
+            .sum()
+
+        return WorkDirectoryStatistics(
+            snapshots = workDirectory.timeline.snapshots.size,
+            latestVersion = workDirectory.timeline.latestSnapshot?.timeCreated,
+            storageUsed = workDirectory.repository.storedSize,
+            storageSaved = totalSize - workDirectory.repository.storedSize
+        )
     }
 
     companion object {

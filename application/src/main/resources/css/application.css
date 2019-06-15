@@ -162,6 +162,12 @@
     -fx-background-color: -red-300;
 }
 
+.jfx-toggle-button {
+    -fx-text-fill: -grey-800;
+    -fx-text-alignment: center;
+    -fx-font-size: 12;
+}
+
 /* A card-style list. */
 .card-list-view {
     -fx-background-color: transparent;
@@ -237,6 +243,7 @@
 .icon-button-dark .button-label {
     -fx-text-alignment: center;
     -fx-text-fill: -grey-200;
+    -fx-font-size: 12;
 }
 
 /* A button with an icon label for use on a light background. */
@@ -257,6 +264,7 @@
 .icon-button-light .button-label {
     -fx-text-alignment: center;
     -fx-text-fill: -grey-800;
+    -fx-font-size: 12;
 }
 
 /* A floating action button. */
@@ -277,6 +285,11 @@
 .fab-light .button-foreground:hover {
     -fx-fill: -grey-600;
     -fx-opacity: 0.2;
+}
+
+/* A key-value pair displaying information with an icon. */
+.definition .definition-icon {
+    -fx-icon-size: 24px;
 }
 
 /* A popup notification. */

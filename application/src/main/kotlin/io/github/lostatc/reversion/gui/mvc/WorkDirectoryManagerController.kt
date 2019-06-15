@@ -23,14 +23,18 @@ import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXTextField
+import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.controls.Card
+import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ListItem
 import javafx.fxml.FXML
 import javafx.scene.control.Label
 import javafx.scene.control.TabPane
 import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
+import org.apache.commons.io.FileUtils
+import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
 
 /**
@@ -89,6 +93,30 @@ class WorkDirectoryManagerController {
     @FXML
     private lateinit var workDirectoryTabPane: JFXTabPane
 
+    /**
+     * A widget which shows the current number of snapshots in the working directory.
+     */
+    @FXML
+    private lateinit var snapshotsDefinition: Definition
+
+    /**
+     * A widget which shows the current amount of storage used in the working directory.
+     */
+    @FXML
+    private lateinit var storageUsedDefinition: Definition
+
+    /**
+     * A widget which shows the amount of storage that was saved through deduplication.
+     */
+    @FXML
+    private lateinit var storageSavedDefinition: Definition
+
+    /**
+     * A widget which shows the time the most recent version was created.
+     */
+    @FXML
+    private lateinit var latestVersionDefinition: Definition
+
     private val model: WorkDirectoryManagerModel = WorkDirectoryManagerModel()
 
     @FXML
@@ -126,6 +154,13 @@ class WorkDirectoryManagerController {
                 ignorePathList.items = MappedObservableList(newValue.ignoredPaths) {
                     ListItem(it.toString())
                 }
+
+                // Calculate the statistics and show them in the status pane.
+                val statistics = newValue.getStatistics()
+                snapshotsDefinition.value = statistics.snapshots.toString()
+                storageUsedDefinition.value = FileUtils.byteCountToDisplaySize(statistics.storageUsed)
+                storageSavedDefinition.value = FileUtils.byteCountToDisplaySize(statistics.storageSaved)
+                latestVersionDefinition.value = statistics.latestVersion?.format(FormatStyle.MEDIUM) ?: "N/A"
 
                 workDirectoryTabPane.setContentsVisible(true)
             }
@@ -217,13 +252,5 @@ class WorkDirectoryManagerController {
         if (selectedIndex < 0) return
 
         model.selected?.ignoredPaths?.removeAt(selectedIndex)
-    }
-
-    /**
-     * Repair the repository associated with the currently selected working directory.
-     */
-    @FXML
-    fun repairRepository() {
-        model.repairRepository()
     }
 }

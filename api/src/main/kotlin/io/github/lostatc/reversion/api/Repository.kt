@@ -60,6 +60,14 @@ interface Repository : Configurable {
     val timelines: Map<UUID, Timeline>
 
     /**
+     * The amount of storage space being used by the repository in bytes.
+     *
+     * This is the amount of storage space being used by the repository, which may be different from the total size of
+     * the versions stored in it. This does not include space taken up by metadata.
+     */
+    val storedSize: Long
+
+    /**
      * Creates a new timeline in this repository and returns it.
      *
      * @param [policies] The rules which govern how old snapshots in this timeline are cleaned up.
