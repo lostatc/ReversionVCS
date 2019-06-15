@@ -16,20 +16,18 @@
             <String fx:value="pane-box"/>
         </styleClass>
         <StackPane alignment="BOTTOM_CENTER" minWidth="200.0" prefWidth="400.0">
-            <children>
-                <JFXListView fx:id="workDirectoryList" depth="2" styleClass="card-list-view">
-                    <placeholder>
-                        <Card styleClass="placeholder" subtitle="Add a directory to start tracking changes"
-                              title="No tracked directories"/>
-                    </placeholder>
-                </JFXListView>
-                <IconButton icon="gmi-add" maxHeight="-Infinity" maxWidth="-Infinity" onAction="#addWorkDirectory"
-                            styleClass="fab-light">
-                    <tooltip>
-                        <Tooltip text="Add a new directory to track changes in."/>
-                    </tooltip>
-                </IconButton>
-            </children>
+            <JFXListView fx:id="workDirectoryList" depth="2" styleClass="card-list-view">
+                <placeholder>
+                    <Card styleClass="placeholder" subtitle="Add a directory to start tracking changes"
+                          title="No tracked directories"/>
+                </placeholder>
+            </JFXListView>
+            <IconButton icon="gmi-add" maxHeight="-Infinity" maxWidth="-Infinity" onAction="#addWorkDirectory"
+                        styleClass="fab-light">
+                <tooltip>
+                    <Tooltip text="Add a new directory to track changes in."/>
+                </tooltip>
+            </IconButton>
         </StackPane>
         <StackPane minWidth="400.0" prefWidth="600.0" styleClass="pane" HBox.hgrow="ALWAYS">
             <JFXTabPane fx:id="workDirectoryTabPane" styleClass="section-tab-bar">
@@ -38,15 +36,14 @@
                         <padding>
                             <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                         </padding>
-                        <Region prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS"/>
-                        <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0">
-                            <LabeledIconButton icon="gmi-pause" label="Pause" styleClass="icon-button-light">
-                                <tooltip>
-                                    <Tooltip text="Start/stop tracking changes in this directory."/>
-                                </tooltip>
-                            </LabeledIconButton>
-                            <LabeledIconButton icon="gmi-check-circle" label="Verify"
-                                               styleClass="icon-button-light">
+                        <VBox prefHeight="200.0" prefWidth="100.0" VBox.vgrow="ALWAYS">
+                            <Definition fx:id="snapshotsDefinition" icon="gmi-content-copy" name="Versions"/>
+                            <Definition fx:id="storageUsedDefinition" icon="gmi-storage" name="Storage Used"/>
+                            <Definition fx:id="storageSavedDefinition" icon="gmi-data-usage" name="Storage Saved"/>
+                            <Definition fx:id="latestVersionDefinition" icon="gmi-access-time" name="Latest Version"/>
+                        </VBox>
+                        <HBox alignment="CENTER_LEFT" spacing="30.0">
+                            <LabeledIconButton icon="gmi-check-circle" label="Verify" styleClass="icon-button-light">
                                 <tooltip>
                                     <Tooltip text="Check this directory for corruption."/>
                                 </tooltip>
@@ -56,13 +53,18 @@
                                     <Tooltip text="Repair corrupt data in this directory."/>
                                 </tooltip>
                             </LabeledIconButton>
-                            <LabeledIconButton icon="gmi-delete-forever" label="Delete"
-                                               styleClass="icon-button-light">
+                            <LabeledIconButton icon="gmi-delete-forever" label="Delete" styleClass="icon-button-light">
                                 <tooltip>
                                     <Tooltip text="Delete all versions in this directory."/>
                                 </tooltip>
                             </LabeledIconButton>
-                        </FlowPane>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <JFXToggleButton contentDisplay="TOP" size="8.0" text="Track Changes">
+                                <tooltip>
+                                    <Tooltip text="Start or stop the program from automatically saving new versions."/>
+                                </tooltip>
+                            </JFXToggleButton>
+                        </HBox>
                     </VBox>
                 </Tab>
                 <Tab text="Cleanup Rules">

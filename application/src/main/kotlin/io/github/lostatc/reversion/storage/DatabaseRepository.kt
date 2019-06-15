@@ -133,6 +133,11 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         }
     }
 
+    override val storedSize: Long
+        get() = transaction(db) {
+            BlobEntity.all().map { it.size }.sum()
+        }
+
     /**
      * The path of the repository's database.
      */

@@ -83,13 +83,6 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
         }
     }
 
-    /**
-     * Repairs the repository of the currently selected working directory.
-     */
-    fun repairRepository() {
-        selected?.execute { workDirectory.repository.repair(workDirectory.path) }
-    }
-
     companion object {
         /**
          * The path of the file which stores the list of the user's working directories.
