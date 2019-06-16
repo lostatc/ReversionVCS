@@ -65,7 +65,7 @@ private val Timeline.versions: List<Version>
 /**
  * The model for storing information about the currently selected working directory.
  */
-class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineScope by MainScope() {
+data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineScope by MainScope() {
     /**
      * A channel to send storage operations to.
      */
