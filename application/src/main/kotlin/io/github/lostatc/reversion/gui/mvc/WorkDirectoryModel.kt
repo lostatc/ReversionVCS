@@ -21,9 +21,9 @@ package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
-import io.github.lostatc.reversion.gui.FlushableActor
-import io.github.lostatc.reversion.gui.flushableActor
+import io.github.lostatc.reversion.gui.TaskChannel
 import io.github.lostatc.reversion.gui.sendNotification
+import io.github.lostatc.reversion.gui.taskActor
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
@@ -31,6 +31,8 @@ import javafx.collections.ObservableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.channels.sendBlocking
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.time.Instant
@@ -46,7 +48,7 @@ data class WorkDirectoryOperationContext(val workDirectory: WorkDirectory)
 /**
  * An operation to store or retrieve data about a [WorkDirectory].
  */
-typealias WorkDirectoryOperation = WorkDirectoryOperationContext.() -> Unit
+typealias WorkDirectoryOperation<R> = WorkDirectoryOperationContext.() -> R
 
 /**
  * Statistics about a working directory.
@@ -69,11 +71,9 @@ data class WorkDirectoryStatistics(
  */
 class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineScope by MainScope() {
     /**
-     * An actor to send storage operations to.
+     * A channel to send storage operations to.
      */
-    private val actor: FlushableActor<WorkDirectoryOperation> = flushableActor(context = Dispatchers.IO) { operation ->
-        WorkDirectoryOperationContext(workDirectory).operation()
-    }
+    private val taskChannel: TaskChannel = taskActor(context = Dispatchers.IO)
 
     /**
      * The path of the working directory.
@@ -83,16 +83,24 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
     /**
      * The [CleanupPolicy] objects associated with this [WorkDirectory].
      */
-    val cleanupPolicies: ObservableList<CleanupPolicy> =
-        FXCollections.observableArrayList(workDirectory.timeline.cleanupPolicies)
+    val cleanupPolicies: ObservableList<CleanupPolicy> = FXCollections.observableArrayList()
 
     /**
      * The ignored paths being displayed in the UI.
      */
-    val ignoredPaths: ObservableList<Path> =
-        FXCollections.observableArrayList(workDirectory.ignoredPaths)
+    val ignoredPaths: ObservableList<Path> = FXCollections.observableArrayList()
 
     init {
+        // Load the cleanup policies in the UI.
+        launch {
+            cleanupPolicies.addAll(query { workDirectory.timeline.cleanupPolicies })
+        }
+
+        // Load the ignored path list in the UI.
+        launch {
+            ignoredPaths.addAll(query { workDirectory.ignoredPaths })
+        }
+
         // Update the working directory whenever a cleanup policy is added or removed.
         cleanupPolicies.addListener(
             ListChangeListener<CleanupPolicy> { change ->
@@ -111,9 +119,15 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
     /**
      * Queue up a change to the working directory to be completed asynchronously.
      */
-    fun execute(operation: WorkDirectoryOperation) {
-        actor.sendBlocking(operation)
+    fun execute(operation: WorkDirectoryOperation<Unit>) {
+        taskChannel.sendBlocking { WorkDirectoryOperationContext(workDirectory).operation() }
     }
+
+    /**
+     * Request information from the working directory to be returned asynchronously.
+     */
+    suspend fun <R> query(operation: WorkDirectoryOperation<R>): R =
+        taskChannel.sendAsync { WorkDirectoryOperationContext(workDirectory).operation() }.await()
 
     /**
      * Adds a [CleanupPolicy] to this working directory.
@@ -144,13 +158,13 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
     /**
      * Returns statistics for the working directory.
      */
-    fun getStatistics(): WorkDirectoryStatistics {
+    suspend fun getStatistics(): WorkDirectoryStatistics = query {
         val totalSize = workDirectory.timeline.snapshots.values
             .flatMap { it.versions.values }
             .map { it.size }
             .sum()
 
-        return WorkDirectoryStatistics(
+        WorkDirectoryStatistics(
             snapshots = workDirectory.timeline.snapshots.size,
             latestVersion = workDirectory.timeline.latestSnapshot?.timeCreated,
             storageUsed = workDirectory.repository.storedSize,

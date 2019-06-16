@@ -22,109 +22,82 @@ package io.github.lostatc.reversion.gui
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.sendBlocking
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
- * An action to be taken by an actor.
+ * A unit of work to be completed concurrently.
  */
-sealed class ActorAction<T>
+typealias Task<T> = suspend () -> T
 
 /**
- * An action which sends the given [element] to the actor.
+ * A channel that can return results asynchronously.
  */
-data class SendAction<T>(val element: T) : ActorAction<T>()
-
-/**
- * An action which waits for the actor to finish processing all previously received actions.
- *
- * @param [acknowledgment] A future that completes and returns `true` when all previously received actions have been
- * processed.
- */
-data class FlushAction<T>(val acknowledgment: CompletableDeferred<Boolean>) : ActorAction<T>()
-
-/**
- * An actor which encapsulates a coroutine and a channel.
- *
- * This actor can have messages sent to it through a channel.
- */
-data class FlushableActor<T>(private val job: Job, private val channel: Channel<ActorAction<T>>) : Job by job {
+class TaskChannel(channel: Channel<Task<Unit>>) : Channel<Task<Unit>> by channel {
     /**
-     * Closes the channel associated with this actor.
+     * Sends the given [task] to the channel and returns its result.
      *
-     * @see [SendChannel.close]
+     * @see [Channel.send]
      */
-    fun close(cause: Throwable? = null): Boolean = channel.close(cause)
-
-    /**
-     * Sends [element] to this actor if it is possible to do so immediately.
-     *
-     * @see [SendChannel.offer]
-     */
-    fun offer(element: T): Boolean = channel.offer(SendAction(element))
-
-    /**
-     * Sends [element] to this actor.
-     *
-     * @see [SendChannel.send]
-     */
-    suspend fun send(element: T) {
-        channel.send(SendAction(element))
+    suspend fun <T> sendAsync(task: Task<T>): Deferred<T> {
+        val result = CompletableDeferred<T>()
+        send {
+            try {
+                result.complete(task())
+            } catch (e: Throwable) {
+                result.completeExceptionally(e)
+            }
+        }
+        return result
     }
 
     /**
-     * Sends [element] to this actor, blocking the caller if its channel is full.
+     * Sends the given [task] to the channel and returns its result, blocking if the channel is full.
      *
-     * @see [SendChannel.sendBlocking]
+     * @see [Channel.sendBlocking]
      */
-    fun sendBlocking(element: T) {
-        channel.sendBlocking(SendAction(element))
+    fun <T> sendBlockingAsync(task: Task<T>): Deferred<T> {
+        val result = CompletableDeferred<T>()
+        sendBlocking {
+            try {
+                result.complete(task())
+            } catch (e: Throwable) {
+                result.completeExceptionally(e)
+            }
+        }
+        return result
     }
 
     /**
-     * Suspends until all elements sent to this actor have been processed.
+     * Suspends until all tasks which have been sent to this channel have been processed.
      */
     suspend fun flush() {
-        val acknowledgement = CompletableDeferred<Boolean>()
-        channel.send(FlushAction(acknowledgement))
-
-        select<Unit> {
-            acknowledgement.onAwait { }
-            onJoin { }
-        }
+        val acknowledgement = sendAsync { true }
+        acknowledgement.await()
     }
 }
 
 /**
- * Creates a new [FlushableActor].
+ * Creates a new actor for processing tasks.
  *
- * @param [context] Context to use in addition to [CoroutineScope.coroutineContext].
- * @param [capacity] The capacity of the channel associated with this actor.
- * @param [start] How to start the coroutine.
- * @param [block] A function which processes each element sent to the actor.
+ * @return A channel which tasks can be sent to.
  */
-fun <T> CoroutineScope.flushableActor(
+fun CoroutineScope.taskActor(
     context: CoroutineContext = EmptyCoroutineContext,
-    capacity: Int = Channel.UNLIMITED,
-    start: CoroutineStart = CoroutineStart.DEFAULT,
-    block: suspend CoroutineScope.(T) -> Unit
-): FlushableActor<T> {
-    val channel = Channel<ActorAction<T>>(capacity = capacity)
+    capacity: Int = Channel.RENDEZVOUS,
+    start: CoroutineStart = CoroutineStart.DEFAULT
+): TaskChannel {
+    val channel = Channel<Task<Unit>>(capacity)
 
-    val job = launch(context = context, start = start) {
-        for (action in channel) {
-            when (action) {
-                is FlushAction -> action.acknowledgment.complete(true)
-                is SendAction -> block(action.element)
-            }
+    launch(context = context, start = start) {
+        for (task in channel) {
+            task()
         }
     }
 
-    return FlushableActor(job, channel)
+    return TaskChannel(channel)
 }
