@@ -37,12 +37,33 @@
                             <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                         </padding>
                         <VBox prefHeight="200.0" prefWidth="100.0" VBox.vgrow="ALWAYS">
-                            <Definition fx:id="snapshotsDefinition" icon="gmi-content-copy" name="Versions"/>
-                            <Definition fx:id="storageUsedDefinition" icon="gmi-storage" name="Storage Used"/>
-                            <Definition fx:id="storageSavedDefinition" icon="gmi-data-usage" name="Storage Saved"/>
-                            <Definition fx:id="latestVersionDefinition" icon="gmi-access-time" name="Latest Version"/>
+                            <Definition fx:id="snapshotsDefinition" icon="gmi-content-copy" name="Versions">
+                                <tooltip>
+                                    <Tooltip text="The number of versions saved in this working directory."/>
+                                </tooltip>
+                            </Definition>
+                            <Definition fx:id="storageUsedDefinition" icon="gmi-storage" name="Storage Used">
+                                <tooltip>
+                                    <Tooltip text="The amount of storage space used by the working directory."/>
+                                </tooltip>
+                            </Definition>
+                            <Definition fx:id="storageSavedDefinition" icon="gmi-data-usage" name="Storage Saved">
+                                <tooltip>
+                                    <Tooltip text="The amount of storage space that was saved through deduplication."/>
+                                </tooltip>
+                            </Definition>
+                            <Definition fx:id="latestVersionDefinition" icon="gmi-access-time" name="Latest Version">
+                                <tooltip>
+                                    <Tooltip text="The time that the most recent version was created."/>
+                                </tooltip>
+                            </Definition>
                             <Definition fx:id="trackedFilesDefinition" icon="gmi-insert-drive-file"
-                                        name="Tracked Files"/>
+                                        name="Tracked Files">
+                                <tooltip>
+                                    <Tooltip
+                                        text="The number of files in the working directory that are being tracked."/>
+                                </tooltip>
+                            </Definition>
                         </VBox>
                         <HBox alignment="CENTER_LEFT" spacing="30.0">
                             <LabeledIconButton icon="gmi-check-circle" label="Verify" styleClass="icon-button-light">

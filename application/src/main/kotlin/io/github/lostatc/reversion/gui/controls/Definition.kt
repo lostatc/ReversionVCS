@@ -26,6 +26,7 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
+import javafx.scene.control.Tooltip
 import javafx.scene.layout.HBox
 import org.kordamp.ikonli.javafx.FontIcon
 
@@ -82,6 +83,16 @@ class Definition : HBox() {
      */
     var value: String by valueProperty
 
+    /**
+     * A property for [tooltip].
+     */
+    val tooltipProperty: Property<Tooltip?> = SimpleObjectProperty()
+
+    /**
+     * The tooltip to display on this button.
+     */
+    var tooltip: Tooltip? by tooltipProperty
+
     init {
         FXMLLoader(this::class.java.getResource("/fxml/Definition.fxml")).apply {
             classLoader = this@Definition::class.java.classLoader
@@ -93,8 +104,10 @@ class Definition : HBox() {
 
     @FXML
     fun initialize() {
+        nameLabel.tooltipProperty().bind(tooltipProperty)
         nameLabel.textProperty().bind(nameProperty)
         valueLabel.textProperty().bind(valueProperty)
+
         iconProperty.addListener { _, _, newValue ->
             fontIcon.iconLiteral = newValue
         }
