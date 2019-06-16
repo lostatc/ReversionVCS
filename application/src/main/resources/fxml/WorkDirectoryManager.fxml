@@ -41,6 +41,8 @@
                             <Definition fx:id="storageUsedDefinition" icon="gmi-storage" name="Storage Used"/>
                             <Definition fx:id="storageSavedDefinition" icon="gmi-data-usage" name="Storage Saved"/>
                             <Definition fx:id="latestVersionDefinition" icon="gmi-access-time" name="Latest Version"/>
+                            <Definition fx:id="trackedFilesDefinition" icon="gmi-insert-drive-file"
+                                        name="Tracked Files"/>
                         </VBox>
                         <HBox alignment="CENTER_LEFT" spacing="30.0">
                             <LabeledIconButton icon="gmi-check-circle" label="Verify" styleClass="icon-button-light">

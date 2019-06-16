@@ -21,10 +21,16 @@ package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
+import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.gui.TaskChannel
+import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
+import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.taskActor
 import io.github.lostatc.reversion.storage.WorkDirectory
+import javafx.beans.property.Property
+import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
@@ -51,20 +57,10 @@ data class WorkDirectoryOperationContext(val workDirectory: WorkDirectory)
 typealias WorkDirectoryOperation<R> = WorkDirectoryOperationContext.() -> R
 
 /**
- * Statistics about a working directory.
- *
- * @param [snapshots] The number of snapshots in the timeline.
- * @param [latestVersion] The time the most recent version was created, or `null` if there are no versions.
- * @param [storageUsed] The amount of space the repository takes up in bytes.
- * @param [storageSaved] The difference between the total size of all the versions stored in the repository and the
- * amount of space taken up by the repository.
+ * All the snapshots in the timeline.
  */
-data class WorkDirectoryStatistics(
-    val snapshots: Int,
-    val latestVersion: Instant?,
-    val storageUsed: Long,
-    val storageSaved: Long
-)
+private val Timeline.versions: List<Version>
+    get() = snapshots.values.flatMap { it.versions.values }
 
 /**
  * The model for storing information about the currently selected working directory.
@@ -90,6 +86,57 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
      */
     val ignoredPaths: ObservableList<Path> = FXCollections.observableArrayList()
 
+    /**
+     * A property for [snapshots].
+     */
+    val snapshotsProperty: Property<Int?> = SimpleObjectProperty(null)
+
+    /**
+     * The number of snapshots in the working directory.
+     */
+    var snapshots: Int? by snapshotsProperty
+
+    /**
+     * A property for [latestVersion].
+     */
+    val latestVersionProperty: Property<Instant?> = SimpleObjectProperty(null)
+
+    /**
+     * The time that the most recent version was created.
+     */
+    var latestVersion: Instant? by latestVersionProperty
+
+    /**
+     * A property for [storageUsed].
+     */
+    val storageUsedProperty: Property<Long?> = SimpleObjectProperty(null)
+
+    /**
+     * The amount of space the repository takes up in bytes.
+     */
+    var storageUsed: Long? by storageUsedProperty
+
+    /**
+     * A property for [storageSaved].
+     */
+    val storageSavedProperty: Property<Long?> = SimpleObjectProperty(null)
+
+    /**
+     * The difference between the total size of all the versions stored in the repository and the amount of space taken
+     * up by the repository.
+     */
+    var storageSaved: Long? by storageSavedProperty
+
+    /**
+     * A property for [trackedFiles].
+     */
+    val trackedFilesProperty: Property<Int?> = SimpleObjectProperty(null)
+
+    /**
+     * The number of tracked files in the working directory.
+     */
+    var trackedFiles: Int? by trackedFilesProperty
+
     init {
         // Load the cleanup policies in the UI.
         launch {
@@ -100,6 +147,9 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
         launch {
             ignoredPaths.addAll(query { workDirectory.ignoredPaths })
         }
+
+        // Load statistics about the working directory.
+        updateStatistics()
 
         // Update the working directory whenever a cleanup policy is added or removed.
         cleanupPolicies.addListener(
@@ -114,6 +164,30 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
                 execute { workDirectory.ignoredPaths = change.list }
             }
         )
+    }
+
+    /**
+     * Updates the values of the statistics in this model.
+     */
+    private fun updateStatistics() {
+        launch {
+            snapshots = query { workDirectory.timeline.snapshots.size }
+        }
+        launch {
+            latestVersion = query { workDirectory.timeline.latestSnapshot?.timeCreated }
+        }
+        launch {
+            storageUsed = query { workDirectory.repository.storedSize }
+        }
+        launch {
+            query {
+                val totalSize = workDirectory.timeline.versions.map { it.size }.sum()
+                storageSaved = totalSize - workDirectory.repository.storedSize
+            }
+        }
+        launch {
+            trackedFiles = query { workDirectory.listFiles().size }
+        }
     }
 
     /**
@@ -153,23 +227,6 @@ class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineSc
         }
 
         cleanupPolicies.add(policy)
-    }
-
-    /**
-     * Returns statistics for the working directory.
-     */
-    suspend fun getStatistics(): WorkDirectoryStatistics = query {
-        val totalSize = workDirectory.timeline.snapshots.values
-            .flatMap { it.versions.values }
-            .map { it.size }
-            .sum()
-
-        WorkDirectoryStatistics(
-            snapshots = workDirectory.timeline.snapshots.size,
-            latestVersion = workDirectory.timeline.latestSnapshot?.timeCreated,
-            storageUsed = workDirectory.repository.storedSize,
-            storageSaved = totalSize - workDirectory.repository.storedSize
-        )
     }
 
     companion object {
