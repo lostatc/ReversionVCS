@@ -28,12 +28,14 @@ import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.controls.Card
 import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ListItem
+import io.github.lostatc.reversion.gui.dialog
 import io.github.lostatc.reversion.gui.toMappedProperty
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyProperty
 import javafx.fxml.FXML
 import javafx.scene.control.Label
 import javafx.scene.control.TabPane
+import javafx.scene.layout.StackPane
 import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
 import kotlinx.coroutines.CoroutineScope
@@ -64,6 +66,13 @@ private fun <T : Any> Property<T?>.toDisplayProperty(transform: (T) -> String): 
  * The controller for the view that is used to manage working directories.
  */
 class WorkDirectoryManagerController : CoroutineScope by MainScope() {
+
+    /**
+     * The root node of the view.
+     */
+    @FXML
+    private lateinit var root: StackPane
+
     /**
      * The text field where the user inputs the number of versions to keep for a new cleanup policy.
      */
@@ -281,5 +290,20 @@ class WorkDirectoryManagerController : CoroutineScope by MainScope() {
         if (selectedIndex < 0) return
 
         model.selected?.ignoredPaths?.removeAt(selectedIndex)
+    }
+
+    @FXML
+    fun deleteWorkDirectory() {
+        val dialog = dialog {
+            title = "Delete version history"
+            text =
+                "Are you sure you want to permanently delete all past versions in this directory? This will not affect the current versions of your files."
+            button("Cancel", listOf("button-text", "button-regular"))
+            button("Delete", listOf("button-text", "button-danger")) {
+                model.deleteWorkDirectory()
+            }
+        }
+
+        dialog.show(root)
     }
 }

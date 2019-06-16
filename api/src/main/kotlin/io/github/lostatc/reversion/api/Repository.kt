@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.api
 
+import java.io.IOException
 import java.nio.file.Path
 import java.util.UUID
 
@@ -100,4 +101,11 @@ interface Repository : Configurable {
      * @param [workDirectory] The path of the working directory.
      */
     fun repair(workDirectory: Path)
+
+    /**
+     * Deletes this repository.
+     *
+     * @throws [IOException] An I/O error occurred.
+     */
+    fun delete()
 }

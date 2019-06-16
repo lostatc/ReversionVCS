@@ -89,6 +89,18 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * Deletes the selected working directory.
+     */
+    fun deleteWorkDirectory() {
+        launch {
+            selected?.execute { workDirectory.delete() }
+            _workDirectories.remove(selected)
+            selected = null
+            saveWorkPaths(workDirectories.map { it.path })
+        }
+    }
+
     companion object {
         /**
          * The path of the file which stores the list of the user's working directories.

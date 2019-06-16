@@ -42,6 +42,7 @@ import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import io.github.lostatc.reversion.schema.VersionTable
 import org.apache.commons.codec.digest.DigestUtils
+import org.apache.commons.io.FileUtils
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.deleteWhere
@@ -256,6 +257,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         }
 
         logger.info("Repaired repository $this and deleted ${versionsToDelete.size} versions.")
+    }
+
+    override fun delete() {
+        FileUtils.deleteDirectory(path.toFile())
     }
 
     /**

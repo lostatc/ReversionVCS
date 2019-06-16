@@ -34,12 +34,14 @@ import org.slf4j.LoggerFactory
 /**
  * A snack bar which displays notifications across the program.
  */
-val notificationBar: JFXSnackbar = JFXSnackbar()
+private val notificationBar: JFXSnackbar = JFXSnackbar()
 
 /**
  * Send a notification to be displayed.
  */
-fun sendNotification(message: String) = notificationBar.sendNotification(message, Duration.seconds(5.0))
+fun sendNotification(message: String) {
+    notificationBar.sendNotification(message, Duration.seconds(5.0))
+}
 
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
