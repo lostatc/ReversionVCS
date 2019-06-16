@@ -28,6 +28,7 @@ import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
+import org.apache.commons.io.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.awt.Desktop
@@ -294,6 +295,19 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         val targetPath = tempDirectory.resolve(version.path.fileName)
         version.checkout(targetPath)
         Desktop.getDesktop().open(targetPath.toFile())
+    }
+
+    /**
+     * Deletes all version history for this working directory.
+     *
+     * This method de-initializes the working directory and deletes the repository associated with it. It does not
+     * delete the current version of any file in the directory. After this method is called, [isWorkDirectory] should
+     * return false for this [path].
+     */
+    fun delete() {
+        repository.delete()
+        FileUtils.deleteDirectory(hiddenPath.toFile())
+        instanceCache.remove(path)
     }
 
     /**

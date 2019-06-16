@@ -5,67 +5,71 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<VBox xmlns:fx="http://javafx.com/fxml/1" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
-      prefWidth="640.0" styleClass="background" xmlns="http://javafx.com/javafx/11.0.1"
-      fx:controller="io.github.lostatc.reversion.gui.mvc.VersionManagerController">
-    <JFXToolbar>
-        <top>
-            <HBox alignment="CENTER" minHeight="50.0" nodeOrientation="RIGHT_TO_LEFT" BorderPane.alignment="CENTER">
-                <padding>
-                    <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
-                </padding>
-                <IconButton icon="gmi-folder-open" onAction="#browsePath" styleClass="icon-button-light"/>
-                <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#setPath" promptText="Path"
-                              HBox.hgrow="ALWAYS">
-                    <HBox.margin>
-                        <Insets left="15.0"/>
-                    </HBox.margin>
-                </JFXTextField>
-            </HBox>
-        </top>
-    </JFXToolbar>
-    <HBox prefHeight="100.0" prefWidth="640.0" styleClass="pane-box" VBox.vgrow="ALWAYS">
-        <JFXListView fx:id="versionList" depth="2" minWidth="200.0" prefWidth="400.0" styleClass="card-list-view">
-            <placeholder>
-                <Card styleClass="placeholder" subtitle="Choose a file to show versions" title="No versions"/>
-            </placeholder>
-        </JFXListView>
-        <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" styleClass="pane" HBox.hgrow="SOMETIMES">
-            <VBox fx:id="infoPane" spacing="50.0">
-                <FlowPane hgap="50.0" vgap="25.0">
+<StackPane xmlns:fx="http://javafx.com/fxml/1" fx:id="root" minHeight="-Infinity" minWidth="-Infinity"
+           prefHeight="400.0"
+           prefWidth="640.0" styleClass="background" xmlns="http://javafx.com/javafx/11.0.1"
+           fx:controller="io.github.lostatc.reversion.gui.mvc.VersionManagerController">
+    <VBox>
+        <JFXToolbar>
+            <top>
+                <HBox alignment="CENTER" minHeight="50.0" nodeOrientation="RIGHT_TO_LEFT" BorderPane.alignment="CENTER">
+                    <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+                    </padding>
+                    <IconButton icon="gmi-folder-open" onAction="#browsePath" styleClass="icon-button-light"/>
+                    <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#setPath"
+                                  promptText="Path"
+                                  HBox.hgrow="ALWAYS">
+                        <HBox.margin>
+                            <Insets left="15.0"/>
+                        </HBox.margin>
+                    </JFXTextField>
+                </HBox>
+            </top>
+        </JFXToolbar>
+        <HBox prefHeight="100.0" prefWidth="640.0" styleClass="pane-box" VBox.vgrow="ALWAYS">
+            <JFXListView fx:id="versionList" depth="2" minWidth="200.0" prefWidth="400.0" styleClass="card-list-view">
+                <placeholder>
+                    <Card styleClass="placeholder" subtitle="Choose a file to show versions" title="No versions"/>
+                </placeholder>
+            </JFXListView>
+            <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" styleClass="pane" HBox.hgrow="SOMETIMES">
+                <VBox fx:id="infoPane" spacing="50.0">
+                    <FlowPane hgap="50.0" vgap="25.0">
+                        <VBox>
+                            <Label styleClass="info-key" text="Keep Forever"/>
+                            <JFXCheckBox fx:id="pinnedCheckBox" styleClass="info-value" text="Pinned"/>
+                        </VBox>
+                        <VBox>
+                            <Label styleClass="info-key" text="Last Modified"/>
+                            <Label fx:id="lastModifiedLabel" styleClass="info-value"/>
+                        </VBox>
+                        <VBox>
+                            <Label styleClass="info-key" text="Size"/>
+                            <Label fx:id="sizeLabel" styleClass="info-value"/>
+                        </VBox>
+                    </FlowPane>
                     <VBox>
-                        <Label styleClass="info-key" text="Keep Forever"/>
-                        <JFXCheckBox fx:id="pinnedCheckBox" styleClass="info-value" text="Pinned"/>
+                        <Label styleClass="info-key" text="Name"/>
+                        <JFXTextField fx:id="nameField"/>
                     </VBox>
                     <VBox>
-                        <Label styleClass="info-key" text="Last Modified"/>
-                        <Label fx:id="lastModifiedLabel" styleClass="info-value"/>
+                        <Label styleClass="info-key" text="Description"/>
+                        <JFXTextArea fx:id="descriptionField" maxHeight="1.7976931348623157E308" wrapText="true"/>
                     </VBox>
-                    <VBox>
-                        <Label styleClass="info-key" text="Size"/>
-                        <Label fx:id="sizeLabel" styleClass="info-value"/>
-                    </VBox>
-                </FlowPane>
-                <VBox>
-                    <Label styleClass="info-key" text="Name"/>
-                    <JFXTextField fx:id="nameField"/>
+                    <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
+                        <LabeledIconButton icon="gmi-delete-forever" label="Delete" onAction="#deleteVersion"
+                                           styleClass="icon-button-light"/>
+                        <LabeledIconButton icon="gmi-restore" label="Restore" onAction="#restoreVersion"
+                                           styleClass="icon-button-light"/>
+                        <LabeledIconButton icon="gmi-open-in-new" label="Open" onAction="#openVersion"
+                                           styleClass="icon-button-light"/>
+                    </FlowPane>
+                    <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+                    </padding>
                 </VBox>
-                <VBox>
-                    <Label styleClass="info-key" text="Description"/>
-                    <JFXTextArea fx:id="descriptionField" maxHeight="1.7976931348623157E308" wrapText="true"/>
-                </VBox>
-                <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
-                    <LabeledIconButton icon="gmi-delete-forever" label="Delete" onAction="#deleteVersion"
-                                       styleClass="icon-button-light"/>
-                    <LabeledIconButton icon="gmi-restore" label="Restore" onAction="#restoreVersion"
-                                       styleClass="icon-button-light"/>
-                    <LabeledIconButton icon="gmi-open-in-new" label="Open" onAction="#openVersion"
-                                       styleClass="icon-button-light"/>
-                </FlowPane>
-                <padding>
-                    <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
-                </padding>
-            </VBox>
-        </StackPane>
-    </HBox>
-</VBox>
+            </StackPane>
+        </HBox>
+    </VBox>
+</StackPane>

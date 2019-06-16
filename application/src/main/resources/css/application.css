@@ -290,6 +290,7 @@
 /* A key-value pair displaying information with an icon. */
 .definition .definition-icon {
     -fx-icon-size: 24px;
+    -fx-icon-color: -grey-800;
 }
 
 /* A popup notification. */

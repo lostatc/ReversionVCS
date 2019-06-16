@@ -217,4 +217,20 @@ interface WorkDirectoryTest {
 
         assertTrue(Files.notExists(workPath.resolve("b")))
     }
+
+    @Test
+    fun `a deleted work directory cannot be opened`() {
+        workDirectory.delete()
+        assertThrows<InvalidWorkDirException> {
+            WorkDirectory.open(workPath)
+        }
+    }
+
+    @Test
+    fun `deleting a work directory doesn't affect current versions`() {
+        workDirectory.delete()
+        assertTrue(Files.exists(workPath.resolve("a")))
+        assertTrue(Files.exists(workPath.resolve("b")))
+        assertTrue(Files.exists(workPath.resolve("c", "a")))
+    }
 }

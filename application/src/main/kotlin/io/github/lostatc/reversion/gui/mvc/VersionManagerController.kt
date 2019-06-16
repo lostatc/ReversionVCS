@@ -30,6 +30,7 @@ import javafx.fxml.FXML
 import javafx.scene.Node
 import javafx.scene.control.Label
 import javafx.scene.layout.Pane
+import javafx.scene.layout.StackPane
 import javafx.stage.FileChooser
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.io.FileUtils
@@ -40,6 +41,13 @@ import java.time.format.FormatStyle
  * The controller for the view that is used to manage versions of a file.
  */
 class VersionManagerController {
+
+    /**
+     * The root node of the view.
+     */
+    @FXML
+    private lateinit var root: StackPane
+
     /**
      * The field for getting the path of the file to manage versions of.
      */
