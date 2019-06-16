@@ -23,6 +23,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.DATA_DIR
 import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.storage.PathTypeAdapter
 import io.github.lostatc.reversion.storage.fromJson
@@ -78,8 +79,13 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     fun addWorkDirectory(path: Path) {
         launch {
             val model = WorkDirectoryModel.fromPath(path)
-            _workDirectories.add(model)
-            saveWorkPaths(workDirectories.map { it.path })
+
+            if (model in workDirectories) {
+                sendNotification("This directory is already being tracked.")
+            } else {
+                _workDirectories.add(model)
+                saveWorkPaths(workDirectories.map { it.path })
+            }
         }
     }
 
