@@ -28,6 +28,9 @@ import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.controls.Card
 import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ListItem
+import io.github.lostatc.reversion.gui.toMappedProperty
+import javafx.beans.property.Property
+import javafx.beans.property.ReadOnlyProperty
 import javafx.fxml.FXML
 import javafx.scene.control.Label
 import javafx.scene.control.TabPane
@@ -35,7 +38,6 @@ import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 import org.apache.commons.io.FileUtils
 import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
@@ -48,6 +50,14 @@ private fun TabPane.setContentsVisible(visible: Boolean) {
         tab.content.isVisible = visible
     }
 }
+
+/**
+ * Returns a read-only property with a value equal to this property with the given [transform] function applied.
+ *
+ * If the value of this property is `null`, a placeholder string is returned.
+ */
+private fun <T : Any> Property<T?>.toDisplayProperty(transform: (T) -> String): ReadOnlyProperty<String> =
+    toMappedProperty { if (it == null) "Loading..." else transform(it) }
 
 
 /**
@@ -120,6 +130,12 @@ class WorkDirectoryManagerController : CoroutineScope by MainScope() {
     @FXML
     private lateinit var latestVersionDefinition: Definition
 
+    /**
+     * A widget which shows the total number of tracked files.
+     */
+    @FXML
+    private lateinit var trackedFilesDefinition: Definition
+
     private val model: WorkDirectoryManagerModel = WorkDirectoryManagerModel()
 
     @FXML
@@ -158,14 +174,22 @@ class WorkDirectoryManagerController : CoroutineScope by MainScope() {
                     ListItem(it.toString())
                 }
 
-                // Calculate the statistics and show them in the status pane.
-                launch {
-                    val stats = newValue.getStatistics()
-                    snapshotsDefinition.value = stats.snapshots.toString()
-                    storageUsedDefinition.value = FileUtils.byteCountToDisplaySize(stats.storageUsed)
-                    storageSavedDefinition.value = FileUtils.byteCountToDisplaySize(stats.storageSaved)
-                    latestVersionDefinition.value = stats.latestVersion?.format(FormatStyle.MEDIUM) ?: "N/A"
-                }
+                // Bind statistics in the view to the model.
+                snapshotsDefinition.valueProperty.bind(
+                    newValue.snapshotsProperty.toDisplayProperty { it.toString() }
+                )
+                storageUsedDefinition.valueProperty.bind(
+                    newValue.storageUsedProperty.toDisplayProperty { FileUtils.byteCountToDisplaySize(it) }
+                )
+                storageSavedDefinition.valueProperty.bind(
+                    newValue.storageSavedProperty.toDisplayProperty { FileUtils.byteCountToDisplaySize(it) }
+                )
+                latestVersionDefinition.valueProperty.bind(
+                    newValue.latestVersionProperty.toDisplayProperty { it.format(FormatStyle.MEDIUM) }
+                )
+                trackedFilesDefinition.valueProperty.bind(
+                    newValue.trackedFilesProperty.toDisplayProperty { it.toString() }
+                )
 
                 workDirectoryTabPane.setContentsVisible(true)
             }

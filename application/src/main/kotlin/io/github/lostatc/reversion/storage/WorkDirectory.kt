@@ -192,6 +192,11 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     }
 
     /**
+     * Returns a list of all the tracked files in the working directory.
+     */
+    fun listFiles(): List<Path> = walkDirectory(listOf(path))
+
+    /**
      * Creates a new snapshot containing the given [paths] and returns it.
      *
      * Passing the path of a directory commits all the files contained in it. By default, this only commits files with
