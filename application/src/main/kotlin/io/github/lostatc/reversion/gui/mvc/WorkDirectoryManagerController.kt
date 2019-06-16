@@ -33,6 +33,9 @@ import javafx.scene.control.Label
 import javafx.scene.control.TabPane
 import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import org.apache.commons.io.FileUtils
 import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
@@ -50,7 +53,7 @@ private fun TabPane.setContentsVisible(visible: Boolean) {
 /**
  * The controller for the view that is used to manage working directories.
  */
-class WorkDirectoryManagerController {
+class WorkDirectoryManagerController : CoroutineScope by MainScope() {
     /**
      * The text field where the user inputs the number of versions to keep for a new cleanup policy.
      */
@@ -156,11 +159,13 @@ class WorkDirectoryManagerController {
                 }
 
                 // Calculate the statistics and show them in the status pane.
-                val statistics = newValue.getStatistics()
-                snapshotsDefinition.value = statistics.snapshots.toString()
-                storageUsedDefinition.value = FileUtils.byteCountToDisplaySize(statistics.storageUsed)
-                storageSavedDefinition.value = FileUtils.byteCountToDisplaySize(statistics.storageSaved)
-                latestVersionDefinition.value = statistics.latestVersion?.format(FormatStyle.MEDIUM) ?: "N/A"
+                launch {
+                    val stats = newValue.getStatistics()
+                    snapshotsDefinition.value = stats.snapshots.toString()
+                    storageUsedDefinition.value = FileUtils.byteCountToDisplaySize(stats.storageUsed)
+                    storageSavedDefinition.value = FileUtils.byteCountToDisplaySize(stats.storageSaved)
+                    latestVersionDefinition.value = stats.latestVersion?.format(FormatStyle.MEDIUM) ?: "N/A"
+                }
 
                 workDirectoryTabPane.setContentsVisible(true)
             }

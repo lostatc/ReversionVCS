@@ -20,10 +20,10 @@
 package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.api.Version
-import io.github.lostatc.reversion.gui.FlushableActor
-import io.github.lostatc.reversion.gui.flushableActor
+import io.github.lostatc.reversion.gui.TaskChannel
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.setValue
+import io.github.lostatc.reversion.gui.taskActor
 import io.github.lostatc.reversion.gui.toMappedProperty
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.BooleanProperty
@@ -34,6 +34,7 @@ import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.channels.sendBlocking
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
@@ -51,7 +52,7 @@ data class VersionOperationContext(val version: Version, val workDirectory: Work
 /**
  * An operation to store or retrieve data about a [Version].
  */
-typealias VersionOperation = VersionOperationContext.() -> Unit
+typealias VersionOperation<R> = VersionOperationContext.() -> R
 
 /**
  * The model for storing information about the currently selected version.
@@ -62,17 +63,14 @@ class VersionModel(
 ) : CoroutineScope by MainScope() {
 
     /**
-     * An actor to send storage operations to.
+     * A channel to send storage operations to.
      */
-    private val actor: FlushableActor<VersionOperation> = flushableActor(context = Dispatchers.IO) { operation ->
-        VersionOperationContext(version, workDirectory, path).operation()
-    }
+    private val taskChannel: TaskChannel = taskActor(context = Dispatchers.IO)
 
     /**
      * The absolute path of the [version].
      */
-    val path: Path
-        get() = workDirectory.path.resolve(version.path)
+    val path: Path = workDirectory.path.resolve(version.path)
 
     /**
      * A property for [name].
@@ -133,15 +131,21 @@ class VersionModel(
     /**
      * Queue up a change to the version to be completed asynchronously.
      */
-    fun execute(operation: VersionOperation) {
-        actor.sendBlocking(operation)
+    fun execute(operation: VersionOperation<Unit>) {
+        taskChannel.sendBlocking { VersionOperationContext(version, workDirectory, path).operation() }
     }
+
+    /**
+     * Request information from the version to be returned asynchronously.
+     */
+    suspend fun <R> query(operation: VersionOperation<R>): R =
+        taskChannel.sendBlockingAsync { VersionOperationContext(version, workDirectory, path).operation() }.await()
 
     /**
      * Suspend and wait for changes applied with [execute] to commit.
      */
     suspend fun flush() {
-        actor.flush()
+        taskChannel.flush()
     }
 
     /**
