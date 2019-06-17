@@ -35,9 +35,11 @@ import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.sendBlocking
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
@@ -54,7 +56,7 @@ data class WorkDirectoryOperationContext(val workDirectory: WorkDirectory)
 /**
  * An operation to store or retrieve data about a [WorkDirectory].
  */
-typealias WorkDirectoryOperation<R> = WorkDirectoryOperationContext.() -> R
+typealias WorkDirectoryOperation<R> = suspend WorkDirectoryOperationContext.() -> R
 
 /**
  * All the snapshots in the timeline.
@@ -69,7 +71,7 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
     /**
      * A channel to send storage operations to.
      */
-    private val taskChannel: TaskChannel = taskActor(context = Dispatchers.IO)
+    private val taskChannel: TaskChannel = taskActor(context = Dispatchers.IO, capacity = Channel.UNLIMITED)
 
     /**
      * The path of the working directory.
@@ -140,12 +142,12 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
     init {
         // Load the cleanup policies in the UI.
         launch {
-            cleanupPolicies.addAll(query { workDirectory.timeline.cleanupPolicies })
+            cleanupPolicies.addAll(executeAsync { workDirectory.timeline.cleanupPolicies }.await())
         }
 
         // Load the ignored path list in the UI.
         launch {
-            ignoredPaths.addAll(query { workDirectory.ignoredPaths })
+            ignoredPaths.addAll(executeAsync { workDirectory.ignoredPaths }.await())
         }
 
         // Load statistics about the working directory.
@@ -171,37 +173,62 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      */
     private fun updateStatistics() {
         launch {
-            snapshots = query { workDirectory.timeline.snapshots.size }
+            snapshots = executeAsync { workDirectory.timeline.snapshots.size }.await()
         }
         launch {
-            latestVersion = query { workDirectory.timeline.latestSnapshot?.timeCreated }
+            latestVersion = executeAsync { workDirectory.timeline.latestSnapshot?.timeCreated }.await()
         }
         launch {
-            storageUsed = query { workDirectory.repository.storedSize }
+            storageUsed = executeAsync { workDirectory.repository.storedSize }.await()
         }
         launch {
-            query {
+            storageSaved = executeAsync {
                 val totalSize = workDirectory.timeline.versions.map { it.size }.sum()
-                storageSaved = totalSize - workDirectory.repository.storedSize
-            }
+                totalSize - workDirectory.repository.storedSize
+            }.await()
         }
         launch {
-            trackedFiles = query { workDirectory.listFiles().size }
+            trackedFiles = executeAsync { workDirectory.listFiles().size }.await()
         }
     }
 
     /**
      * Queue up a change to the working directory to be completed asynchronously.
+     *
+     * @param [operation] The operation to complete asynchronously.
+     *
+     * @return The job that is running the operation.
      */
-    fun execute(operation: WorkDirectoryOperation<Unit>) {
-        taskChannel.sendBlocking { WorkDirectoryOperationContext(workDirectory).operation() }
-    }
+    fun execute(operation: WorkDirectoryOperation<Unit>): Job =
+        taskChannel.sendBlockingAsync { WorkDirectoryOperationContext(workDirectory).operation() }
 
     /**
      * Request information from the working directory to be returned asynchronously.
+     *
+     * @param [operation] The operation to complete asynchronously.
+     *
+     * @return The deferred output of the operation.
      */
-    suspend fun <R> query(operation: WorkDirectoryOperation<R>): R =
-        taskChannel.sendAsync { WorkDirectoryOperationContext(workDirectory).operation() }.await()
+    fun <R> executeAsync(operation: WorkDirectoryOperation<R>): Deferred<R> =
+        taskChannel.sendBlockingAsync { WorkDirectoryOperationContext(workDirectory).operation() }
+
+    /**
+     * Queue up a change to the working directory and run a function on completion.
+     *
+     * When the [operation] finishes, its output is passed to [onCompletion].
+     *
+     * @param [operation] The operation to complete asynchronously.
+     * @param [onCompletion] The function to be called when the job completes.
+     *
+     * @return The job that is running the operation.
+     */
+    fun <R> executeAndRun(operation: WorkDirectoryOperation<R>, onCompletion: (R) -> Unit): Job {
+        val result = executeAsync(operation)
+        launch {
+            onCompletion(result.await())
+        }
+        return result
+    }
 
     /**
      * Adds a [CleanupPolicy] to this working directory.
