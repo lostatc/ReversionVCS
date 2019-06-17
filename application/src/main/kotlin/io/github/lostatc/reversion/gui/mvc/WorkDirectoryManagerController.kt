@@ -23,12 +23,16 @@ import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXTextField
+import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MappedObservableList
+import io.github.lostatc.reversion.gui.approvalDialog
+import io.github.lostatc.reversion.gui.confirmationDialog
 import io.github.lostatc.reversion.gui.controls.Card
 import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ListItem
-import io.github.lostatc.reversion.gui.dialog
+import io.github.lostatc.reversion.gui.infoDialog
+import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.toMappedProperty
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyProperty
@@ -38,8 +42,6 @@ import javafx.scene.control.TabPane
 import javafx.scene.layout.StackPane
 import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
 import org.apache.commons.io.FileUtils
 import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
@@ -65,7 +67,7 @@ private fun <T : Any> Property<T?>.toDisplayProperty(transform: (T) -> String): 
 /**
  * The controller for the view that is used to manage working directories.
  */
-class WorkDirectoryManagerController : CoroutineScope by MainScope() {
+class WorkDirectoryManagerController {
 
     /**
      * The root node of the view.
@@ -294,15 +296,69 @@ class WorkDirectoryManagerController : CoroutineScope by MainScope() {
 
     @FXML
     fun deleteWorkDirectory() {
-        val dialog = dialog {
-            title = "Delete version history"
-            text =
-                "Are you sure you want to permanently delete all past versions in this directory? This will not affect the current versions of your files."
-            button("Cancel", listOf("button-text", "button-regular"))
-            button("Delete", listOf("button-text", "button-danger")) {
-                model.deleteWorkDirectory()
-            }
+        val dialog = approvalDialog(
+            title = "Delete version history",
+            text = "Are you sure you want to permanently delete all past versions in this directory? This will not affect the current versions of your files.",
+            action = { model.deleteWorkDirectory() }
+        )
+
+        dialog.show(root)
+    }
+
+
+    /**
+     * Repair the repository and show the user a dialog to indicate progress.
+     */
+    private fun repair() {
+        val job = model.selected?.execute { workDirectory.repository.repair(workDirectory.path) } ?: return
+
+        val dialog = processingDialog(title = "Reparing...", job = job)
+        dialog.show(root)
+
+    }
+
+    /**
+     * Prompt the user for whether they want to repair the repository.
+     */
+    private fun promptRepair(report: IntegrityReport) {
+        val dialog = if (report.isValid) {
+            infoDialog(
+                title = "No corruption detected",
+                text = "There are no corrupt versions in this directory."
+            )
+        } else {
+            confirmationDialog(
+                title = "Corruption detected",
+                text = "There are ${report.corruptVersions.size} corrupt versions in this directory. Repairing the data will repair corrupt versions if possible and delete them otherwise. This may take a while. Do you want to repair?",
+                action = { repair() }
+            )
         }
+        dialog.show(root)
+    }
+
+    /**
+     * Verify the repository and show the user a dialog to indicate progress.
+     */
+    private fun verify() {
+        val job = model.selected?.executeAndRun(
+            operation = { workDirectory.repository.verify() },
+            onCompletion = { promptRepair(it) }
+        ) ?: return
+
+        val dialog = processingDialog(title = "Checking for corruption...", job = job)
+        dialog.show(root)
+    }
+
+    /**
+     * Prompt the user for whether they want to verify the repository.
+     */
+    @FXML
+    fun promptVerify() {
+        val dialog = confirmationDialog(
+            title = "Check for corruption",
+            text = "This will check the versions in this directory for corruption. If corrupt data is found, you will have the option to repair it. This may take a while. Do you want to check for corruption?",
+            action = { verify() }
+        )
 
         dialog.show(root)
     }

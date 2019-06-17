@@ -66,14 +66,10 @@
                             </Definition>
                         </VBox>
                         <HBox alignment="CENTER_LEFT" spacing="30.0">
-                            <LabeledIconButton icon="gmi-check-circle" label="Verify" styleClass="icon-button-light">
+                            <LabeledIconButton icon="gmi-build" label="Repair" onAction="#promptVerify"
+                                               styleClass="icon-button-light">
                                 <tooltip>
-                                    <Tooltip text="Check this directory for corruption."/>
-                                </tooltip>
-                            </LabeledIconButton>
-                            <LabeledIconButton icon="gmi-build" label="Repair" styleClass="icon-button-light">
-                                <tooltip>
-                                    <Tooltip text="Repair corrupt data in this directory."/>
+                                    <Tooltip text="Check this directory for corruption and repair it if necessary."/>
                                 </tooltip>
                             </LabeledIconButton>
                             <LabeledIconButton icon="gmi-delete-forever" label="Delete" onAction="#deleteWorkDirectory"

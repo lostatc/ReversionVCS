@@ -33,8 +33,9 @@ import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.sendBlocking
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
@@ -52,7 +53,7 @@ data class VersionOperationContext(val version: Version, val workDirectory: Work
 /**
  * An operation to store or retrieve data about a [Version].
  */
-typealias VersionOperation<R> = VersionOperationContext.() -> R
+typealias VersionOperation<R> = suspend VersionOperationContext.() -> R
 
 /**
  * The model for storing information about the currently selected version.
@@ -65,7 +66,7 @@ class VersionModel(
     /**
      * A channel to send storage operations to.
      */
-    private val taskChannel: TaskChannel = taskActor(context = Dispatchers.IO)
+    private val taskChannel: TaskChannel = taskActor(context = Dispatchers.IO, capacity = Channel.UNLIMITED)
 
     /**
      * The absolute path of the [version].
@@ -129,17 +130,14 @@ class VersionModel(
     val timeCreated: Instant = version.snapshot.timeCreated
 
     /**
-     * Queue up a change to the version to be completed asynchronously.
+     * Queue up a change to the working directory to be completed asynchronously.
+     *
+     * @param [operation] The operation to complete asynchronously.
+     *
+     * @return The job that is running the operation.
      */
-    fun execute(operation: VersionOperation<Unit>) {
-        taskChannel.sendBlocking { VersionOperationContext(version, workDirectory, path).operation() }
-    }
-
-    /**
-     * Request information from the version to be returned asynchronously.
-     */
-    suspend fun <R> query(operation: VersionOperation<R>): R =
-        taskChannel.sendBlockingAsync { VersionOperationContext(version, workDirectory, path).operation() }.await()
+    fun execute(operation: VersionOperation<Unit>): Job =
+        taskChannel.sendBlockingAsync { VersionOperationContext(version, workDirectory, path).operation() }
 
     /**
      * Suspend and wait for changes applied with [execute] to commit.
