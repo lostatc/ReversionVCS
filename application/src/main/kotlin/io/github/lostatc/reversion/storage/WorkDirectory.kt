@@ -147,6 +147,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     private fun walkDirectory(paths: Iterable<Path>): List<Path> = paths
         .map { it.toAbsolutePath().normalize() }
         .flattenPaths()
+        .filter { Files.exists(it) }
         .flatMap { Files.walk(it).toList() }
         .filterNot { ignoreMatcher.matches(it) }
         .filter { Files.isRegularFile(it) }
