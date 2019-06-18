@@ -101,3 +101,22 @@ interface Snapshot {
      */
     fun removeVersion(path: Path): Boolean
 }
+
+/**
+ * Removes this snapshot from its [timeline][Snapshot.timeline].
+ */
+fun Snapshot.delete() {
+    timeline.removeSnapshot(revision)
+}
+
+/**
+ * Removes this snapshot from its [timeline][Snapshot.timeline] if it has no versions.
+ *
+ * @return `true` if the snapshot was removed, `false` if it still had versions.
+ */
+fun Snapshot.deleteIfEmpty(): Boolean = if (versions.isEmpty()) {
+    delete()
+    true
+} else {
+    false
+}

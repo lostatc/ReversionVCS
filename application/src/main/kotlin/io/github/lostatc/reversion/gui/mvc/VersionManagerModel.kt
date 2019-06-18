@@ -19,6 +19,8 @@
 
 package io.github.lostatc.reversion.gui.mvc
 
+import io.github.lostatc.reversion.api.delete
+import io.github.lostatc.reversion.api.deleteIfEmpty
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
@@ -85,10 +87,8 @@ class VersionManagerModel : CoroutineScope by MainScope() {
 
         selected.executeAsync {
             val snapshot = version.snapshot
-            snapshot.removeVersion(version.path)
-            if (snapshot.versions.isEmpty()) {
-                snapshot.timeline.removeSnapshot(snapshot.revision)
-            }
+            version.delete()
+            snapshot.deleteIfEmpty()
         } ui {
             reloadVersions()
         }
