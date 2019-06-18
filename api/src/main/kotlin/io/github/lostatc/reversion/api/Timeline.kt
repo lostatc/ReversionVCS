@@ -190,14 +190,12 @@ interface Timeline {
 
         // Delete versions.
         for (version in versionsToDelete) {
-            version.snapshot.removeVersion(version.path)
+            version.delete()
         }
 
         // Remove empty snapshots.
         for (snapshot in snapshots.values) {
-            if (snapshot.versions.isEmpty()) {
-                removeSnapshot(snapshot.revision)
-            }
+            snapshot.deleteIfEmpty()
         }
 
         logger.info("Cleaned up $totalDeleted versions in timeline $this.")
@@ -211,4 +209,11 @@ interface Timeline {
          */
         private val logger: Logger = LoggerFactory.getLogger(Timeline::class.java)
     }
+}
+
+/**
+ * Removes this timeline from its [repository][Timeline.repository].
+ */
+fun Timeline.delete() {
+    repository.removeTimeline(id)
 }

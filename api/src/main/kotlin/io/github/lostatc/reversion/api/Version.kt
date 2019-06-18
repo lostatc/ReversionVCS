@@ -149,3 +149,10 @@ interface Version {
         private val logger: Logger = LoggerFactory.getLogger(Version::class.java)
     }
 }
+
+/**
+ * Removes this version from its [snapshot][Version.snapshot].
+ */
+fun Version.delete() {
+    snapshot.removeVersion(path)
+}

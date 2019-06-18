@@ -28,6 +28,7 @@ import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.api.deleteIfEmpty
 import org.apache.commons.io.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -279,10 +280,11 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * @param [revision] The revision number. If `null`, use the most recent revision.
      */
     fun restore(paths: Iterable<Path>, revision: Int? = null) {
-        commit(
+        val snapshot = commit(
             paths = paths,
             description = "This version was created to save the file before it was overwritten by a restore."
         )
+        snapshot.deleteIfEmpty()
         update(paths = paths, revision = revision)
     }
 

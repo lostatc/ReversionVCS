@@ -26,6 +26,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
+import io.github.lostatc.reversion.api.deleteIfEmpty
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 
@@ -64,6 +65,7 @@ class VersionRemoveCommand(val parent: VersionCommand) : CliktCommand(
         val workDirectory = WorkDirectory.open(parent.workPath)
         val snapshot = getSnapshot(workDirectory, revision)
         snapshot.removeVersion(versionPath)
+        snapshot.deleteIfEmpty()
     }
 }
 

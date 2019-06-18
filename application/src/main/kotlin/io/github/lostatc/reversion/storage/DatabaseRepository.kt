@@ -31,6 +31,7 @@ import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
 import io.github.lostatc.reversion.api.UnsupportedFormatException
+import io.github.lostatc.reversion.api.delete
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
 import io.github.lostatc.reversion.schema.BlockEntity
@@ -253,7 +254,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
         // Delete all versions which could not be repaired.
         for (version in versionsToDelete) {
-            version.snapshot.removeVersion(version.path)
+            version.delete()
         }
 
         logger.info("Repaired repository $this and deleted ${versionsToDelete.size} versions.")
