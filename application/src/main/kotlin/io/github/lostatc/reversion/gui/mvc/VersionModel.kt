@@ -32,6 +32,7 @@ import javafx.beans.property.ReadOnlyProperty
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -137,6 +138,16 @@ class VersionModel(
      * @return The job that is running the operation.
      */
     fun execute(operation: VersionOperation<Unit>): Job =
+        storageActor.sendBlockingAsync { VersionOperationContext(version, workDirectory, path).operation() }
+
+    /**
+     * Request information from the version to be returned asynchronously.
+     *
+     * @param [operation] The operation to complete asynchronously.
+     *
+     * @return The deferred output of the operation.
+     */
+    fun <T> executeAsync(operation: VersionOperation<T>): Deferred<T> =
         storageActor.sendBlockingAsync { VersionOperationContext(version, workDirectory, path).operation() }
 
     /**

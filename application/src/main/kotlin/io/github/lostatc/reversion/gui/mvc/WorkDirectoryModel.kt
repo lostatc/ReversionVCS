@@ -28,6 +28,7 @@ import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.taskActor
+import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
@@ -39,7 +40,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.time.Instant
@@ -140,14 +140,10 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
 
     init {
         // Load the cleanup policies in the UI.
-        launch {
-            cleanupPolicies.addAll(executeAsync { workDirectory.timeline.cleanupPolicies }.await())
-        }
+        executeAsync { workDirectory.timeline.cleanupPolicies } ui { cleanupPolicies.addAll(it) }
 
         // Load the ignored path list in the UI.
-        launch {
-            ignoredPaths.addAll(executeAsync { workDirectory.ignoredPaths }.await())
-        }
+        executeAsync { workDirectory.ignoredPaths } ui { ignoredPaths.addAll(it) }
 
         // Load statistics about the working directory.
         updateStatistics()
@@ -171,24 +167,14 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      * Updates the values of the statistics in this model.
      */
     private fun updateStatistics() {
-        launch {
-            snapshots = executeAsync { workDirectory.timeline.snapshots.size }.await()
-        }
-        launch {
-            latestVersion = executeAsync { workDirectory.timeline.latestSnapshot?.timeCreated }.await()
-        }
-        launch {
-            storageUsed = executeAsync { workDirectory.repository.storedSize }.await()
-        }
-        launch {
-            storageSaved = executeAsync {
-                val totalSize = workDirectory.timeline.versions.map { it.size }.sum()
-                totalSize - workDirectory.repository.storedSize
-            }.await()
-        }
-        launch {
-            trackedFiles = executeAsync { workDirectory.listFiles().size }.await()
-        }
+        executeAsync { workDirectory.timeline.snapshots.size } ui { snapshots = it }
+        executeAsync { workDirectory.timeline.latestSnapshot?.timeCreated } ui { latestVersion = it }
+        executeAsync { workDirectory.repository.storedSize } ui { storageUsed = it }
+        executeAsync {
+            val totalSize = workDirectory.timeline.versions.map { it.size }.sum()
+            totalSize - workDirectory.repository.storedSize
+        } ui { storageSaved = it }
+        executeAsync { workDirectory.listFiles().size } ui { trackedFiles = it }
     }
 
     /**
@@ -208,26 +194,8 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      *
      * @return The deferred output of the operation.
      */
-    fun <R> executeAsync(operation: WorkDirectoryOperation<R>): Deferred<R> =
+    fun <T> executeAsync(operation: WorkDirectoryOperation<T>): Deferred<T> =
         storageActor.sendBlockingAsync { WorkDirectoryOperationContext(workDirectory).operation() }
-
-    /**
-     * Queue up a change to the working directory and run a function on completion.
-     *
-     * When the [operation] finishes, its output is passed to [onCompletion].
-     *
-     * @param [operation] The operation to complete asynchronously.
-     * @param [onCompletion] The function to be called when the job completes.
-     *
-     * @return The job that is running the operation.
-     */
-    fun <R> executeAndRun(operation: WorkDirectoryOperation<R>, onCompletion: (R) -> Unit): Job {
-        val result = executeAsync(operation)
-        launch {
-            onCompletion(result.await())
-        }
-        return result
-    }
 
     /**
      * Adds a [CleanupPolicy] to this working directory.
