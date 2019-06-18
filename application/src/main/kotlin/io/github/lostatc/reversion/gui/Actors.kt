@@ -23,6 +23,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.sendBlocking
 import kotlinx.coroutines.launch
@@ -167,4 +169,12 @@ fun CoroutineScope.taskActor(
     }
 
     return actor
+}
+
+/**
+ * Run the given [block] in the UI thread once this job completes.
+ */
+infix fun <T> Deferred<T>.ui(block: suspend (T) -> Unit): Job {
+    MainScope().launch { block(await()) }
+    return this
 }

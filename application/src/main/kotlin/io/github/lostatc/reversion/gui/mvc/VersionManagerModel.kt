@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.setValue
+import io.github.lostatc.reversion.gui.ui
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
@@ -80,8 +81,15 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      * Deletes the currently selected version.
      */
     fun deleteVersion() {
-        selected?.execute {
-            version.snapshot.removeVersion(version.path)
+        val selected = selected ?: return
+
+        selected.executeAsync {
+            val snapshot = version.snapshot
+            snapshot.removeVersion(version.path)
+            if (snapshot.versions.isEmpty()) {
+                snapshot.timeline.removeSnapshot(snapshot.revision)
+            }
+        } ui {
             reloadVersions()
         }
     }
@@ -90,8 +98,11 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      * Restores the currently selected version.
      */
     fun restoreVersion() {
-        selected?.execute {
+        val selected = selected ?: return
+
+        selected.executeAsync {
             workDirectory.restore(listOf(path), revision = version.snapshot.revision)
+        } ui {
             reloadVersions()
         }
     }

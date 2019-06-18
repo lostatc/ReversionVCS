@@ -34,6 +34,7 @@ import io.github.lostatc.reversion.gui.controls.ListItem
 import io.github.lostatc.reversion.gui.infoDialog
 import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.toMappedProperty
+import io.github.lostatc.reversion.gui.ui
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyProperty
 import javafx.fxml.FXML
@@ -312,7 +313,7 @@ class WorkDirectoryManagerController {
     private fun repair() {
         val job = model.selected?.execute { workDirectory.repository.repair(workDirectory.path) } ?: return
 
-        val dialog = processingDialog(title = "Reparing...", job = job)
+        val dialog = processingDialog(title = "Repairing...", job = job)
         dialog.show(root)
 
     }
@@ -340,10 +341,9 @@ class WorkDirectoryManagerController {
      * Verify the repository and show the user a dialog to indicate progress.
      */
     private fun verify() {
-        val job = model.selected?.executeAndRun(
-            operation = { workDirectory.repository.verify() },
-            onCompletion = { promptRepair(it) }
-        ) ?: return
+        val selected = model.selected ?: return
+
+        val job = selected.executeAsync { workDirectory.repository.verify() } ui { promptRepair(it) }
 
         val dialog = processingDialog(title = "Checking for corruption...", job = job)
         dialog.show(root)
