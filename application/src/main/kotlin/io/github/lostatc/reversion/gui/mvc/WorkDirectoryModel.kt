@@ -23,6 +23,7 @@ import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.gui.ActorEvent
 import io.github.lostatc.reversion.gui.TaskActor
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
@@ -147,6 +148,11 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
 
         // Load statistics about the working directory.
         updateStatistics()
+
+        // Update the working directory statistics whenever a change is made.
+        storageActor.addEventHandler(ActorEvent.TASK_COMPLETED) {
+            updateStatistics()
+        }
 
         // Update the working directory whenever a cleanup policy is added or removed.
         cleanupPolicies.addListener(
