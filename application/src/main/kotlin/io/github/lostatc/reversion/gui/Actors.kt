@@ -35,34 +35,78 @@ import kotlin.coroutines.EmptyCoroutineContext
 typealias Task<T> = suspend () -> T
 
 /**
- * A channel that can return results asynchronously.
+ * An event that can occur in an actor.
  */
-class TaskChannel(channel: Channel<Task<Unit>>) : Channel<Task<Unit>> by channel {
+enum class ActorEvent {
     /**
-     * Sends the given [task] to the channel and returns its result.
+     * An event that occurs whenever an actor receives a task.
+     */
+    TASK_RECEIVED,
+
+    /**
+     * An event that occurs whenever an actor completes a task.
+     */
+    TASK_COMPLETED,
+
+    /**
+     * An event that occurs when an actor finishes its last task and starts waiting for more.
+     */
+    WAITING,
+
+    /**
+     * An event that occurs when an actor receives its first task after a period of [WAITING].
+     */
+    BUSY
+}
+
+/**
+ * An actor for executing tasks.
+ */
+interface TaskActor {
+    /**
+     * Registers a function to handle actor events of the given [type].
+     */
+    fun addEventHandler(type: ActorEvent, handler: () -> Unit)
+
+    /**
+     * Sends the given [task] to the actor and returns its result.
      *
      * @see [Channel.send]
      */
-    suspend fun <T> sendAsync(task: Task<T>): Deferred<T> {
-        val result = CompletableDeferred<T>()
-        send {
-            try {
-                result.complete(task())
-            } catch (e: Throwable) {
-                result.completeExceptionally(e)
-            }
-        }
-        return result
-    }
+    suspend fun <T> sendAsync(task: Task<T>): Deferred<T>
 
     /**
-     * Sends the given [task] to the channel and returns its result, blocking if the channel is full.
+     * Sends the given [task] to the actor and returns its result, blocking if the actor is full.
      *
      * @see [Channel.sendBlocking]
      */
-    fun <T> sendBlockingAsync(task: Task<T>): Deferred<T> {
+    fun <T> sendBlockingAsync(task: Task<T>): Deferred<T>
+
+    /**
+     * Suspends until all tasks which have been sent to this actor have been processed.
+     */
+    suspend fun flush()
+}
+
+private data class ChannelTaskActor(
+    private val channel: Channel<Task<Unit>>,
+    private val eventHandlers: MutableList<ActorEventHandler> = mutableListOf()
+) : TaskActor {
+
+    override fun addEventHandler(type: ActorEvent, handler: () -> Unit) {
+        eventHandlers.add(ActorEventHandler(type, handler))
+    }
+
+    /**
+     * Triggers an event of the given [type].
+     */
+    fun triggerEvent(type: ActorEvent) {
+        eventHandlers.filter { it.type == type }.forEach { it.handler() }
+    }
+
+    override suspend fun <T> sendAsync(task: Task<T>): Deferred<T> {
         val result = CompletableDeferred<T>()
-        sendBlocking {
+        channel.send {
             try {
                 result.complete(task())
             } catch (e: Throwable) {
@@ -72,32 +116,55 @@ class TaskChannel(channel: Channel<Task<Unit>>) : Channel<Task<Unit>> by channel
         return result
     }
 
-    /**
-     * Suspends until all tasks which have been sent to this channel have been processed.
-     */
-    suspend fun flush() {
-        val acknowledgement = sendAsync { true }
-        acknowledgement.await()
+    override fun <T> sendBlockingAsync(task: Task<T>): Deferred<T> {
+        val result = CompletableDeferred<T>()
+        channel.sendBlocking {
+            try {
+                result.complete(task())
+            } catch (e: Throwable) {
+                result.completeExceptionally(e)
+            }
+        }
+        return result
     }
+
+    override suspend fun flush() {
+        val acknowledgement = sendAsync { true }
+        acknowledgement.join()
+    }
+
+    /**
+     * A [handler] which is triggered on events of a certain [type].
+     */
+    private data class ActorEventHandler(val type: ActorEvent, val handler: () -> Unit)
 }
 
 /**
  * Creates a new actor for processing tasks.
- *
- * @return A channel which tasks can be sent to.
  */
 fun CoroutineScope.taskActor(
     context: CoroutineContext = EmptyCoroutineContext,
-    capacity: Int = Channel.RENDEZVOUS,
+    capacity: Int = Channel.UNLIMITED,
     start: CoroutineStart = CoroutineStart.DEFAULT
-): TaskChannel {
+): TaskActor {
     val channel = Channel<Task<Unit>>(capacity)
+    val actor = ChannelTaskActor(channel)
 
     launch(context = context, start = start) {
-        for (task in channel) {
-            task()
+        while (true) {
+            var task: Task<Unit>? = channel.receive()
+            actor.triggerEvent(ActorEvent.BUSY)
+
+            while (task != null) {
+                actor.triggerEvent(ActorEvent.TASK_RECEIVED)
+                task()
+                actor.triggerEvent(ActorEvent.TASK_COMPLETED)
+                task = channel.poll()
+            }
+
+            actor.triggerEvent(ActorEvent.WAITING)
         }
     }
 
-    return TaskChannel(channel)
+    return actor
 }
