@@ -131,6 +131,11 @@ interface WorkDirectoryTest {
     }
 
     @Test
+    fun `committing nonexistent files does not throw`() {
+        workDirectory.commit(listOf(workPath.resolve("nonexistent")))
+    }
+
+    @Test
     fun `modified files are considered changed`() {
         workDirectory.commit(listOf(workPath.resolve("a"), workPath.resolve("b"), workPath.resolve("c", "a")))
 
