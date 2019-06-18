@@ -59,7 +59,7 @@ typealias VersionOperation<R> = suspend VersionOperationContext.() -> R
 /**
  * The model for storing information about the currently selected version.
  */
-class VersionModel(
+data class VersionModel(
     private val version: Version,
     private val workDirectory: WorkDirectory
 ) : CoroutineScope by MainScope() {
@@ -73,6 +73,11 @@ class VersionModel(
      * The absolute path of the [version].
      */
     val path: Path = workDirectory.path.resolve(version.path)
+
+    /**
+     * The revision number of the version's snapshot.
+     */
+    val revision: Int = version.snapshot.revision
 
     /**
      * A property for [name].

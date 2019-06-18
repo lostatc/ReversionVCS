@@ -28,6 +28,7 @@ import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
+import javafx.collections.transformation.SortedList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -54,8 +55,10 @@ class VersionManagerModel : CoroutineScope by MainScope() {
 
     /**
      * A read-only list of the versions currently being displayed in the UI.
+     *
+     * This list is sorted from most recent to least recent.
      */
-    val versions: ObservableList<VersionModel> = FXCollections.unmodifiableObservableList(_versions)
+    val versions: ObservableList<VersionModel> = SortedList(_versions, compareByDescending { it.revision })
 
     /**
      * Loads the [versions] of the file with the given [path].
@@ -73,10 +76,17 @@ class VersionManagerModel : CoroutineScope by MainScope() {
     }
 
     /**
-     * Reloads the [versions] of the [selected] file.
+     * Reloads the [versions] of the [selected] file displayed in the UI to match the database.
      */
     fun reloadVersions() {
-        selected?.let { loadVersions(it.path) }
+        val selected = selected ?: return
+
+        selected.executeAsync {
+            VersionModel.listVersions(selected.path)
+        } ui { newVersions ->
+            _versions.retainAll(newVersions)
+            _versions.addAll(newVersions - _versions)
+        }
     }
 
     /**
@@ -85,13 +95,13 @@ class VersionManagerModel : CoroutineScope by MainScope() {
     fun deleteVersion() {
         val selected = selected ?: return
 
-        selected.executeAsync {
+        selected.execute {
             val snapshot = version.snapshot
             version.delete()
             snapshot.deleteIfEmpty()
-        } ui {
-            reloadVersions()
         }
+
+        _versions.remove(selected)
     }
 
     /**
