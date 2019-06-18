@@ -23,7 +23,7 @@ import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
-import io.github.lostatc.reversion.gui.TaskChannel
+import io.github.lostatc.reversion.gui.TaskActor
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
@@ -39,7 +39,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
@@ -71,7 +70,7 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
     /**
      * A channel to send storage operations to.
      */
-    private val taskChannel: TaskChannel = taskActor(context = Dispatchers.IO, capacity = Channel.UNLIMITED)
+    private val storageActor: TaskActor = taskActor(context = Dispatchers.IO)
 
     /**
      * The path of the working directory.
@@ -200,7 +199,7 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      * @return The job that is running the operation.
      */
     fun execute(operation: WorkDirectoryOperation<Unit>): Job =
-        taskChannel.sendBlockingAsync { WorkDirectoryOperationContext(workDirectory).operation() }
+        storageActor.sendBlockingAsync { WorkDirectoryOperationContext(workDirectory).operation() }
 
     /**
      * Request information from the working directory to be returned asynchronously.
@@ -210,7 +209,7 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      * @return The deferred output of the operation.
      */
     fun <R> executeAsync(operation: WorkDirectoryOperation<R>): Deferred<R> =
-        taskChannel.sendBlockingAsync { WorkDirectoryOperationContext(workDirectory).operation() }
+        storageActor.sendBlockingAsync { WorkDirectoryOperationContext(workDirectory).operation() }
 
     /**
      * Queue up a change to the working directory and run a function on completion.

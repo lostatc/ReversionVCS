@@ -20,7 +20,7 @@
 package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.api.Version
-import io.github.lostatc.reversion.gui.TaskChannel
+import io.github.lostatc.reversion.gui.TaskActor
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.taskActor
@@ -66,7 +66,7 @@ class VersionModel(
     /**
      * A channel to send storage operations to.
      */
-    private val taskChannel: TaskChannel = taskActor(context = Dispatchers.IO, capacity = Channel.UNLIMITED)
+    private val storageActor: TaskActor = taskActor(context = Dispatchers.IO, capacity = Channel.UNLIMITED)
 
     /**
      * The absolute path of the [version].
@@ -130,20 +130,20 @@ class VersionModel(
     val timeCreated: Instant = version.snapshot.timeCreated
 
     /**
-     * Queue up a change to the working directory to be completed asynchronously.
+     * Queue up a change to the version to be completed asynchronously.
      *
      * @param [operation] The operation to complete asynchronously.
      *
      * @return The job that is running the operation.
      */
     fun execute(operation: VersionOperation<Unit>): Job =
-        taskChannel.sendBlockingAsync { VersionOperationContext(version, workDirectory, path).operation() }
+        storageActor.sendBlockingAsync { VersionOperationContext(version, workDirectory, path).operation() }
 
     /**
      * Suspend and wait for changes applied with [execute] to commit.
      */
     suspend fun flush() {
-        taskChannel.flush()
+        storageActor.flush()
     }
 
     /**
