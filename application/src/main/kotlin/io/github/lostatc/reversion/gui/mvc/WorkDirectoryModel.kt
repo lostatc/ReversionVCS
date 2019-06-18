@@ -150,8 +150,11 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
         updateStatistics()
 
         // Update the working directory statistics whenever a change is made.
-        storageActor.addEventHandler(ActorEvent.TASK_COMPLETED) {
-            updateStatistics()
+        storageActor.addEventHandler(ActorEvent.TASK_COMPLETED) { key ->
+            // Only update the UI if the event was not triggered by another UI update.
+            if (key != UI_UPDATE_KEY) {
+                updateStatistics()
+            }
         }
 
         // Update the working directory whenever a cleanup policy is added or removed.
@@ -173,35 +176,37 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      * Updates the values of the statistics in this model.
      */
     private fun updateStatistics() {
-        executeAsync { workDirectory.timeline.snapshots.size } ui { snapshots = it }
-        executeAsync { workDirectory.timeline.latestSnapshot?.timeCreated } ui { latestVersion = it }
-        executeAsync { workDirectory.repository.storedSize } ui { storageUsed = it }
-        executeAsync {
+        executeAsync(UI_UPDATE_KEY) { workDirectory.timeline.snapshots.size } ui { snapshots = it }
+        executeAsync(UI_UPDATE_KEY) { workDirectory.timeline.latestSnapshot?.timeCreated } ui { latestVersion = it }
+        executeAsync(UI_UPDATE_KEY) { workDirectory.repository.storedSize } ui { storageUsed = it }
+        executeAsync(UI_UPDATE_KEY) {
             val totalSize = workDirectory.timeline.versions.map { it.size }.sum()
             totalSize - workDirectory.repository.storedSize
         } ui { storageSaved = it }
-        executeAsync { workDirectory.listFiles().size } ui { trackedFiles = it }
+        executeAsync(UI_UPDATE_KEY) { workDirectory.listFiles().size } ui { trackedFiles = it }
     }
 
     /**
      * Queue up a change to the working directory to be completed asynchronously.
      *
+     * @param [key] An object used to identify the [operation].
      * @param [operation] The operation to complete asynchronously.
      *
      * @return The job that is running the operation.
      */
-    fun execute(operation: WorkDirectoryOperation<Unit>): Job =
-        storageActor.sendBlockingAsync { WorkDirectoryOperationContext(workDirectory).operation() }
+    fun execute(key: Any = Any(), operation: WorkDirectoryOperation<Unit>): Job =
+        storageActor.sendBlockingAsync(key) { WorkDirectoryOperationContext(workDirectory).operation() }
 
     /**
      * Request information from the working directory to be returned asynchronously.
      *
+     * @param [key] An object used to identify the [operation].
      * @param [operation] The operation to complete asynchronously.
      *
      * @return The deferred output of the operation.
      */
-    fun <T> executeAsync(operation: WorkDirectoryOperation<T>): Deferred<T> =
-        storageActor.sendBlockingAsync { WorkDirectoryOperationContext(workDirectory).operation() }
+    fun <T> executeAsync(key: Any = Any(), operation: WorkDirectoryOperation<T>): Deferred<T> =
+        storageActor.sendBlockingAsync(key) { WorkDirectoryOperationContext(workDirectory).operation() }
 
     /**
      * Adds a [CleanupPolicy] to this working directory.
@@ -230,6 +235,14 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
     }
 
     companion object {
+
+        /**
+         * An object used as a key with [taskActor] to indicate that an event is updating the UI.
+         *
+         * This is used to ensure that event handlers on [storageActor] don't trigger themselves endlessly.
+         */
+        val UI_UPDATE_KEY: Any = Any()
+
         /**
          * Returns a new [WorkDirectoryModel] for the working directory with the given [path].
          *

@@ -67,22 +67,37 @@ enum class ActorEvent {
 interface TaskActor {
     /**
      * Registers a function to handle actor events of the given [type].
+     *
+     * The given [handler] is passed an object which identifies the task which triggered the event.
+     *
+     * @param [type] The type of event to register a handler for.
+     * @param [handler] A function which is called when an event is triggered.
      */
-    fun addEventHandler(type: ActorEvent, handler: () -> Unit)
+    fun addEventHandler(type: ActorEvent, handler: (Any) -> Unit)
 
     /**
      * Sends the given [task] to the actor and returns its result.
      *
+     * Each task has a [key] which can be used to identify it in an event handler.
+     *
+     * @param [task] The task to execute.
+     * @param [key] An object used to identify the task which was sent.
+     *
      * @see [Channel.send]
      */
-    suspend fun <T> sendAsync(task: Task<T>): Deferred<T>
+    suspend fun <T> sendAsync(key: Any = Any(), task: Task<T>): Deferred<T>
 
     /**
      * Sends the given [task] to the actor and returns its result, blocking if the actor is full.
      *
+     * Each task has a [key] which can be used to identify it in an event handler.
+     *
+     * @param [task] The task to execute.
+     * @param [key] An object used to identify the task which was sent.
+     *
      * @see [Channel.sendBlocking]
      */
-    fun <T> sendBlockingAsync(task: Task<T>): Deferred<T>
+    fun <T> sendBlockingAsync(key: Any = Any(), task: Task<T>): Deferred<T>
 
     /**
      * Suspends until all tasks which have been sent to this actor have been processed.
@@ -90,43 +105,55 @@ interface TaskActor {
     suspend fun flush()
 }
 
+/**
+ * An event to send to a [ChannelTaskActor].
+ */
+private data class TaskActorEvent(val key: Any, val task: Task<Unit>)
+
 private data class ChannelTaskActor(
-    private val channel: Channel<Task<Unit>>,
+    private val channel: Channel<TaskActorEvent>,
     private val eventHandlers: MutableList<ActorEventHandler> = mutableListOf()
 ) : TaskActor {
 
-    override fun addEventHandler(type: ActorEvent, handler: () -> Unit) {
+    override fun addEventHandler(type: ActorEvent, handler: (Any) -> Unit) {
         eventHandlers.add(ActorEventHandler(type, handler))
     }
 
     /**
      * Triggers an event of the given [type].
+     *
+     * @param [type] The type of event to trigger.
+     * @param [key] The key which uniquely identifies the task which triggered the event.
      */
-    fun triggerEvent(type: ActorEvent) {
-        eventHandlers.filter { it.type == type }.forEach { it.handler() }
+    fun triggerEvent(type: ActorEvent, key: Any) {
+        eventHandlers.filter { it.type == type }.forEach { it.handler(key) }
     }
 
-    override suspend fun <T> sendAsync(task: Task<T>): Deferred<T> {
+    override suspend fun <T> sendAsync(key: Any, task: Task<T>): Deferred<T> {
         val result = CompletableDeferred<T>()
-        channel.send {
-            try {
-                result.complete(task())
-            } catch (e: Throwable) {
-                result.completeExceptionally(e)
+        channel.send(
+            TaskActorEvent(key) {
+                try {
+                    result.complete(task())
+                } catch (e: Throwable) {
+                    result.completeExceptionally(e)
+                }
             }
-        }
+        )
         return result
     }
 
-    override fun <T> sendBlockingAsync(task: Task<T>): Deferred<T> {
+    override fun <T> sendBlockingAsync(key: Any, task: Task<T>): Deferred<T> {
         val result = CompletableDeferred<T>()
-        channel.sendBlocking {
-            try {
-                result.complete(task())
-            } catch (e: Throwable) {
-                result.completeExceptionally(e)
+        channel.sendBlocking(
+            TaskActorEvent(key) {
+                try {
+                    result.complete(task())
+                } catch (e: Throwable) {
+                    result.completeExceptionally(e)
+                }
             }
-        }
+        )
         return result
     }
 
@@ -138,7 +165,7 @@ private data class ChannelTaskActor(
     /**
      * A [handler] which is triggered on events of a certain [type].
      */
-    private data class ActorEventHandler(val type: ActorEvent, val handler: () -> Unit)
+    private data class ActorEventHandler(val type: ActorEvent, val handler: (Any) -> Unit)
 }
 
 /**
@@ -149,22 +176,28 @@ fun CoroutineScope.taskActor(
     capacity: Int = Channel.UNLIMITED,
     start: CoroutineStart = CoroutineStart.DEFAULT
 ): TaskActor {
-    val channel = Channel<Task<Unit>>(capacity)
+    val channel = Channel<TaskActorEvent>(capacity)
     val actor = ChannelTaskActor(channel)
 
     launch(context = context, start = start) {
         while (true) {
-            var task: Task<Unit>? = channel.receive()
-            actor.triggerEvent(ActorEvent.BUSY)
+            var (key, task) = channel.receive()
 
-            while (task != null) {
-                actor.triggerEvent(ActorEvent.TASK_RECEIVED)
+            actor.triggerEvent(ActorEvent.BUSY, key)
+
+            while (true) {
+                actor.triggerEvent(ActorEvent.TASK_RECEIVED, key)
+
                 task()
-                actor.triggerEvent(ActorEvent.TASK_COMPLETED)
-                task = channel.poll()
+
+                actor.triggerEvent(ActorEvent.TASK_COMPLETED, key)
+
+                val event = channel.poll() ?: break
+                key = event.key
+                task = event.task
             }
 
-            actor.triggerEvent(ActorEvent.WAITING)
+            actor.triggerEvent(ActorEvent.WAITING, key)
         }
     }
 
@@ -173,6 +206,8 @@ fun CoroutineScope.taskActor(
 
 /**
  * Run the given [block] in the UI thread once this job completes.
+ *
+ * The [block] is passed the output of this job.
  */
 infix fun <T> Deferred<T>.ui(block: suspend (T) -> Unit): Job {
     MainScope().launch { block(await()) }
