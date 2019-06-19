@@ -24,11 +24,10 @@ import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.gui.ActorEvent
-import io.github.lostatc.reversion.gui.TaskActor
 import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.mvc.StorageModel.UI_UPDATE_KEY
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
-import io.github.lostatc.reversion.gui.taskActor
 import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
@@ -68,10 +67,6 @@ private val Timeline.versions: List<Version>
  * The model for storing information about the currently selected working directory.
  */
 data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineScope by MainScope() {
-    /**
-     * A channel to send storage operations to.
-     */
-    private val storageActor: TaskActor = taskActor(context = Dispatchers.IO)
 
     /**
      * The path of the working directory.
@@ -150,7 +145,7 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
         updateStatistics()
 
         // Update the working directory statistics whenever a change is made.
-        storageActor.addEventHandler(ActorEvent.TASK_COMPLETED) { key ->
+        StorageModel.storageActor.addEventHandler(ActorEvent.TASK_COMPLETED) { key ->
             // Only update the UI if the event was not triggered by another UI update.
             if (key != UI_UPDATE_KEY) {
                 updateStatistics()
@@ -194,8 +189,7 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      *
      * @return The job that is running the operation.
      */
-    fun execute(key: Any = Any(), operation: WorkDirectoryOperation<Unit>): Job =
-        storageActor.sendBlockingAsync(key) { WorkDirectoryOperationContext(workDirectory).operation() }
+    fun execute(key: Any = Any(), operation: WorkDirectoryOperation<Unit>): Job = executeAsync(key, operation)
 
     /**
      * Request information from the working directory to be returned asynchronously.
@@ -206,7 +200,9 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      * @return The deferred output of the operation.
      */
     fun <T> executeAsync(key: Any = Any(), operation: WorkDirectoryOperation<T>): Deferred<T> =
-        storageActor.sendBlockingAsync(key) { WorkDirectoryOperationContext(workDirectory).operation() }
+        StorageModel.storageActor.sendBlockingAsync(key) {
+            WorkDirectoryOperationContext(workDirectory).operation()
+        }
 
     /**
      * Adds a [CleanupPolicy] to this working directory.
@@ -235,14 +231,6 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
     }
 
     companion object {
-
-        /**
-         * An object used as a key with [taskActor] to indicate that an event is updating the UI.
-         *
-         * This is used to ensure that event handlers on [storageActor] don't trigger themselves endlessly.
-         */
-        val UI_UPDATE_KEY: Any = Any()
-
         /**
          * Returns a new [WorkDirectoryModel] for the working directory with the given [path].
          *

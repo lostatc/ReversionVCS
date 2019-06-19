@@ -28,6 +28,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.sendBlocking
 import kotlinx.coroutines.launch
+import java.util.Objects
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
@@ -35,6 +36,11 @@ import kotlin.coroutines.EmptyCoroutineContext
  * A unit of work to be completed concurrently.
  */
 typealias Task<T> = suspend () -> T
+
+/**
+ * A function which handles an [ActorEvent].
+ */
+typealias ActorEventHandler = (Any) -> Unit
 
 /**
  * An event that can occur in an actor.
@@ -66,14 +72,14 @@ enum class ActorEvent {
  */
 interface TaskActor {
     /**
-     * Registers a function to handle actor events of the given [type].
+     * Registers a function to handle actor events.
      *
      * The given [handler] is passed an object which identifies the task which triggered the event.
      *
-     * @param [type] The type of event to register a handler for.
+     * @param [events] The events to register a handler for.
      * @param [handler] A function which is called when an event is triggered.
      */
-    fun addEventHandler(type: ActorEvent, handler: (Any) -> Unit)
+    fun addEventHandler(vararg events: ActorEvent, handler: ActorEventHandler)
 
     /**
      * Sends the given [task] to the actor and returns its result.
@@ -110,23 +116,34 @@ interface TaskActor {
  */
 private data class TaskActorEvent(val key: Any, val task: Task<Unit>)
 
-private data class ChannelTaskActor(
-    private val channel: Channel<TaskActorEvent>,
-    private val eventHandlers: MutableList<ActorEventHandler> = mutableListOf()
-) : TaskActor {
+private class ChannelTaskActor(private val channel: Channel<TaskActorEvent>) : TaskActor {
 
-    override fun addEventHandler(type: ActorEvent, handler: (Any) -> Unit) {
-        eventHandlers.add(ActorEventHandler(type, handler))
+    /**
+     * A map of event types to handlers for that event type.
+     */
+    private val eventHandlers: Map<ActorEvent, MutableList<ActorEventHandler>> = mapOf(
+        ActorEvent.TASK_RECEIVED to mutableListOf(),
+        ActorEvent.TASK_COMPLETED to mutableListOf(),
+        ActorEvent.WAITING to mutableListOf(),
+        ActorEvent.BUSY to mutableListOf()
+    )
+
+    override fun addEventHandler(vararg events: ActorEvent, handler: ActorEventHandler) {
+        for (event in events) {
+            eventHandlers[event]?.add(handler)
+        }
     }
 
     /**
-     * Triggers an event of the given [type].
+     * Triggers the given [event].
      *
-     * @param [type] The type of event to trigger.
-     * @param [key] The key which uniquely identifies the task which triggered the event.
+     * @param [event] The event to trigger.
+     * @param [key] An object which identifies the task which triggered the event.
      */
-    fun triggerEvent(type: ActorEvent, key: Any) {
-        eventHandlers.filter { it.type == type }.forEach { it.handler(key) }
+    fun triggerEvent(event: ActorEvent, key: Any) {
+        eventHandlers[event]?.forEach { handler ->
+            handler(key)
+        }
     }
 
     override suspend fun <T> sendAsync(key: Any, task: Task<T>): Deferred<T> {
@@ -162,10 +179,13 @@ private data class ChannelTaskActor(
         acknowledgement.join()
     }
 
-    /**
-     * A [handler] which is triggered on events of a certain [type].
-     */
-    private data class ActorEventHandler(val type: ActorEvent, val handler: (Any) -> Unit)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ChannelTaskActor) return false
+        return channel == other.channel && eventHandlers == other.eventHandlers
+    }
+
+    override fun hashCode(): Int = Objects.hash(channel, eventHandlers)
 }
 
 /**
