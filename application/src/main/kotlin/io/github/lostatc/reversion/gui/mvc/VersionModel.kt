@@ -20,10 +20,8 @@
 package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.api.Version
-import io.github.lostatc.reversion.gui.TaskActor
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.setValue
-import io.github.lostatc.reversion.gui.taskActor
 import io.github.lostatc.reversion.gui.toMappedProperty
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.BooleanProperty
@@ -36,7 +34,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
@@ -63,11 +60,6 @@ data class VersionModel(
     private val version: Version,
     private val workDirectory: WorkDirectory
 ) : CoroutineScope by MainScope() {
-
-    /**
-     * A channel to send storage operations to.
-     */
-    private val storageActor: TaskActor = taskActor(context = Dispatchers.IO, capacity = Channel.UNLIMITED)
 
     /**
      * The absolute path of the [version].
@@ -138,28 +130,31 @@ data class VersionModel(
     /**
      * Queue up a change to the version to be completed asynchronously.
      *
+     * @param [key] An object used to identify the [operation].
      * @param [operation] The operation to complete asynchronously.
      *
      * @return The job that is running the operation.
      */
-    fun execute(operation: VersionOperation<Unit>): Job =
-        storageActor.sendBlockingAsync { VersionOperationContext(version, workDirectory, path).operation() }
+    fun execute(key: Any = Any(), operation: VersionOperation<Unit>): Job = executeAsync(key, operation)
 
     /**
      * Request information from the version to be returned asynchronously.
      *
+     * @param [key] An object used to identify the [operation].
      * @param [operation] The operation to complete asynchronously.
      *
      * @return The deferred output of the operation.
      */
-    fun <T> executeAsync(operation: VersionOperation<T>): Deferred<T> =
-        storageActor.sendBlockingAsync { VersionOperationContext(version, workDirectory, path).operation() }
+    fun <T> executeAsync(key: Any = Any(), operation: VersionOperation<T>): Deferred<T> =
+        StorageModel.storageActor.sendBlockingAsync(key) {
+            VersionOperationContext(version, workDirectory, path).operation()
+        }
 
     /**
-     * Suspend and wait for changes applied with [execute] to commit.
+     * Suspend and wait for changes applied with [execute] or [executeAsync] to commit.
      */
     suspend fun flush() {
-        storageActor.flush()
+        StorageModel.storageActor.flush()
     }
 
     /**
