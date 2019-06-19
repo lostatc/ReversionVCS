@@ -78,7 +78,7 @@ private fun Path.relativizedOrNull(other: Path): Path? =
  * Returns [other] resolved against this path if possible or `null` otherwise.
  */
 private fun Path.resolvedOrNull(other: Path): Path? =
-    if (!other.isAbsolute || startsWith(other)) resolve(other) else null
+    if (!other.isAbsolute || other.startsWith(this)) resolve(other) else null
 
 /**
  * A working directory.
