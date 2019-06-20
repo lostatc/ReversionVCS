@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.toMappedProperty
 import io.github.lostatc.reversion.storage.WorkDirectory
@@ -135,7 +136,8 @@ data class VersionModel(
      *
      * @return The job that is running the operation.
      */
-    fun execute(key: Any = Any(), operation: VersionOperation<Unit>): Job = executeAsync(key, operation)
+    fun execute(key: TaskType = storageActor.defaultKey, operation: VersionOperation<Unit>): Job =
+        executeAsync(key, operation)
 
     /**
      * Request information from the version to be returned asynchronously.
@@ -145,8 +147,8 @@ data class VersionModel(
      *
      * @return The deferred output of the operation.
      */
-    fun <T> executeAsync(key: Any = Any(), operation: VersionOperation<T>): Deferred<T> =
-        StorageModel.storageActor.sendBlockingAsync(key) {
+    fun <T> executeAsync(key: TaskType = storageActor.defaultKey, operation: VersionOperation<T>): Deferred<T> =
+        storageActor.sendBlockingAsync(key) {
             VersionOperationContext(version, workDirectory, path).operation()
         }
 

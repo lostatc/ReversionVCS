@@ -25,7 +25,7 @@ import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.gui.ActorEvent
 import io.github.lostatc.reversion.gui.getValue
-import io.github.lostatc.reversion.gui.mvc.StorageModel.UI_UPDATE_KEY
+import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
@@ -147,7 +147,7 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
         // Update the working directory statistics whenever a change is made.
         StorageModel.storageActor.addEventHandler(ActorEvent.TASK_COMPLETED) { key ->
             // Only update the UI if the event was not triggered by another UI update.
-            if (key != UI_UPDATE_KEY) {
+            if (key != TaskType.HANDLER) {
                 updateStatistics()
             }
         }
@@ -171,14 +171,14 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      * Updates the values of the statistics in this model.
      */
     private fun updateStatistics() {
-        executeAsync(UI_UPDATE_KEY) { workDirectory.timeline.snapshots.size } ui { snapshots = it }
-        executeAsync(UI_UPDATE_KEY) { workDirectory.timeline.latestSnapshot?.timeCreated } ui { latestVersion = it }
-        executeAsync(UI_UPDATE_KEY) { workDirectory.repository.storedSize } ui { storageUsed = it }
-        executeAsync(UI_UPDATE_KEY) {
+        executeAsync(TaskType.HANDLER) { workDirectory.timeline.snapshots.size } ui { snapshots = it }
+        executeAsync(TaskType.HANDLER) { workDirectory.timeline.latestSnapshot?.timeCreated } ui { latestVersion = it }
+        executeAsync(TaskType.HANDLER) { workDirectory.repository.storedSize } ui { storageUsed = it }
+        executeAsync(TaskType.HANDLER) {
             val totalSize = workDirectory.timeline.versions.map { it.size }.sum()
             totalSize - workDirectory.repository.storedSize
         } ui { storageSaved = it }
-        executeAsync(UI_UPDATE_KEY) { workDirectory.listFiles().size } ui { trackedFiles = it }
+        executeAsync(TaskType.HANDLER) { workDirectory.listFiles().size } ui { trackedFiles = it }
     }
 
     /**
@@ -189,7 +189,8 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      *
      * @return The job that is running the operation.
      */
-    fun execute(key: Any = Any(), operation: WorkDirectoryOperation<Unit>): Job = executeAsync(key, operation)
+    fun execute(key: TaskType = TaskType.DEFAULT, operation: WorkDirectoryOperation<Unit>): Job =
+        executeAsync(key, operation)
 
     /**
      * Request information from the working directory to be returned asynchronously.
@@ -199,8 +200,8 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      *
      * @return The deferred output of the operation.
      */
-    fun <T> executeAsync(key: Any = Any(), operation: WorkDirectoryOperation<T>): Deferred<T> =
-        StorageModel.storageActor.sendBlockingAsync(key) {
+    fun <T> executeAsync(key: TaskType = storageActor.defaultKey, operation: WorkDirectoryOperation<T>): Deferred<T> =
+        storageActor.sendBlockingAsync(key) {
             WorkDirectoryOperationContext(workDirectory).operation()
         }
 
