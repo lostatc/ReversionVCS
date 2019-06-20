@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.gui.mvc
 
+import io.github.lostatc.reversion.gui.ActorEventHandler
 import io.github.lostatc.reversion.gui.TaskActor
 import io.github.lostatc.reversion.gui.taskActor
 import kotlinx.coroutines.CoroutineScope
@@ -33,12 +34,21 @@ object StorageModel : CoroutineScope by MainScope() {
     /**
      * An actor for sending tasks which storage and retrieve data from a repository.
      */
-    val storageActor: TaskActor = taskActor(context = Dispatchers.IO, capacity = Channel.UNLIMITED)
+    val storageActor: TaskActor<TaskType> =
+        taskActor(TaskType.DEFAULT, context = Dispatchers.IO, capacity = Channel.UNLIMITED)
+}
+
+/**
+ * A type of task that can be filtered on in [ActorEventHandler] functions.
+ */
+enum class TaskType {
+    /**
+     * The default [TaskType].
+     */
+    DEFAULT,
 
     /**
-     * An object used as a key with [storageActor] to indicate that an event is updating the UI.
-     *
-     * This is used to ensure that event handlers on [TaskActor] don't trigger themselves endlessly.
+     * A task which is called by an [ActorEventHandler] and should not trigger additional events.
      */
-    val UI_UPDATE_KEY: Any = Any()
+    HANDLER
 }

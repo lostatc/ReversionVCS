@@ -40,7 +40,7 @@ typealias Task<T> = suspend () -> T
 /**
  * A function which handles an [ActorEvent].
  */
-typealias ActorEventHandler = (Any) -> Unit
+typealias ActorEventHandler<K> = (K) -> Unit
 
 /**
  * An event that can occur in an actor.
@@ -70,7 +70,12 @@ enum class ActorEvent {
 /**
  * An actor for executing tasks.
  */
-interface TaskActor {
+interface TaskActor<K> {
+    /**
+     * The default key to use for events.
+     */
+    val defaultKey: K
+
     /**
      * Registers a function to handle actor events.
      *
@@ -79,7 +84,7 @@ interface TaskActor {
      * @param [events] The events to register a handler for.
      * @param [handler] A function which is called when an event is triggered.
      */
-    fun addEventHandler(vararg events: ActorEvent, handler: ActorEventHandler)
+    fun addEventHandler(vararg events: ActorEvent, handler: ActorEventHandler<K>)
 
     /**
      * Sends the given [task] to the actor and returns its result.
@@ -91,7 +96,7 @@ interface TaskActor {
      *
      * @see [Channel.send]
      */
-    suspend fun <T> sendAsync(key: Any = Any(), task: Task<T>): Deferred<T>
+    suspend fun <T> sendAsync(key: K = defaultKey, task: Task<T>): Deferred<T>
 
     /**
      * Sends the given [task] to the actor and returns its result, blocking if the actor is full.
@@ -103,7 +108,7 @@ interface TaskActor {
      *
      * @see [Channel.sendBlocking]
      */
-    fun <T> sendBlockingAsync(key: Any = Any(), task: Task<T>): Deferred<T>
+    fun <T> sendBlockingAsync(key: K = defaultKey, task: Task<T>): Deferred<T>
 
     /**
      * Suspends until all tasks which have been sent to this actor have been processed.
@@ -114,21 +119,27 @@ interface TaskActor {
 /**
  * An event to send to a [ChannelTaskActor].
  */
-private data class TaskActorEvent(val key: Any, val task: Task<Unit>)
+private data class TaskActorEvent<K>(val key: K, val task: Task<Unit>)
 
-private class ChannelTaskActor(private val channel: Channel<TaskActorEvent>) : TaskActor {
+/**
+ * A [TaskActor] backed by a [Channel].
+ */
+private class ChannelTaskActor<K>(
+    override val defaultKey: K,
+    private val channel: Channel<TaskActorEvent<K>>
+) : TaskActor<K> {
 
     /**
      * A map of event types to handlers for that event type.
      */
-    private val eventHandlers: Map<ActorEvent, MutableList<ActorEventHandler>> = mapOf(
+    private val eventHandlers: Map<ActorEvent, MutableList<ActorEventHandler<K>>> = mapOf(
         ActorEvent.TASK_RECEIVED to mutableListOf(),
         ActorEvent.TASK_COMPLETED to mutableListOf(),
         ActorEvent.WAITING to mutableListOf(),
         ActorEvent.BUSY to mutableListOf()
     )
 
-    override fun addEventHandler(vararg events: ActorEvent, handler: ActorEventHandler) {
+    override fun addEventHandler(vararg events: ActorEvent, handler: ActorEventHandler<K>) {
         for (event in events) {
             eventHandlers[event]?.add(handler)
         }
@@ -140,13 +151,13 @@ private class ChannelTaskActor(private val channel: Channel<TaskActorEvent>) : T
      * @param [event] The event to trigger.
      * @param [key] An object which identifies the task which triggered the event.
      */
-    fun triggerEvent(event: ActorEvent, key: Any) {
+    fun triggerEvent(event: ActorEvent, key: K) {
         eventHandlers[event]?.forEach { handler ->
             handler(key)
         }
     }
 
-    override suspend fun <T> sendAsync(key: Any, task: Task<T>): Deferred<T> {
+    override suspend fun <T> sendAsync(key: K, task: Task<T>): Deferred<T> {
         val result = CompletableDeferred<T>()
         channel.send(
             TaskActorEvent(key) {
@@ -160,7 +171,7 @@ private class ChannelTaskActor(private val channel: Channel<TaskActorEvent>) : T
         return result
     }
 
-    override fun <T> sendBlockingAsync(key: Any, task: Task<T>): Deferred<T> {
+    override fun <T> sendBlockingAsync(key: K, task: Task<T>): Deferred<T> {
         val result = CompletableDeferred<T>()
         channel.sendBlocking(
             TaskActorEvent(key) {
@@ -175,13 +186,13 @@ private class ChannelTaskActor(private val channel: Channel<TaskActorEvent>) : T
     }
 
     override suspend fun flush() {
-        val acknowledgement = sendAsync { true }
+        val acknowledgement = sendAsync { defaultKey }
         acknowledgement.join()
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ChannelTaskActor) return false
+        if (other !is ChannelTaskActor<*>) return false
         return channel == other.channel && eventHandlers == other.eventHandlers
     }
 
@@ -190,14 +201,20 @@ private class ChannelTaskActor(private val channel: Channel<TaskActorEvent>) : T
 
 /**
  * Creates a new actor for processing tasks.
+ *
+ * @param [defaultKey] The key to use when one is not otherwise specified.
+ * @param [context] Additional coroutine contexts to use with the coroutine.
+ * @param [capacity] The capacity of the underlying channel.
+ * @param [start] When to start the coroutine.
  */
-fun CoroutineScope.taskActor(
+fun <K> CoroutineScope.taskActor(
+    defaultKey: K,
     context: CoroutineContext = EmptyCoroutineContext,
     capacity: Int = Channel.UNLIMITED,
     start: CoroutineStart = CoroutineStart.DEFAULT
-): TaskActor {
-    val channel = Channel<TaskActorEvent>(capacity)
-    val actor = ChannelTaskActor(channel)
+): TaskActor<K> {
+    val channel = Channel<TaskActorEvent<K>>(capacity)
+    val actor = ChannelTaskActor(defaultKey, channel)
 
     launch(context = context, start = start) {
         while (true) {
@@ -222,6 +239,48 @@ fun CoroutineScope.taskActor(
     }
 
     return actor
+}
+
+/**
+ * A class for encapsulating mutable state by controlling access to it using a [TaskActor].
+ */
+interface StateWrapper<K, T> {
+    /**
+     * The actor to send operations to.
+     */
+    val actor: TaskActor<K>
+
+    /**
+     * Execute an operation to be queued up and completed asynchronously.
+     *
+     * @param [key] An object used to identify the [operation].
+     * @param [operation] The operation to complete asynchronously.
+     *
+     * @return The deferred output of the operation.
+     */
+    fun <R> executeAsync(key: K = actor.defaultKey, operation: suspend T.() -> R): Deferred<R>
+
+    /**
+     * Execute an operation to be queued up and completed asynchronously.
+     *
+     * @param [key] An object used to identify the [operation].
+     * @param [operation] The operation to complete asynchronously.
+     *
+     * @return The job that is running the operation.
+     */
+    fun execute(key: K = actor.defaultKey, operation: suspend T.() -> Unit): Job = executeAsync(key, operation)
+}
+
+/**
+ * Creates a new [StateWrapper] using this actor.
+ *
+ * @param [state] The mutable state to encapsulate.
+ */
+fun <K, T> TaskActor<K>.wrap(state: T): StateWrapper<K, T> = object : StateWrapper<K, T> {
+    override val actor: TaskActor<K> = this@wrap
+
+    override fun <R> executeAsync(key: K, operation: suspend T.() -> R): Deferred<R> =
+        sendBlockingAsync(key) { state.operation() }
 }
 
 /**
