@@ -26,14 +26,47 @@ import java.util.UUID
 /**
  * Information about the integrity of a repository.
  *
- * @param [corruptVersions] The set of versions in the repository which are corrupt.
+ * This represents the integrity of the repository at the time it was checked for corruption. After [repair] is called,
+ * this report is outdated.
  */
-data class IntegrityReport(val corruptVersions: Set<Version>) {
+interface IntegrityReport {
+    /**
+     * The set of corrupt versions that will be repaired by [repair].
+     *
+     * These are versions which can be repaired without losing data. This could involve replacing corrupt data with
+     * duplicate data from the working directory or elsewhere in the repository.
+     */
+    val repaired: Set<Version>
+
+    /**
+     * The set of corrupt versions that will be deleted by [repair].
+     *
+     * These are versions which cannot be repaired, and must instead be deleted.
+     */
+    val deleted: Set<Version>
+
+    /**
+     * The set of versions in the repository which are corrupt.
+     */
+    val corrupt: Set<Version>
+        get() = repaired + deleted
+
     /**
      * Whether the repository is valid (not corrupt).
      */
     val isValid: Boolean
-        get() = corruptVersions.isEmpty()
+        get() = corrupt.isEmpty()
+
+    /**
+     * Repairs the repository.
+     *
+     * This repairs all versions in [repaired] and deletes all versions in [deleted]. After this is called, all corrupt
+     * versions in the repository must have been repaired or deleted. Calling this method does not change the values of
+     * [repaired], [deleted], [corrupt], or [isValid].
+     *
+     * @throws [IOException] An I/O error occurred.
+     */
+    fun repair()
 }
 
 /**
@@ -99,22 +132,13 @@ interface Repository : Configurable {
     fun removeTimeline(id: UUID): Boolean
 
     /**
-     * Verifies the integrity of the repository.
+     * Verifies the integrity of the repository and allows for repairing it.
      *
-     * @return A report of which versions are corrupt.
+     * @param [workDirectory] The path of the working directory containing the data.
+     *
+     * @return An object which can be used to identify corrupt versions and optionally repair them.
      */
-    fun verify(): IntegrityReport
-
-    /**
-     * Repairs the repository.
-     *
-     * This attempts to repair corrupt data in the repository using files from the working directory. Any versions which
-     * cannot be repaired are removed. If this returns without throwing an exception, it is guaranteed that
-     * `verify().isValid` will evaluate to `true`. However, data may be lost.
-     *
-     * @param [workDirectory] The path of the working directory.
-     */
-    fun repair(workDirectory: Path)
+    fun verify(workDirectory: Path): IntegrityReport
 
     /**
      * Deletes this repository.

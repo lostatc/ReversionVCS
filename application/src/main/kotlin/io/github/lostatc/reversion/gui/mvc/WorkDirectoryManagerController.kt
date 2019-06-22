@@ -32,6 +32,7 @@ import io.github.lostatc.reversion.gui.controls.Card
 import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ListItem
 import io.github.lostatc.reversion.gui.infoDialog
+import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.toDisplayProperty
 import io.github.lostatc.reversion.gui.ui
@@ -300,12 +301,10 @@ class WorkDirectoryManagerController {
     /**
      * Repair the repository and show the user a dialog to indicate progress.
      */
-    private fun repair() {
-        val job = model.selected?.execute { workDirectory.repository.repair(workDirectory.path) } ?: return
-
+    private fun repair(report: IntegrityReport) {
+        val job = storageActor.sendBlockingAsync { report.repair() }
         val dialog = processingDialog(title = "Repairing...", job = job)
         dialog.show(root)
-
     }
 
     /**
@@ -320,8 +319,8 @@ class WorkDirectoryManagerController {
         } else {
             confirmationDialog(
                 title = "Corruption detected",
-                text = "There are ${report.corruptVersions.size} corrupt versions in this directory. Repairing the data will repair corrupt versions if possible and delete them otherwise. This may take a while. Do you want to repair?",
-                action = { repair() }
+                text = "There are ${report.corrupt.size} corrupt versions in this directory. ${report.repaired.size} of them will be repaired. ${report.deleted.size} of them cannot be repaired and will be deleted. This may take a while. Do you want to repair?",
+                action = { repair(report) }
             )
         }
         dialog.show(root)
@@ -332,9 +331,7 @@ class WorkDirectoryManagerController {
      */
     private fun verify() {
         val selected = model.selected ?: return
-
-        val job = selected.executeAsync { workDirectory.repository.verify() } ui { promptRepair(it) }
-
+        val job = selected.executeAsync { workDirectory.repository.verify(workDirectory.path) } ui { promptRepair(it) }
         val dialog = processingDialog(title = "Checking for corruption...", job = job)
         dialog.show(root)
     }
@@ -349,7 +346,6 @@ class WorkDirectoryManagerController {
             text = "This will check the versions in this directory for corruption. If corrupt data is found, you will have the option to repair it. This may take a while. Do you want to check for corruption?",
             action = { verify() }
         )
-
         dialog.show(root)
     }
 }
