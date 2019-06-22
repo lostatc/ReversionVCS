@@ -93,13 +93,32 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
                     .toSet()
             }
 
+        override val keys: Set<Path>
+            get() = transaction(db) {
+                VersionEntity
+                    .find { VersionTable.snapshot eq entity.id }
+                    .map { it.path }
+                    .toSet()
+            }
+
+        override val size: Int
+            get() = transaction(db) {
+                VersionEntity.find { VersionTable.snapshot eq entity.id }.count()
+            }
+
         override fun containsKey(key: Path): Boolean = get(key) != null
+
+        override fun containsValue(value: DatabaseVersion): Boolean = containsKey(value.path)
 
         override fun get(key: Path): DatabaseVersion? = transaction(db) {
             VersionEntity
                 .find { (VersionTable.snapshot eq entity.id) and (VersionTable.path eq key) }
                 .firstOrNull()
                 ?.let { DatabaseVersion(it, repository) }
+        }
+
+        override fun isEmpty(): Boolean = transaction(db) {
+            VersionEntity.find { VersionTable.snapshot eq entity.id }.empty()
         }
     }
 

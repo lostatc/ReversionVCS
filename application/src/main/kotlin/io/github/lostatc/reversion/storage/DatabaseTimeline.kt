@@ -104,13 +104,32 @@ class DatabaseTimeline(val entity: TimelineEntity, override val repository: Data
                     .toSet()
             }
 
+        override val keys: Set<Int>
+            get() = transaction(db) {
+                SnapshotEntity
+                    .find { SnapshotTable.timeline eq entity.id }
+                    .map { it.revision }
+                    .toSet()
+            }
+
+        override val size: Int
+            get() = transaction(db) {
+                SnapshotEntity.find { SnapshotTable.timeline eq entity.id }.count()
+            }
+
         override fun containsKey(key: Int): Boolean = get(key) != null
+
+        override fun containsValue(value: DatabaseSnapshot): Boolean = containsKey(value.revision)
 
         override fun get(key: Int): DatabaseSnapshot? = transaction(db) {
             SnapshotEntity
                 .find { (SnapshotTable.timeline eq entity.id) and (SnapshotTable.revision eq key) }
                 .firstOrNull()
                 ?.let { DatabaseSnapshot(it, repository) }
+        }
+
+        override fun isEmpty(): Boolean = transaction(db) {
+            SnapshotEntity.find { SnapshotTable.timeline eq entity.id }.empty()
         }
     }
 
