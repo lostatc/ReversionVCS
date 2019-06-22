@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-
+<?import com.jfoenix.controls.JFXSpinner?>
 <?import com.jfoenix.controls.JFXTabPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.layout.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
-            minWidth="-Infinity"
-            prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/11.0.1"
+            minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/11.0.1"
             fx:controller="io.github.lostatc.reversion.gui.mvc.MainSceneController">
     <JFXTabPane layoutX="10.0" layoutY="10.0" styleClass="navigation-tab-bar" tabClosingPolicy="UNAVAILABLE"
                 AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"
@@ -18,4 +17,7 @@
             <fx:include fx:id="versionManager" source="VersionManager.fxml"/>
         </Tab>
     </JFXTabPane>
+    <JFXSpinner fx:id="processingSpinner" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
+                minWidth="-Infinity" prefHeight="35.0" prefWidth="35.0" visible="false" AnchorPane.rightAnchor="5.0"
+                AnchorPane.topAnchor="5.0"/>
 </AnchorPane>

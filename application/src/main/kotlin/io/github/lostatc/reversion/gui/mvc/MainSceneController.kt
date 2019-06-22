@@ -19,6 +19,9 @@
 
 package io.github.lostatc.reversion.gui.mvc
 
+import com.jfoenix.controls.JFXSpinner
+import io.github.lostatc.reversion.gui.ActorEvent
+import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import javafx.fxml.FXML
 import javafx.scene.layout.Pane
 
@@ -38,6 +41,23 @@ class MainSceneController {
 
     @FXML
     private lateinit var versionManagerController: VersionManagerController
+
+    /**
+     * A spinner which indicates that something is processing in the background.
+     */
+    @FXML
+    private lateinit var processingSpinner: JFXSpinner
+
+    @FXML
+    fun initialize() {
+        // Display the spinner whenever something is processing in the background.
+        storageActor.addEventHandler(ActorEvent.BUSY) {
+            processingSpinner.isVisible = true
+        }
+        storageActor.addEventHandler(ActorEvent.WAITING) {
+            processingSpinner.isVisible = false
+        }
+    }
 
     /**
      * This function is run before the program exits.
