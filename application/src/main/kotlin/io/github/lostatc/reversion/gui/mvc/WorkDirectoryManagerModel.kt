@@ -85,7 +85,8 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
                 sendNotification("This directory is already being tracked.")
             } else {
                 _workDirectories.add(model)
-                saveWorkPaths(workDirectories.map { it.path })
+                val paths = workDirectories.map { it.executeAsync { workDirectory.path }.await() }
+                saveWorkPaths(paths)
             }
         }
     }
@@ -101,7 +102,8 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
         } ui {
             _workDirectories.remove(selected)
             this.selected = null
-            saveWorkPaths(workDirectories.map { it.path })
+            val paths = workDirectories.map { it.executeAsync { workDirectory.path }.await() }
+            saveWorkPaths(paths)
         }
     }
 

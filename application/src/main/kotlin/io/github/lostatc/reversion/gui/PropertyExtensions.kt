@@ -33,8 +33,16 @@ operator fun <T> Property<T>.setValue(thisRef: Any?, property: KProperty<*>, val
 /**
  * Returns a read-only property with a value equal to this property with the given [transform] function applied.
  */
-fun <T, R> Property<T>.toMappedProperty(transform: (T) -> R): ReadOnlyProperty<R> {
+fun <T, R> ReadOnlyProperty<T>.toMappedProperty(transform: (T) -> R): ReadOnlyProperty<R> {
     val wrapper = ReadOnlyObjectWrapper<R>(transform(value))
     addListener { _, _, newValue -> wrapper.value = transform(newValue) }
     return wrapper.readOnlyProperty
 }
+
+/**
+ * Returns a read-only property with a value equal to this property with the given [transform] function applied.
+ *
+ * If the value of this property is `null`, a placeholder string is returned.
+ */
+fun <T : Any> ReadOnlyProperty<T?>.toDisplayProperty(transform: (T) -> String): ReadOnlyProperty<String> =
+    toMappedProperty { if (it == null) "Loading..." else transform(it) }

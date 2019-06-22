@@ -24,11 +24,13 @@ import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.gui.ActorEvent
+import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
+import io.github.lostatc.reversion.gui.wrap
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
@@ -36,9 +38,7 @@ import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
@@ -46,32 +46,28 @@ import java.time.Instant
 import java.time.temporal.TemporalUnit
 
 /**
- * The receiver for a [WorkDirectoryOperation].
+ * Mutable state associated with a working directory.
  *
- * @param [workDirectory] The working directory to modify.
+ * @param [workDirectory] The working directory.
  */
-data class WorkDirectoryOperationContext(val workDirectory: WorkDirectory)
-
-/**
- * An operation to store or retrieve data about a [WorkDirectory].
- */
-typealias WorkDirectoryOperation<R> = suspend WorkDirectoryOperationContext.() -> R
+data class WorkDirectoryState(val workDirectory: WorkDirectory)
 
 /**
  * All the snapshots in the timeline.
  */
+// TODO: Optimize. This is very expensive.
 private val Timeline.versions: List<Version>
     get() = snapshots.values.flatMap { it.versions.values }
 
 /**
  * The model for storing information about the currently selected working directory.
+ *
+ * @param [workDirectory] The working directory this model represents.
  */
-data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : CoroutineScope by MainScope() {
-
-    /**
-     * The path of the working directory.
-     */
-    val path: Path = workDirectory.path
+data class WorkDirectoryModel(
+    private val workDirectory: WorkDirectory
+) : CoroutineScope by MainScope(),
+    StateWrapper<TaskType, WorkDirectoryState> by storageActor.wrap(WorkDirectoryState(workDirectory)) {
 
     /**
      * The [CleanupPolicy] objects associated with this [WorkDirectory].
@@ -82,6 +78,16 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
      * The ignored paths being displayed in the UI.
      */
     val ignoredPaths: ObservableList<Path> = FXCollections.observableArrayList()
+
+    /**
+     * A property for [path].
+     */
+    val pathProperty: Property<Path> = SimpleObjectProperty(workDirectory.path)
+
+    /**
+     * The path of the working directory.
+     */
+    var path: Path by pathProperty
 
     /**
      * A property for [snapshots].
@@ -145,7 +151,7 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
         updateStatistics()
 
         // Update the working directory statistics whenever a change is made.
-        StorageModel.storageActor.addEventHandler(ActorEvent.TASK_COMPLETED) { key ->
+        actor.addEventHandler(ActorEvent.TASK_COMPLETED) { key ->
             // Only update the UI if the event was not triggered by another UI update.
             if (key != TaskType.HANDLER) {
                 updateStatistics()
@@ -180,30 +186,6 @@ data class WorkDirectoryModel(private val workDirectory: WorkDirectory) : Corout
         } ui { storageSaved = it }
         executeAsync(TaskType.HANDLER) { workDirectory.listFiles().size } ui { trackedFiles = it }
     }
-
-    /**
-     * Queue up a change to the working directory to be completed asynchronously.
-     *
-     * @param [key] An object used to identify the [operation].
-     * @param [operation] The operation to complete asynchronously.
-     *
-     * @return The job that is running the operation.
-     */
-    fun execute(key: TaskType = TaskType.DEFAULT, operation: WorkDirectoryOperation<Unit>): Job =
-        executeAsync(key, operation)
-
-    /**
-     * Request information from the working directory to be returned asynchronously.
-     *
-     * @param [key] An object used to identify the [operation].
-     * @param [operation] The operation to complete asynchronously.
-     *
-     * @return The deferred output of the operation.
-     */
-    fun <T> executeAsync(key: TaskType = storageActor.defaultKey, operation: WorkDirectoryOperation<T>): Deferred<T> =
-        storageActor.sendBlockingAsync(key) {
-            WorkDirectoryOperationContext(workDirectory).operation()
-        }
 
     /**
      * Adds a [CleanupPolicy] to this working directory.

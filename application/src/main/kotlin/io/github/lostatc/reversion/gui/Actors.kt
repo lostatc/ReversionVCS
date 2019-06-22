@@ -272,16 +272,19 @@ interface StateWrapper<K, T> {
 }
 
 /**
+ * A [StateWrapper] that provides access to the mutable [state].
+ */
+data class MutableStateWrapper<K, T>(override val actor: TaskActor<K>, val state: T) : StateWrapper<K, T> {
+    override fun <R> executeAsync(key: K, operation: suspend T.() -> R): Deferred<R> =
+        actor.sendBlockingAsync(key) { state.operation() }
+}
+
+/**
  * Creates a new [StateWrapper] using this actor.
  *
  * @param [state] The mutable state to encapsulate.
  */
-fun <K, T> TaskActor<K>.wrap(state: T): StateWrapper<K, T> = object : StateWrapper<K, T> {
-    override val actor: TaskActor<K> = this@wrap
-
-    override fun <R> executeAsync(key: K, operation: suspend T.() -> R): Deferred<R> =
-        sendBlockingAsync(key) { state.operation() }
-}
+fun <K, T> TaskActor<K>.wrap(state: T): MutableStateWrapper<K, T> = MutableStateWrapper(this, state)
 
 /**
  * Run the given [block] in the UI thread once this job completes.

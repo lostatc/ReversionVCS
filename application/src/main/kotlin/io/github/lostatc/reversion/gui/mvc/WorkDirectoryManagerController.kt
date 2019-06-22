@@ -33,10 +33,8 @@ import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ListItem
 import io.github.lostatc.reversion.gui.infoDialog
 import io.github.lostatc.reversion.gui.processingDialog
-import io.github.lostatc.reversion.gui.toMappedProperty
+import io.github.lostatc.reversion.gui.toDisplayProperty
 import io.github.lostatc.reversion.gui.ui
-import javafx.beans.property.Property
-import javafx.beans.property.ReadOnlyProperty
 import javafx.fxml.FXML
 import javafx.scene.control.Label
 import javafx.scene.control.TabPane
@@ -55,14 +53,6 @@ private fun TabPane.setContentsVisible(visible: Boolean) {
         tab.content.isVisible = visible
     }
 }
-
-/**
- * Returns a read-only property with a value equal to this property with the given [transform] function applied.
- *
- * If the value of this property is `null`, a placeholder string is returned.
- */
-private fun <T : Any> Property<T?>.toDisplayProperty(transform: (T) -> String): ReadOnlyProperty<String> =
-    toMappedProperty { if (it == null) "Loading..." else transform(it) }
 
 
 /**
@@ -162,8 +152,8 @@ class WorkDirectoryManagerController {
         // Bind the list of working directories in the view to the model.
         workDirectoryList.items = MappedObservableList(model.workDirectories) {
             Card().apply {
-                title = it.path.fileName.toString()
-                subtitle = it.path.toString()
+                titleProperty.bind(it.pathProperty.toDisplayProperty { it.fileName.toString() })
+                subtitleProperty.bind(it.pathProperty.toDisplayProperty { it.toString() })
             }
         }
 

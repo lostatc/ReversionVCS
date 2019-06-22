@@ -20,55 +20,50 @@
 package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.toMappedProperty
+import io.github.lostatc.reversion.gui.wrap
 import io.github.lostatc.reversion.storage.WorkDirectory
-import javafx.beans.property.BooleanProperty
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyProperty
-import javafx.beans.property.SimpleBooleanProperty
+import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Instant
 
 /**
- * The receiver for a [VersionOperation].
+ * Mutable state associated with a version of a file.
  *
- * @param [version] The version to modify.
+ * @param [version] The version.
  * @param [workDirectory] The working directory that the [version] is a part of.
- * @param [path] The absolute path of the [version].
  */
-data class VersionOperationContext(val version: Version, val workDirectory: WorkDirectory, val path: Path)
-
-/**
- * An operation to store or retrieve data about a [Version].
- */
-typealias VersionOperation<R> = suspend VersionOperationContext.() -> R
+data class VersionState(val version: Version, val workDirectory: WorkDirectory) {
+    /**
+     * The path of the [version].
+     */
+    val path: Path
+        get() = workDirectory.path.resolve(version.path)
+}
 
 /**
  * The model for storing information about the currently selected version.
+ *
+ * @param [version] The version this model represents.
+ * @param [workDirectory] The working directory this model is in.
  */
 data class VersionModel(
     private val version: Version,
     private val workDirectory: WorkDirectory
-) : CoroutineScope by MainScope() {
-
+) : CoroutineScope by MainScope(),
+    StateWrapper<TaskType, VersionState> by storageActor.wrap(VersionState(version, workDirectory)) {
     /**
-     * The absolute path of the [version].
-     */
-    val path: Path = workDirectory.path.resolve(version.path)
-
-    /**
-     * The revision number of the version's snapshot.
+     * The revision number of the version.
      */
     val revision: Int = version.snapshot.revision
 
@@ -85,17 +80,17 @@ data class VersionModel(
     /**
      * A property for [description].
      */
-    val descriptionProperty: Property<String?> = SimpleStringProperty(version.snapshot.description)
+    val descriptionProperty: Property<String> = SimpleStringProperty(version.snapshot.description)
 
     /**
      * The description of the version.
      */
-    var description: String? by descriptionProperty
+    var description: String by descriptionProperty
 
     /**
      * A property for [pinned].
      */
-    val pinnedProperty: BooleanProperty = SimpleBooleanProperty(version.snapshot.pinned)
+    val pinnedProperty: Property<Boolean> = SimpleObjectProperty(version.snapshot.pinned)
 
     /**
      * Whether the version is pinned.
@@ -113,10 +108,15 @@ data class VersionModel(
     val size: Long = version.size
 
     /**
+     * The name to display for a snapshot without a name.
+     */
+    private val defaultName: String = version.snapshot.defaultName
+
+    /**
      * A property for [displayName].
      */
     val displayNameProperty: ReadOnlyProperty<String> =
-        nameProperty.toMappedProperty { if (it.isNullOrEmpty()) version.snapshot.defaultName else it }
+        nameProperty.toMappedProperty { if (it.isNullOrEmpty()) defaultName else it }
 
     /**
      * The name of the snapshot to display to the user.
@@ -129,30 +129,6 @@ data class VersionModel(
     val timeCreated: Instant = version.snapshot.timeCreated
 
     /**
-     * Queue up a change to the version to be completed asynchronously.
-     *
-     * @param [key] An object used to identify the [operation].
-     * @param [operation] The operation to complete asynchronously.
-     *
-     * @return The job that is running the operation.
-     */
-    fun execute(key: TaskType = storageActor.defaultKey, operation: VersionOperation<Unit>): Job =
-        executeAsync(key, operation)
-
-    /**
-     * Request information from the version to be returned asynchronously.
-     *
-     * @param [key] An object used to identify the [operation].
-     * @param [operation] The operation to complete asynchronously.
-     *
-     * @return The deferred output of the operation.
-     */
-    fun <T> executeAsync(key: TaskType = storageActor.defaultKey, operation: VersionOperation<T>): Deferred<T> =
-        storageActor.sendBlockingAsync(key) {
-            VersionOperationContext(version, workDirectory, path).operation()
-        }
-
-    /**
      * Suspend and wait for changes applied with [execute] or [executeAsync] to commit.
      */
     suspend fun flush() {
@@ -160,30 +136,17 @@ data class VersionModel(
     }
 
     /**
-     * Saves the values of the properties in this model to the [version].
+     * Saves the values of the properties in this model to the [Version].
      */
     fun saveInfo() {
         val name = name?.let { if (it.isEmpty()) null else it }
-        val description = description ?: ""
+        val description = description
         val pinned = pinned
 
         execute {
             version.snapshot.name = name
             version.snapshot.description = description
             version.snapshot.pinned = pinned
-        }
-    }
-
-    companion object {
-        /**
-         * Creates a list of [VersionModel] objects for all the versions of the file with the given [path].
-         */
-        suspend fun listVersions(path: Path): List<VersionModel> = withContext(Dispatchers.IO) {
-            val workDirectory = WorkDirectory.openFromDescendant(path)
-            val relativePath = workDirectory.path.relativize(path)
-            val versions = workDirectory.timeline.listVersions(relativePath)
-
-            versions.map { VersionModel(it, workDirectory) }
         }
     }
 }
