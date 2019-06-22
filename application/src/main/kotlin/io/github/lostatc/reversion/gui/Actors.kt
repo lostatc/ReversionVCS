@@ -29,6 +29,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.sendBlocking
 import kotlinx.coroutines.launch
 import java.util.Objects
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
@@ -133,10 +134,10 @@ private class ChannelTaskActor<K>(
      * A map of event types to handlers for that event type.
      */
     private val eventHandlers: Map<ActorEvent, MutableList<ActorEventHandler<K>>> = mapOf(
-        ActorEvent.TASK_RECEIVED to mutableListOf(),
-        ActorEvent.TASK_COMPLETED to mutableListOf(),
-        ActorEvent.WAITING to mutableListOf(),
-        ActorEvent.BUSY to mutableListOf()
+        ActorEvent.TASK_RECEIVED to CopyOnWriteArrayList(),
+        ActorEvent.TASK_COMPLETED to CopyOnWriteArrayList(),
+        ActorEvent.WAITING to CopyOnWriteArrayList(),
+        ActorEvent.BUSY to CopyOnWriteArrayList()
     )
 
     override fun addEventHandler(vararg events: ActorEvent, handler: ActorEventHandler<K>) {
