@@ -26,6 +26,7 @@ import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.controls.Card
+import javafx.beans.InvalidationListener
 import javafx.fxml.FXML
 import javafx.scene.Node
 import javafx.scene.control.Label
@@ -103,6 +104,13 @@ class VersionManagerController {
 
     @FXML
     fun initialize() {
+        // Update the selected version when the list changes. Deleting a version could change the selected version.
+        model.versions.addListener(
+            InvalidationListener {
+                model.selectedVersion = model.versions.getOrNull(versionList.selectionModel.selectedIndex)
+            }
+        )
+
         // Bind the selected version in the model to the selected version in the view.
         versionList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
             model.selectedVersion = model.versions.getOrNull(newValue.toInt())
