@@ -24,6 +24,7 @@ import io.github.lostatc.reversion.api.deleteIfEmpty
 import io.github.lostatc.reversion.gui.MutableStateWrapper
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
+import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.gui.wrap
@@ -89,7 +90,7 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      *
      * This list is sorted from most recent to least recent.
      */
-    val versions: ObservableList<VersionModel> = SortedList(_versions)
+    val versions: ObservableList<VersionModel> = SortedList(_versions, compareByDescending { it.revision })
 
     /**
      * Selects the file with the given [path] and loads versions of it.
@@ -162,6 +163,24 @@ class VersionManagerModel : CoroutineScope by MainScope() {
     fun openVersion() {
         selectedVersion?.execute {
             workDirectory.openInApplication(version)
+        }
+    }
+
+    /**
+     * Creates a new version of the [selectedFile].
+     */
+    fun createVersion() {
+        val selected = selectedFile
+
+        if (selected == null) {
+            sendNotification("There is no file selected to create a version of.")
+            return
+        }
+
+        selected.executeAsync {
+            workDirectory.commit(listOf(path), force = true)
+        } ui {
+            reloadVersions()
         }
     }
 }

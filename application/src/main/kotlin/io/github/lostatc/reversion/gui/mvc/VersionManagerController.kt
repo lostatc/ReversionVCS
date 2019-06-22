@@ -183,6 +183,14 @@ class VersionManagerController {
     }
 
     /**
+     * Creates a new version of the selected file.
+     */
+    @FXML
+    fun createVersion() {
+        model.createVersion()
+    }
+
+    /**
      * Delete the currently selected version.
      */
     @FXML
