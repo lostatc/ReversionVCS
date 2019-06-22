@@ -41,6 +41,7 @@ import io.github.lostatc.reversion.schema.SnapshotTable
 import io.github.lostatc.reversion.schema.TimelineCleanupPolicyTable
 import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
+import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.FileUtils
@@ -125,7 +126,22 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                     .toSet()
             }
 
+        override val keys: Set<UUID>
+            get() = transaction(db) {
+                TimelineEntity
+                    .all()
+                    .map { it.id.value }
+                    .toSet()
+            }
+
+        override val size: Int
+            get() = transaction(db) {
+                TimelineEntity.count()
+            }
+
         override fun containsKey(key: UUID): Boolean = get(key) != null
+
+        override fun containsValue(value: DatabaseTimeline): Boolean = containsKey(value.id)
 
         override fun get(key: UUID): DatabaseTimeline? = transaction(db) {
             TimelineEntity
@@ -133,11 +149,20 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                 .firstOrNull()
                 ?.let { DatabaseTimeline(it, this@DatabaseRepository) }
         }
+
+        override fun isEmpty(): Boolean = transaction(db) {
+            TimelineEntity.all().empty()
+        }
     }
 
     override val storedSize: Long
         get() = transaction(db) {
             BlobEntity.all().map { it.size }.sum()
+        }
+
+    override val totalSize: Long
+        get() = transaction(db) {
+            VersionEntity.all().map { it.size }.sum()
         }
 
     /**

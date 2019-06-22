@@ -21,8 +21,6 @@ package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
-import io.github.lostatc.reversion.api.Timeline
-import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.gui.ActorEvent
 import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.getValue
@@ -51,13 +49,6 @@ import java.time.temporal.TemporalUnit
  * @param [workDirectory] The working directory.
  */
 data class WorkDirectoryState(val workDirectory: WorkDirectory)
-
-/**
- * All the snapshots in the timeline.
- */
-// TODO: Optimize. This is very expensive.
-private val Timeline.versions: List<Version>
-    get() = snapshots.values.flatMap { it.versions.values }
 
 /**
  * The model for storing information about the currently selected working directory.
@@ -181,8 +172,7 @@ data class WorkDirectoryModel(
         executeAsync(TaskType.HANDLER) { workDirectory.timeline.latestSnapshot?.timeCreated } ui { latestVersion = it }
         executeAsync(TaskType.HANDLER) { workDirectory.repository.storedSize } ui { storageUsed = it }
         executeAsync(TaskType.HANDLER) {
-            val totalSize = workDirectory.timeline.versions.map { it.size }.sum()
-            totalSize - workDirectory.repository.storedSize
+            workDirectory.repository.totalSize - workDirectory.repository.storedSize
         } ui { storageSaved = it }
         executeAsync(TaskType.HANDLER) { workDirectory.listFiles().size } ui { trackedFiles = it }
     }

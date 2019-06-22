@@ -63,10 +63,24 @@ interface Repository : Configurable {
     /**
      * The amount of storage space being used by the repository in bytes.
      *
-     * This is the amount of storage space being used by the repository, which may be different from the total size of
-     * the versions stored in it. This does not include space taken up by metadata.
+     * This is an estimate of the amount of storage space being used in the file system by the repository, which may be
+     * different from the [totalSize]. This does not include space taken up by metadata.
      */
     val storedSize: Long
+
+    /**
+     * The total size of all the versions stored in this repository in bytes.
+     *
+     * This is the sum of the [Version.size] of all the versions in this repository. This may be different from the
+     * [storedSize].
+     */
+    val totalSize: Long
+        get() = timelines.values
+            .flatMap { it.snapshots.values }
+            .flatMap { it.versions.values }
+            .map { it.size }
+            .sum()
+
 
     /**
      * Creates a new timeline in this repository and returns it.
