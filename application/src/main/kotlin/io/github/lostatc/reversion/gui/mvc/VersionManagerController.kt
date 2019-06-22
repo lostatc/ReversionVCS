@@ -99,14 +99,13 @@ class VersionManagerController {
     /**
      * A model for storing information about selected versions.
      */
-    private val model: VersionManagerModel =
-        VersionManagerModel()
+    private val model: VersionManagerModel = VersionManagerModel()
 
     @FXML
     fun initialize() {
         // Bind the selected version in the model to the selected version in the view.
         versionList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
-            model.selected = model.versions.getOrNull(newValue.toInt())
+            model.selectedVersion = model.versions.getOrNull(newValue.toInt())
         }
 
         // Bind the list of versions in the view to the model.
@@ -120,7 +119,7 @@ class VersionManagerController {
         // Make the version information pane initially invisible.
         infoPane.isVisible = false
 
-        model.selectedProperty.addListener { _, oldValue, newValue ->
+        model.selectedVersionProperty.addListener { _, oldValue, newValue ->
 
             lastModifiedLabel.text = newValue?.lastModified?.toInstant()?.format(FormatStyle.MEDIUM)
 
@@ -154,23 +153,23 @@ class VersionManagerController {
      */
     fun cleanup() {
         // Save the information for the currently selected version.
-        model.selected?.run {
+        model.selectedVersion?.run {
             saveInfo()
             runBlocking { flush() }
         }
     }
 
     /**
-     * Load versions from the path in the [pathField].
+     * Set the currently selected file from the text field.
      */
     @FXML
     fun setPath() {
         val file = Paths.get(pathField.text)
-        model.loadVersions(file)
+        model.setFile(file)
     }
 
     /**
-     * Load versions by browsing for a file.
+     * Set the currently selected file from a file browser.
      */
     @FXML
     fun browsePath() {
@@ -180,7 +179,7 @@ class VersionManagerController {
         }
 
         pathField.text = file.toString()
-        model.loadVersions(file)
+        model.setFile(file)
     }
 
     /**

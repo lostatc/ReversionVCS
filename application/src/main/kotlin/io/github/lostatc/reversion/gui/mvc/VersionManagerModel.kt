@@ -21,9 +21,13 @@ package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.api.delete
 import io.github.lostatc.reversion.api.deleteIfEmpty
+import io.github.lostatc.reversion.gui.MutableStateWrapper
 import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
+import io.github.lostatc.reversion.gui.wrap
+import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
@@ -31,22 +35,49 @@ import javafx.collections.ObservableList
 import javafx.collections.transformation.SortedList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 import java.nio.file.Path
+
+/**
+ * Mutable state associated with a file in a working directory.
+ *
+ * @param [path] The path of the file.
+ * @param [workDirectory] The working directory that the file is in.
+ */
+data class FileState(val path: Path, val workDirectory: WorkDirectory) {
+    /**
+     * Returns a list of [VersionModel] objects representing the versions of this file.
+     */
+    fun listVersionModels(): List<VersionModel> {
+        val relativePath = workDirectory.path.relativize(path)
+        val versions = workDirectory.timeline.listVersions(relativePath)
+        return versions.map { VersionModel(it, workDirectory) }
+    }
+}
 
 /**
  * The model for storing information for the [VersionManagerController].
  */
 class VersionManagerModel : CoroutineScope by MainScope() {
     /**
-     * A property for [selected].
+     * A property for [selectedFile].
      */
-    val selectedProperty: Property<VersionModel?> = SimpleObjectProperty(null)
+    private val selectedFileProperty: Property<MutableStateWrapper<TaskType, FileState>?> =
+        SimpleObjectProperty(null)
 
     /**
-     * A model representing the currently selected version, or `null` if there is no version selected.
+     * Information about the currently selected file.
      */
-    var selected: VersionModel? by selectedProperty
+    private var selectedFile: MutableStateWrapper<TaskType, FileState>? by selectedFileProperty
+
+    /**
+     * A property for [selectedVersion].
+     */
+    val selectedVersionProperty: Property<VersionModel?> = SimpleObjectProperty(null)
+
+    /**
+     * A model representing the currently selected version of the [selectedFile].
+     */
+    var selectedVersion: VersionModel? by selectedVersionProperty
 
     /**
      * The mutable backing property of [versions].
@@ -58,31 +89,39 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      *
      * This list is sorted from most recent to least recent.
      */
-    val versions: ObservableList<VersionModel> = SortedList(_versions, compareByDescending { it.revision })
+    val versions: ObservableList<VersionModel> = SortedList(_versions)
 
     /**
-     * Loads the [versions] of the file with the given [path].
+     * Selects the file with the given [path] and loads versions of it.
      */
-    fun loadVersions(path: Path) {
-        launch {
-            // Wait for changes to be saved before loading new versions in case the same versions are reloaded.
-            selected?.saveInfo()
-            selected?.flush()
+    fun setFile(path: Path) {
+        selectedFile = storageActor.wrap(FileState(path, WorkDirectory.openFromDescendant(path)))
+        loadVersions()
+    }
 
-            selected = null
-            _versions.clear()
-            _versions.setAll(VersionModel.listVersions(path))
+    /**
+     * Loads the [versions] of the [selectedFile] and de-selects the selected version.
+     */
+    fun loadVersions() {
+        selectedVersion?.saveInfo()
+        selectedVersion = null
+
+        val selectedFile = selectedFile ?: return
+        selectedFile.executeAsync {
+            listVersionModels()
+        } ui {
+            _versions.setAll(it)
         }
     }
 
     /**
-     * Reloads the [versions] of the [selected] file displayed in the UI to match the database.
+     * Loads the [versions] of the [selectedFile].
      */
     fun reloadVersions() {
-        val selected = selected ?: return
+        val selectedFile = selectedFile ?: return
 
-        selected.executeAsync {
-            VersionModel.listVersions(selected.path)
+        selectedFile.executeAsync {
+            listVersionModels()
         } ui { newVersions ->
             _versions.retainAll(newVersions)
             _versions.addAll(newVersions - _versions)
@@ -93,7 +132,7 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      * Deletes the currently selected version.
      */
     fun deleteVersion() {
-        val selected = selected ?: return
+        val selected = selectedVersion ?: return
 
         selected.execute {
             val snapshot = version.snapshot
@@ -108,7 +147,7 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      * Restores the currently selected version.
      */
     fun restoreVersion() {
-        val selected = selected ?: return
+        val selected = selectedVersion ?: return
 
         selected.executeAsync {
             workDirectory.restore(listOf(path), revision = version.snapshot.revision)
@@ -121,7 +160,7 @@ class VersionManagerModel : CoroutineScope by MainScope() {
      * Opens the currently selected version in its default application.
      */
     fun openVersion() {
-        selected?.execute {
+        selectedVersion?.execute {
             workDirectory.openInApplication(version)
         }
     }
