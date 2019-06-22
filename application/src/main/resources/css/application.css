@@ -1,25 +1,14 @@
-.depth-1 {
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 10, 0.12, -1, 2);
-}
-
-.depth-2 {
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 15, 0.16, 0, 4);
-}
-
-.depth-3 {
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 20, 0.19, 0, 6);
-}
-
-.depth-4 {
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 25, 0.25, 0, 8);
-}
-
-.depth-5 {
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 30, 0.30, 0, 10);
-}
-
 .root {
     -fx-font-family: "Roboto";
+
+    -accent-color: -teal-300;
+    -accent-color-selected: -teal-200;
+
+    -depth-1: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 10, 0.12, -1, 2);
+    -depth-2: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 15, 0.16, 0, 4);
+    -depth-3: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 20, 0.19, 0, 6);
+    -depth-4: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 25, 0.25, 0, 8);
+    -depth-5: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 30, 0.30, 0, 10);
 }
 
 .jfx-tool-bar {
@@ -28,27 +17,35 @@
 }
 
 .jfx-check-box {
-    -jfx-checked-color: -blue-grey-400;
+    -jfx-checked-color: -accent-color;
     -fx-font-size: 14;
 }
 
 .jfx-combo-box {
     -jfx-unfocus-color: -grey-600;
-    -jfx-focus-color: -blue-grey-400;
+    -jfx-focus-color: -accent-color;
 }
 
 .jfx-text-field {
     -jfx-unfocus-color: -grey-600;
-    -jfx-focus-color: -blue-grey-400;
+    -jfx-focus-color: -accent-color;
 }
 
 .jfx-text-area {
     -jfx-unfocus-color: -grey-600;
-    -jfx-focus-color: -blue-grey-400;
+    -jfx-focus-color: -accent-color;
 }
 
 .jfx-rippler {
     -jfx-rippler-fill: white;
+}
+
+.jfx-toggle-button {
+    -jfx-toggle-color: -accent-color;
+}
+
+.jfx-spinner .arc {
+    -fx-stroke: -accent-color;
 }
 
 /* A tab pane for navigating between windows. */
@@ -115,7 +112,7 @@
 /* A pane that floats above the background. */
 .pane {
     -fx-background-color: -grey-50;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 15, 0.16, 0, 4);
+    -fx-effect: -depth-2;
 }
 
 /* An HBox or VBox containing spaced panes. */
@@ -134,22 +131,22 @@
 
 /* A regular button. */
 .button-regular {
-    -fx-background-color: -blue-grey-400;
+    -fx-background-color: -grey-500;
     -fx-text-fill: white;
 }
 
 .button-regular:hover {
-    -fx-background-color: -blue-grey-300;
+    -fx-background-color: -grey-400;
 }
 
 /* A button for confirming/applying an action. */
 .button-confirm {
-    -fx-background-color: -green-400;
+    -fx-background-color: -accent-color;
     -fx-text-fill: white;
 }
 
 .button-confirm:hover {
-    -fx-background-color: -green-300;
+    -fx-background-color: -accent-color-selected;
 }
 
 /* A button for doing something that the user should be cautious about. */
@@ -184,7 +181,7 @@
 }
 
 .card-list-view .list-cell:selected {
-    -fx-background-color: -blue-grey-400;
+    -fx-background-color: -accent-color;
 }
 
 .card-list-view .list-cell:selected .label {
@@ -279,7 +276,7 @@
 
 .fab-light .button-background {
     -fx-fill: -grey-50;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 15, 0.16, 0, 4);
+    -fx-effect: -depth-2;
 }
 
 .fab-light .button-foreground:hover {
