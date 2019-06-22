@@ -167,7 +167,7 @@ interface Timeline {
                 // Get versions with this path sorted from newest to oldest. Skip versions that are pinned.
                 val sortedVersions = listVersions(path).filter { !it.snapshot.pinned }
 
-                val latestVersionCreated = sortedVersions.first().snapshot.timeCreated
+                val latestVersionCreated = sortedVersions.firstOrNull()?.snapshot?.timeCreated ?: return 0
                 val intervals = Interval.step(
                     start = latestVersionCreated - policy.timeFrame,
                     end = latestVersionCreated,

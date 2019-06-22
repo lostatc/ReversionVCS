@@ -167,7 +167,7 @@ class VersionManagerModel : CoroutineScope by MainScope() {
     }
 
     /**
-     * Creates a new version of the [selectedFile].
+     * Creates a new version of the [selectedFile] and cleans up old versions.
      */
     fun createVersion() {
         val selected = selectedFile
@@ -178,7 +178,9 @@ class VersionManagerModel : CoroutineScope by MainScope() {
         }
 
         selected.executeAsync {
+            val relativePath = workDirectory.path.relativize(path)
             workDirectory.commit(listOf(path), force = true)
+            workDirectory.timeline.clean(listOf(relativePath))
         } ui {
             reloadVersions()
         }
