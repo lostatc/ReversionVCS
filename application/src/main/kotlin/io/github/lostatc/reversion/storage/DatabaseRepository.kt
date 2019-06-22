@@ -31,6 +31,7 @@ import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
 import io.github.lostatc.reversion.api.UnsupportedFormatException
+import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.api.delete
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
@@ -107,6 +108,25 @@ private object DatabaseFactory {
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
         logger.debug("Connecting to database at '$path'.")
         connection
+    }
+}
+
+/**
+ * An [IntegrityReport] that can be updated as the repository is checked for corruption.
+ */
+private data class IncrementalIntegrityReport(
+    override val repaired: MutableSet<Version> = mutableSetOf(),
+    override val deleted: MutableSet<Version> = mutableSetOf()
+) : IntegrityReport {
+    /**
+     * The list of actions to take to repair the repository.
+     */
+    val actions: MutableList<() -> Unit> = mutableListOf()
+
+    override fun repair() {
+        for (action in actions) {
+            action()
+        }
     }
 }
 
@@ -224,6 +244,9 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         return true
     }
 
+    /**
+     * Returns the set of blobs which are corrupt.
+     */
     private fun getCorruptBlobs(): Set<BlobEntity> = transaction(db) {
         BlobEntity
             .all()
@@ -231,17 +254,25 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             .toSet()
     }
 
-    override fun verify(): IntegrityReport = transaction(db) {
-        IntegrityReport(
-            getCorruptBlobs()
-                .flatMap { it.blocks }
-                .map { DatabaseVersion(it.version, this@DatabaseRepository) }
-                .toSet()
-        )
+    /**
+     * Returns the blob in the given [file] with the given [checksum].
+     *
+     * If the blob cannot be found or an [IOException] is thrown, this returns `null`.
+     */
+    private fun findBlob(file: Path, checksum: Checksum): Blob? {
+        val blobs = try {
+            Blob.chunkFile(file, hashAlgorithm)
+        } catch (e: IOException) {
+            return null
+        }
+
+        return blobs.find { it.checksum == checksum }
+
     }
 
-    override fun repair(workDirectory: Path) {
-        val versionsToDelete = mutableSetOf<DatabaseVersion>()
+    override fun verify(workDirectory: Path): IntegrityReport {
+        val report = IncrementalIntegrityReport()
+        val corruptVersions = mutableSetOf<Version>()
 
         transaction(db) {
             val corruptBlobs = getCorruptBlobs()
@@ -253,36 +284,45 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                 val versions = blobEntity.blocks.map { DatabaseVersion(it.version, this@DatabaseRepository) }
                 val versionPaths = versions.map { it.path }.distinct()
 
+                // Because this blob is corrupt, all versions containing it are corrupt.
+                corruptVersions.addAll(versions)
+
                 // Iterate over the path of each version the corrupt blob is in.
                 for (relativePath in versionPaths) {
                     val absolutePath = workDirectory.resolve(relativePath)
 
-                    // Get blobs from the current version of the file in the file system.
-                    val fileSystemBlobs = try {
-                        Blob.chunkFile(absolutePath, hashAlgorithm)
-                    } catch (e: IOException) {
-                        continue
-                    }
-
                     // Find the missing blob in the current version of the file. Go to the next version otherwise.
-                    val missingBlob = fileSystemBlobs.find { it.checksum == blobEntity.checksum } ?: continue
+                    val missingBlob = findBlob(absolutePath, blobEntity.checksum) ?: continue
 
                     // If the missing blob was found, use it to repair the repository and go to the next blob.
-                    missingBlob.newInputStream().use { Files.copy(it, blobPath, StandardCopyOption.REPLACE_EXISTING) }
+                    report.actions.add {
+                        missingBlob
+                            .newInputStream()
+                            .use { Files.copy(it, blobPath, StandardCopyOption.REPLACE_EXISTING) }
+                    }
+
                     continue@blobs
                 }
 
                 // The missing blob was not found in the file system. Delete all versions containing the blob.
-                versionsToDelete.addAll(versions)
+                report.actions.add {
+                    for (version in versions) {
+                        version.delete()
+                    }
+                }
+
+                // Mark these versions as deleted.
+                report.deleted.addAll(versions)
             }
         }
 
-        // Delete all versions which could not be repaired.
-        for (version in versionsToDelete) {
-            version.delete()
-        }
+        // If a version is corrupt and was not deleted, it was repaired. We don't know whether a version will be
+        // repaired until all blobs have been checked.
+        report.repaired.addAll(corruptVersions - report.deleted)
 
-        logger.info("Repaired repository $this and deleted ${versionsToDelete.size} versions.")
+        logger.info("Checked repository for corruption and returned report $report.")
+
+        return report
     }
 
     override fun delete() {

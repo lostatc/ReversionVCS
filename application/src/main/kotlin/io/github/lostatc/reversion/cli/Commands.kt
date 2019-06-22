@@ -59,7 +59,6 @@ class ReversionCommand : CliktCommand(name = "reversion") {
             UpdateCommand(this),
             CleanCommand(this),
             VerifyCommand(this),
-            RepairCommand(this),
             MountCommand(this)
         )
     }
@@ -215,32 +214,41 @@ class CleanCommand(val parent: ReversionCommand) : CliktCommand(
 
 class VerifyCommand(val parent: ReversionCommand) : CliktCommand(
     name = "verify", help = """
-    Verify the integrity of a repository.
+    Verify the integrity of a repository and repair it if necessary.
 """
 ) {
+    val prompt: Boolean by option("--prompt", help = "Prompt interactively before repairing the repository.")
+        .flag("--no-prompt", default = true)
+
     override fun run() {
         val workDirectory = WorkDirectory.open(parent.workPath)
-        val report = workDirectory.repository.verify()
+        val report = workDirectory.repository.verify(workDirectory.path)
 
         if (report.isValid) {
             echo("No corruption detected.")
-        } else {
-            echo("The following file versions are corrupt:")
-            echo(report.corruptVersions.joinToString(separator = "\n") { it.info }.prependIndent("    "))
+            return
         }
-    }
-}
 
-class RepairCommand(val parent: ReversionCommand) : CliktCommand(
-    name = "repair", help = """
-    Repair corrupt data in the repository.
+        val repair = if (prompt) {
+            echo("The following versions are corrupt and can be repaired:")
+            echo(report.repaired.joinToString(separator = "\n") { it.info }.prependIndent("    "))
 
-    Corrupt file versions are repaired if possible using existing data in the working directory and deleted otherwise.
-"""
-) {
-    override fun run() {
-        val workDirectory = WorkDirectory.open(parent.workPath)
-        workDirectory.repository.repair(workDirectory.path)
+            println()
+
+            echo("The following versions are corrupt and cannot be repaired:")
+            echo(report.deleted.joinToString(separator = "\n") { it.info }.prependIndent("    "))
+
+            println()
+
+            echo("Versions that cannot be repaired will be deleted.")
+            TermUi.confirm("Do you want to repair?") ?: false
+        } else {
+            true
+        }
+
+        if (repair) {
+            report.repair()
+        }
     }
 }
 
