@@ -67,11 +67,24 @@
                     </VBox>
                     <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
                         <LabeledIconButton icon="gmi-delete-forever" label="Delete" onAction="#deleteVersion"
-                                           styleClass="icon-button-light"/>
+                                           styleClass="icon-button-light">
+                            <tooltip>
+                                <Tooltip text="Permanently delete this version."/>
+                            </tooltip>
+                        </LabeledIconButton>
                         <LabeledIconButton icon="gmi-restore" label="Restore" onAction="#restoreVersion"
-                                           styleClass="icon-button-light"/>
+                                           styleClass="icon-button-light">
+                            <tooltip>
+                                <Tooltip
+                                    text="Save the current version of the file and then replace it with this version."/>
+                            </tooltip>
+                        </LabeledIconButton>
                         <LabeledIconButton icon="gmi-open-in-new" label="Open" onAction="#openVersion"
-                                           styleClass="icon-button-light"/>
+                                           styleClass="icon-button-light">
+                            <tooltip>
+                                <Tooltip text="Open this version in an external application."/>
+                            </tooltip>
+                        </LabeledIconButton>
                     </FlowPane>
                     <padding>
                         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
