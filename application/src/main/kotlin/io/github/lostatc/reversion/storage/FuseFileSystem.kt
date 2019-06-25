@@ -157,14 +157,14 @@ private const val DEFAULT_FILE_PERMISSIONS: Int = FileStat.ALL_READ or FileStat.
  * Returns whether this snapshot contains a path that starts with the given relative [path].
  */
 private fun Snapshot.containsDirectory(path: Path): Boolean =
-    path == Paths.get("") || versions.keys.any { it.startsWith(path) }
+    path == Paths.get("") || cumulativeVersions.keys.any { it.startsWith(path) }
 
 /**
- * Returns the paths in this snapshot which are children of the given [parent].
+ * Returns the paths in [cumulativeVersions][Snapshot.cumulativeVersions] which are children of the given [parent].
  *
  * @param [parent] The relative path of a file in this snapshot or the parent of a file in this snapshot.
  */
-private fun Snapshot.getChildren(parent: Path): Set<Path> = versions.keys
+private fun Snapshot.getChildren(parent: Path): Set<Path> = cumulativeVersions.keys
     .filterNot { it == parent }
     .filter { parent == Paths.get("") || it.startsWith(parent) }
     .map { parent.relativize(it).getName(0) }
@@ -199,7 +199,7 @@ data class FuseFileSystem(val snapshot: Snapshot) : FuseStubFS() {
     override fun getattr(path: String, stat: FileStat): Int {
         // Return an error if the file doesn't exist.
         val relativePath = getRelativePath(path)
-        val version = snapshot.versions[relativePath]
+        val version = snapshot.cumulativeVersions[relativePath]
 
         stat.run {
             st_uid.set(context.uid.get())
@@ -244,7 +244,7 @@ data class FuseFileSystem(val snapshot: Snapshot) : FuseStubFS() {
     override fun open(path: String, fi: FuseFileInfo): Int {
         // Return an error if the file doesn't exist.
         val relativePath = getRelativePath(path)
-        val version = snapshot.versions[relativePath] ?: return -ErrorCodes.ENOENT()
+        val version = snapshot.cumulativeVersions[relativePath] ?: return -ErrorCodes.ENOENT()
 
         dataSources[relativePath] = SeekableDataSource(version.data.newInputStream())
 

@@ -70,12 +70,15 @@ interface FuseFileSystemTest {
             directory("c") {
                 file("a", content = "orange")
             }
+            file("d", content = "mango")
         }
 
         val workDirectory = WorkDirectory.init(workPath, provider, config)
-        val snapshot = workDirectory.commit(listOf(workPath))
 
-        fileSystem = FuseFileSystem(snapshot).apply {
+        workDirectory.commit(listOf(workPath.resolve("d")))
+        workDirectory.commit(listOf(workPath.resolve("a"), workPath.resolve("b"), workPath.resolve("c", "a")))
+
+        fileSystem = FuseFileSystem(workDirectory.timeline.latestSnapshot!!).apply {
             mount(mountPath)
         }
     }
@@ -86,7 +89,7 @@ interface FuseFileSystemTest {
     }
 
     @Test
-    fun `read file metadata`() {
+    fun `read file metadata from latest snapshot`() {
         assertEquals(
             Files.size(workPath.resolve("a")),
             Files.size(mountPath.resolve("a"))
@@ -102,16 +105,45 @@ interface FuseFileSystemTest {
     }
 
     @Test
-    fun `list files`() {
+    fun `read file metadata from previous snapshot`() {
         assertEquals(
-            setOf(mountPath.resolve("a"), mountPath.resolve("b"), mountPath.resolve("c")),
+            Files.size(workPath.resolve("d")),
+            Files.size(mountPath.resolve("d"))
+        )
+        assertEquals(
+            Files.getLastModifiedTime(workPath.resolve("d")).toMillis(),
+            Files.getLastModifiedTime(mountPath.resolve("d")).toMillis()
+        )
+        assertEquals(
+            PermissionSet.fromPath(workPath.resolve("d")),
+            PermissionSet.fromPath(mountPath.resolve("d"))
+        )
+    }
+
+    @Test
+    fun `list files in root directory`() {
+        assertEquals(
+            setOf(mountPath.resolve("a"), mountPath.resolve("b"), mountPath.resolve("c"), mountPath.resolve("d")),
             Files.list(mountPath).asSequence().toSet()
         )
     }
 
     @Test
-    fun `read whole file`() {
+    fun `list files in sub-directory`() {
+        assertEquals(
+            setOf(mountPath.resolve("c", "a")),
+            Files.list(mountPath.resolve("c")).asSequence().toSet()
+        )
+    }
+
+    @Test
+    fun `read whole file from latest snapshot`() {
         assertEquals("apple", Files.readString(mountPath.resolve("a")))
+    }
+
+    @Test
+    fun `read whole file from previous snapshot`() {
+        assertEquals("mango", Files.readString(mountPath.resolve("d")))
     }
 
     @Test
