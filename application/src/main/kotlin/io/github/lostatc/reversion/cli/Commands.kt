@@ -255,6 +255,9 @@ class VerifyCommand(val parent: ReversionCommand) : CliktCommand(
 class MountCommand(val parent: ReversionCommand) : CliktCommand(
     name = "mount", help = """
     Mount a snapshot to a directory.
+
+    This mounts a file system in a directory which provides a read-only view of the state of the working directory at
+    the time a given snapshot was taken.
 """
 ) {
     val revision: Int by argument("REVISION", help = "The revision number of the snapshot to mount.")
