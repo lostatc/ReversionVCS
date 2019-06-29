@@ -27,6 +27,7 @@ import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.storage.PathTypeAdapter
+import io.github.lostatc.reversion.storage.SnapshotMounter
 import io.github.lostatc.reversion.storage.fromJson
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
@@ -37,8 +38,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.Desktop
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Instant
+
+/**
+ * The path of the directory to mount the FUSE file system at.
+ */
+private val MOUNT_DIR: Path = DATA_DIR.resolve("mountpoint")
 
 /**
  * The model for storing information for the [WorkDirectoryManagerController].
@@ -104,6 +112,26 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
             this.selected = null
             val paths = workDirectories.map { it.executeAsync { workDirectory.path }.await() }
             saveWorkPaths(paths)
+        }
+    }
+
+    /**
+     * Mounts the latest snapshot created before [time] and opens it in the browser.
+     */
+    fun mountSnapshot(time: Instant) {
+        val selected = selected ?: return
+
+        launch {
+            val deferredSnapshot = selected.executeAsync {
+                workDirectory.timeline.snapshots.values.filter { it.timeCreated <= time }.maxBy { it.revision }
+            }
+            val snapshot = deferredSnapshot.await() ?: return@launch
+
+            withContext(Dispatchers.IO) {
+                SnapshotMounter.unmount(MOUNT_DIR)
+                SnapshotMounter.mount(snapshot, MOUNT_DIR)
+                Desktop.getDesktop().open(MOUNT_DIR.toFile())
+            }
         }
     }
 

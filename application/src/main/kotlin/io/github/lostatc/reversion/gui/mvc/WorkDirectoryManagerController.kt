@@ -31,9 +31,11 @@ import io.github.lostatc.reversion.gui.confirmationDialog
 import io.github.lostatc.reversion.gui.controls.Card
 import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ListItem
+import io.github.lostatc.reversion.gui.dateTimeDialog
 import io.github.lostatc.reversion.gui.infoDialog
 import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.processingDialog
+import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.toDisplayProperty
 import io.github.lostatc.reversion.gui.ui
 import javafx.fxml.FXML
@@ -43,6 +45,7 @@ import javafx.scene.layout.StackPane
 import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
 import org.apache.commons.io.FileUtils
+import java.time.Instant
 import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
 
@@ -346,6 +349,21 @@ class WorkDirectoryManagerController {
             text = "This will check the versions in this directory for corruption. If corrupt data is found, you will have the option to repair it. This may take a while. Do you want to check for corruption?",
             action = { verify() }
         )
+        dialog.show(root)
+    }
+
+    /**
+     * Prompts the user for a time and date to mount a snapshot.
+     */
+    @FXML
+    fun mountSnapshot() {
+        val dialog = dateTimeDialog(
+            title = "Choose a time and date",
+            text = "Choose the time and date that you want to see files from.",
+            default = Instant.now()
+        ) { time ->
+            time?.let { model.mountSnapshot(it) } ?: sendNotification("You must select a time and date.")
+        }
         dialog.show(root)
     }
 }

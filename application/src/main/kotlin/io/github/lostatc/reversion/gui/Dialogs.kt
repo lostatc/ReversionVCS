@@ -23,9 +23,12 @@ import com.jfoenix.controls.JFXButton
 import com.jfoenix.controls.JFXDialog
 import com.jfoenix.controls.JFXDialogLayout
 import com.jfoenix.controls.JFXSpinner
+import io.github.lostatc.reversion.gui.controls.DateTimePicker
 import javafx.event.EventHandler
 import javafx.scene.control.Label
+import javafx.scene.layout.VBox
 import kotlinx.coroutines.Job
+import java.time.Instant
 
 /**
  * Creates a new dialog that presents the user with information and prompts them to dismiss it.
@@ -127,6 +130,51 @@ fun approvalDialog(title: String, text: String, action: () -> Unit): JFXDialog =
                 this.onAction = EventHandler {
                     close()
                     action()
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Creates a new dialog that prompts the user to choose a date and time.
+ *
+ * @param [title] The title of the dialog.
+ * @param [text] The message body of the dialog.
+ * @param [default] The default date and time that is selected in the dialog.
+ * @param [action] The action to perform when the user confirms their selection.
+ */
+fun dateTimeDialog(
+    title: String,
+    text: String,
+    default: Instant? = null,
+    action: (Instant?) -> Unit
+): JFXDialog = JFXDialog().apply {
+    content = JFXDialogLayout().apply {
+        val dateTimePicker = DateTimePicker().apply {
+            instant = default
+        }
+
+        heading.add(Label(title))
+
+        body.add(
+            VBox(Label(text), dateTimePicker).apply {
+                spacing = 15.0
+            }
+        )
+
+        actions.addAll(
+            JFXButton().apply {
+                this.text = "Cancel"
+                this.styleClass.addAll("button-text", "button-regular")
+                this.onAction = EventHandler { close() }
+            },
+            JFXButton().apply {
+                this.text = "Okay"
+                this.styleClass.addAll("button-text", "button-confirm")
+                this.onAction = EventHandler {
+                    close()
+                    action(dateTimePicker.instant)
                 }
             }
         )
