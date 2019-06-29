@@ -66,16 +66,22 @@
                             </Definition>
                         </VBox>
                         <HBox alignment="CENTER_LEFT" spacing="30.0">
+                            <LabeledIconButton icon="gmi-delete-forever" label="Delete" onAction="#deleteWorkDirectory"
+                                               styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip text="Delete all versions in this directory."/>
+                                </tooltip>
+                            </LabeledIconButton>
                             <LabeledIconButton icon="gmi-build" label="Repair" onAction="#promptVerify"
                                                styleClass="icon-button-light">
                                 <tooltip>
                                     <Tooltip text="Check this directory for corruption and repair it if necessary."/>
                                 </tooltip>
                             </LabeledIconButton>
-                            <LabeledIconButton icon="gmi-delete-forever" label="Delete" onAction="#deleteWorkDirectory"
+                            <LabeledIconButton icon="gmi-open-in-browser" label="Browse" onAction="#mountSnapshot"
                                                styleClass="icon-button-light">
                                 <tooltip>
-                                    <Tooltip text="Delete all versions in this directory."/>
+                                    <Tooltip text="Browse this directory as it was at a certain point in time."/>
                                 </tooltip>
                             </LabeledIconButton>
                             <Region HBox.hgrow="ALWAYS"/>

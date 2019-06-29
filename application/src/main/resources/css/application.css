@@ -48,6 +48,40 @@
     -fx-stroke: -accent-color;
 }
 
+.jfx-time-picker {
+    -jfx-default-color: -accent-color;
+}
+
+.jfx-time-picker > .arrow-button {
+    -jfx-default-color: -grey-600;
+}
+
+.jfx-time-picker:showing > .arrow-button {
+    -jfx-default-color: -accent-color;
+}
+
+.jfx-time-picker > .arrow-button:hover {
+    -jfx-default-color: -accent-color;
+    -fx-cursor: hand;
+}
+
+.jfx-date-picker {
+    -jfx-default-color: -accent-color;
+}
+
+.jfx-date-picker > .arrow-button {
+    -jfx-default-color: -grey-600;
+}
+
+.jfx-date-picker:showing > .arrow-button {
+    -jfx-default-color: -accent-color;
+}
+
+.jfx-date-picker > .arrow-button:hover {
+    -jfx-default-color: -accent-color;
+    -fx-cursor: hand;
+}
+
 /* A tab pane for navigating between windows. */
 .navigation-tab-bar {
     -fx-tab-min-height: 45;

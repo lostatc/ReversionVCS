@@ -23,6 +23,7 @@ import io.github.lostatc.reversion.api.Snapshot
 import jnr.ffi.Pointer
 import org.apache.commons.io.input.BoundedInputStream
 import ru.serce.jnrfuse.ErrorCodes
+import ru.serce.jnrfuse.FuseFS
 import ru.serce.jnrfuse.FuseFillDir
 import ru.serce.jnrfuse.FuseStubFS
 import ru.serce.jnrfuse.struct.FileStat
@@ -269,5 +270,50 @@ data class FuseFileSystem(val snapshot: Snapshot) : FuseStubFS() {
 
         buf.put(0, buffer.array(), 0, buffer.position())
         return buffer.position()
+    }
+}
+
+/**
+ * A singleton for managing mounting and unmounting snapshots.
+ */
+object SnapshotMounter {
+    /**
+     * A map of directory paths to the FUSE file systems mounted at them.
+     */
+    private val mountPoints: MutableMap<Path, FuseFS> = mutableMapOf()
+
+    /**
+     * Mounts the given [snapshot] at [path].
+     *
+     * If a directory does not exist at [path], it is created.
+     *
+     * @return `true` if the snapshot was mounted, `false` if a snapshot was already mounted at [path].
+     */
+    fun mount(snapshot: Snapshot, path: Path): Boolean {
+        if (isMounted(path)) return false
+
+        val fileSystem = FuseFileSystem(snapshot)
+        mountPoints[path] = fileSystem
+
+        Files.createDirectories(path)
+        fileSystem.mount(path, false, false, arrayOf("-o", "auto_unmount"))
+
+        return true
+    }
+
+    /**
+     * Returns whether there is a snapshot mounted at [path].
+     */
+    fun isMounted(path: Path): Boolean = path in mountPoints
+
+    /**
+     * Unmounts the snapshot mounted at [path].
+     *
+     * @return `true` if the snapshot was unmounted, `false` if no snapshot was mounted in the first place.
+     */
+    fun unmount(path: Path): Boolean {
+        val fileSystem = mountPoints.remove(path) ?: return false
+        fileSystem.umount()
+        return true
     }
 }
