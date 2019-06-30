@@ -42,11 +42,21 @@ import java.awt.Desktop
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * The path of the directory to mount the FUSE file system at.
  */
-private val MOUNT_DIR: Path = DATA_DIR.resolve("mountpoint")
+private val MOUNT_DIR: Path = DATA_DIR.resolve("Directory as of")
+
+/**
+ * Format this instant to a string which can be used in file names.
+ */
+private fun Instant.formatPathSafe(): String = DateTimeFormatter
+    .ofPattern("yyyy-MM-dd HH.mm.ss")
+    .withZone(ZoneId.systemDefault())
+    .format(this)
 
 /**
  * The model for storing information for the [WorkDirectoryManagerController].
@@ -116,21 +126,41 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     }
 
     /**
+     * Unmounts all snapshots and deletes their mount points.
+     */
+    private fun unmountAllSnapshots() {
+        if (Files.notExists(MOUNT_DIR)) return
+
+        for (directory in Files.list(MOUNT_DIR)) {
+            SnapshotMounter.unmount(directory)
+            Files.deleteIfExists(directory)
+        }
+    }
+
+    /**
      * Mounts the latest snapshot created before [time] and opens it in the browser.
      */
     fun mountSnapshot(time: Instant) {
         val selected = selected ?: return
 
         launch {
-            val deferredSnapshot = selected.executeAsync {
+            val snapshot = selected.executeAsync {
                 workDirectory.timeline.snapshots.values.filter { it.timeCreated <= time }.maxBy { it.revision }
+            }.await()
+
+            if (snapshot == null) {
+                sendNotification("There are no versions that far back in time.")
+                return@launch
             }
-            val snapshot = deferredSnapshot.await() ?: return@launch
 
             withContext(Dispatchers.IO) {
-                SnapshotMounter.unmount(MOUNT_DIR)
-                SnapshotMounter.mount(snapshot, MOUNT_DIR)
-                Desktop.getDesktop().open(MOUNT_DIR.toFile())
+                unmountAllSnapshots()
+                val mountpoint = MOUNT_DIR.resolve(snapshot.timeCreated.formatPathSafe())
+
+                SnapshotMounter.unmount(mountpoint)
+                SnapshotMounter.mount(snapshot, mountpoint)
+
+                Desktop.getDesktop().open(mountpoint.toFile())
             }
         }
     }
