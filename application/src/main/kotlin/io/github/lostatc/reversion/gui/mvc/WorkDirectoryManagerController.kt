@@ -37,6 +37,7 @@ import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.toDisplayProperty
+import io.github.lostatc.reversion.gui.toSorted
 import io.github.lostatc.reversion.gui.ui
 import javafx.fxml.FXML
 import javafx.scene.control.Label
@@ -176,7 +177,7 @@ class WorkDirectoryManagerController {
                 }
 
                 // Bind the list of ignored paths in the view to the model.
-                ignorePathList.items = MappedObservableList(newValue.ignoredPaths) {
+                ignorePathList.items = MappedObservableList(newValue.ignoredPaths.toSorted()) {
                     ListItem(it.toString())
                 }
 

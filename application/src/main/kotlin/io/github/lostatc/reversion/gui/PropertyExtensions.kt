@@ -22,6 +22,8 @@ package io.github.lostatc.reversion.gui
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.property.ReadOnlyProperty
+import javafx.collections.ObservableList
+import javafx.collections.transformation.SortedList
 import kotlin.reflect.KProperty
 
 operator fun <T> ReadOnlyProperty<T>.getValue(thisRef: Any?, property: KProperty<*>): T = value
@@ -46,3 +48,14 @@ fun <T, R> ReadOnlyProperty<T>.toMappedProperty(transform: (T) -> R): ReadOnlyPr
  */
 fun <T : Any> ReadOnlyProperty<T?>.toDisplayProperty(transform: (T) -> String): ReadOnlyProperty<String> =
     toMappedProperty { if (it == null) "Loading..." else transform(it) }
+
+/**
+ * Returns a read-only sorted view of this list.
+ */
+fun <T : Comparable<T>> ObservableList<T>.toSorted(): SortedList<T> = SortedList(this, compareBy { it })
+
+/**
+ * Returns a read-only sorted view of this list which is sorted by the given [selector].
+ */
+fun <T> ObservableList<T>.toSortedBy(selector: (T) -> Comparable<T>): SortedList<T> =
+    SortedList(this, compareBy(selector))
