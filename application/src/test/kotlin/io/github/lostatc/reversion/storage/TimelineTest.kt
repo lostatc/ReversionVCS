@@ -173,6 +173,20 @@ interface TimelineTest {
     }
 
     @Test
+    fun `clean up timeline with no cleanup policies`() {
+        val timeline = repository.createTimeline(emptySet())
+
+        val snapshot1 = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
+        val snapshot2 = timeline.createSnapshot(listOf(Paths.get("a")), workPath)
+
+        assertEquals(setOf(snapshot1, snapshot2), timeline.snapshots.values.toSet())
+
+        timeline.clean()
+
+        assertEquals(setOf(snapshot1, snapshot2), timeline.snapshots.values.toSet())
+    }
+
+    @Test
     fun `clean up versions by total number`() {
         val policies = setOf(
             repository.policyFactory.ofVersions(1),

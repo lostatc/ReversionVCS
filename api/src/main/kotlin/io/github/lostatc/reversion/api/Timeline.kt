@@ -185,6 +185,8 @@ interface Timeline {
             }
         }
 
+        if (versionsToDeletePerPolicy.isEmpty()) return 0
+
         val versionsToDelete = versionsToDeletePerPolicy.reduce { accumulator, it -> accumulator intersect it }
         val totalDeleted = versionsToDelete.size
 
