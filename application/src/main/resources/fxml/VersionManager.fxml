@@ -16,7 +16,11 @@
                     <padding>
                         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                     </padding>
-                    <IconButton icon="gmi-folder-open" onAction="#browsePath" styleClass="icon-button-light"/>
+                    <IconButton icon="gmi-folder-open" onAction="#browsePath" styleClass="icon-button-light">
+                        <tooltip>
+                            <Tooltip text="Browse for a file to manage versions of."/>
+                        </tooltip>
+                    </IconButton>
                     <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#setPath"
                                   promptText="Path"
                                   HBox.hgrow="ALWAYS">

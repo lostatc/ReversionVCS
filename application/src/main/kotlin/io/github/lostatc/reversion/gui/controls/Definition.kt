@@ -28,12 +28,19 @@ import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
 import javafx.scene.control.Tooltip
 import javafx.scene.layout.HBox
+import javafx.scene.layout.Pane
 import org.kordamp.ikonli.javafx.FontIcon
 
 /**
  * A list item that displays a definition with a [name] and [value].
  */
 class Definition : HBox() {
+
+    /**
+     * The root node of the control.
+     */
+    @FXML
+    private lateinit var root: Pane
 
     /**
      * The icon to display.
@@ -104,7 +111,10 @@ class Definition : HBox() {
 
     @FXML
     fun initialize() {
-        nameLabel.tooltipProperty().bind(tooltipProperty)
+        tooltipProperty.addListener { _, _, newValue ->
+            Tooltip.install(root, newValue)
+        }
+
         nameLabel.textProperty().bind(nameProperty)
         valueLabel.textProperty().bind(valueProperty)
 
