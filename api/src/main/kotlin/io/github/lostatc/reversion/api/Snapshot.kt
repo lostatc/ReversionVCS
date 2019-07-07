@@ -35,7 +35,7 @@ interface Snapshot {
     val revision: Int
 
     /**
-     * The user-provided name of the snapshot.
+     * The user-provided name of the snapshot, or `null` if no name has been provided.
      */
     var name: String?
 
@@ -53,7 +53,7 @@ interface Snapshot {
     /**
      * Whether the snapshot is pinned.
      *
-     * If this is `true`, the tag will not be automatically deleted.
+     * If this is `true`, the snapshot will not be automatically deleted.
      */
     var pinned: Boolean
 
