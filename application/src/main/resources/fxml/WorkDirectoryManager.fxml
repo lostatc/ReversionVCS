@@ -94,60 +94,64 @@
                     </VBox>
                 </Tab>
                 <Tab text="Cleanup Rules">
-                    <VBox xmlns:fx="http://javafx.com/fxml/1" spacing="25.0" xmlns="http://javafx.com/javafx/11.0.1">
-                        <padding>
-                            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
-                        </padding>
-                        <JFXListView fx:id="cleanupPolicyList" depth="2" styleClass="card-list-view"
-                                     VBox.vgrow="ALWAYS">
-                            <placeholder>
-                                <Card styleClass="placeholder"
-                                      subtitle="Add a rule to automatically clean up old versions"
-                                      title="There are no cleanup rules"/>
-                            </placeholder>
-                        </JFXListView>
-                        <HBox alignment="CENTER" spacing="10.0">
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <VBox>
-                                <Label styleClass="info-key" text="Versions">
+                    <HelpPane position="BOTTOM_RIGHT" styleClass="help-pane"
+                              helpText="To conserve disk space, the program can automatically delete old versions of files based on rules that you set. By default, all versions are kept forever. Adding rules allows you to decide how many versions to keep and how long to keep them for.">
+                        <VBox xmlns:fx="http://javafx.com/fxml/1" spacing="25.0"
+                              xmlns="http://javafx.com/javafx/11.0.1">
+                            <padding>
+                                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+                            </padding>
+                            <JFXListView fx:id="cleanupPolicyList" depth="2" styleClass="card-list-view"
+                                         VBox.vgrow="ALWAYS">
+                                <placeholder>
+                                    <Card styleClass="placeholder"
+                                          subtitle="Add a rule to automatically clean up old versions"
+                                          title="There are no cleanup rules"/>
+                                </placeholder>
+                            </JFXListView>
+                            <HBox alignment="CENTER" spacing="10.0">
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <VBox>
+                                    <Label styleClass="info-key" text="Versions">
+                                        <tooltip>
+                                            <Tooltip text="Limit the maximum number of versions to keep."/>
+                                        </tooltip>
+                                    </Label>
+                                    <JFXTextField fx:id="versionsTextField" prefColumnCount="6"/>
+                                </VBox>
+                                <VBox>
+                                    <Label styleClass="info-key" text="Time">
+                                        <tooltip>
+                                            <Tooltip text="Limit how long to keep each version for."/>
+                                        </tooltip>
+                                    </Label>
+                                    <JFXTextField fx:id="timeField" prefColumnCount="6"/>
+                                </VBox>
+                                <VBox>
+                                    <Label styleClass="info-key" text="Unit">
+                                        <tooltip>
+                                            <Tooltip text="Set the unit to measure time in."/>
+                                        </tooltip>
+                                    </Label>
+                                    <JFXComboBox fx:id="unitComboBox" prefWidth="120.0"/>
+                                </VBox>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <IconButton icon="gmi-add" onAction="#addCleanupPolicy" styleClass="icon-button-light">
                                     <tooltip>
-                                        <Tooltip text="Limit the maximum number of versions to keep."/>
+                                        <Tooltip text="Add a new cleanup rule."/>
                                     </tooltip>
-                                </Label>
-                                <JFXTextField fx:id="versionsTextField" prefColumnCount="6"/>
-                            </VBox>
-                            <VBox>
-                                <Label styleClass="info-key" text="Time">
+                                </IconButton>
+                                <IconButton icon="gmi-remove" onAction="#removeCleanupPolicy"
+                                            styleClass="icon-button-light">
                                     <tooltip>
-                                        <Tooltip text="Limit how long to keep each version for."/>
+                                        <Tooltip text="Remove the selected cleanup rule."/>
                                     </tooltip>
-                                </Label>
-                                <JFXTextField fx:id="timeField" prefColumnCount="6"/>
-                            </VBox>
-                            <VBox>
-                                <Label styleClass="info-key" text="Unit">
-                                    <tooltip>
-                                        <Tooltip text="Set the unit to measure time in."/>
-                                    </tooltip>
-                                </Label>
-                                <JFXComboBox fx:id="unitComboBox" prefWidth="120.0"/>
-                            </VBox>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <IconButton icon="gmi-add" onAction="#addCleanupPolicy" styleClass="icon-button-light">
-                                <tooltip>
-                                    <Tooltip text="Add a new cleanup rule."/>
-                                </tooltip>
-                            </IconButton>
-                            <IconButton icon="gmi-remove" onAction="#removeCleanupPolicy"
-                                        styleClass="icon-button-light">
-                                <tooltip>
-                                    <Tooltip text="Remove the selected cleanup rule."/>
-                                </tooltip>
-                            </IconButton>
-                            <Region HBox.hgrow="ALWAYS"/>
-                        </HBox>
-                        <Region prefHeight="40.0"/>
-                    </VBox>
+                                </IconButton>
+                                <Region HBox.hgrow="ALWAYS"/>
+                            </HBox>
+                            <Region prefHeight="40.0"/>
+                        </VBox>
+                    </HelpPane>
                 </Tab>
                 <Tab text="Ignored Files">
                     <VBox xmlns:fx="http://javafx.com/fxml/1" spacing="25.0" xmlns="http://javafx.com/javafx/11.0.1">

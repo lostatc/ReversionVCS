@@ -333,3 +333,8 @@
     -fx-text-fill: -grey-200;
     -fx-font-size: 10pt;
 }
+
+/* A container which displays a help icon. */
+.help-pane .icon-button-light .button-icon {
+    -fx-icon-size: 22px;
+}
