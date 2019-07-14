@@ -257,10 +257,6 @@
 }
 
 /* A button with an icon label for use on a dark background. */
-.icon-button-dark {
-    -jfx-mask-type: CIRCLE;
-}
-
 .icon-button-dark .button-icon {
     -fx-icon-size: 24px;
     -fx-icon-color: -grey-200;
@@ -277,11 +273,6 @@
     -fx-font-size: 12;
 }
 
-/* A button with an icon label for use on a light background. */
-.icon-button-light {
-    -jfx-mask-type: CIRCLE;
-}
-
 .icon-button-light .button-icon {
     -fx-icon-size: 24px;
     -fx-icon-color: -grey-800;
@@ -296,11 +287,6 @@
     -fx-text-alignment: center;
     -fx-text-fill: -grey-800;
     -fx-font-size: 12;
-}
-
-/* A floating action button. */
-.fab-light {
-    -jfx-mask-type: CIRCLE;
 }
 
 .fab-light .button-icon {
@@ -335,6 +321,6 @@
 }
 
 /* A container which displays a help icon. */
-.help-pane .icon-button-light .button-icon {
-    -fx-icon-size: 22px;
+.help-pane .help-button .icon-button {
+    -fx-font-size: 18;
 }

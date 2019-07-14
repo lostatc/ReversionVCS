@@ -42,7 +42,7 @@ fun infoDialog(title: String, text: String): JFXDialog = JFXDialog().apply {
         body.add(Label(text))
         actions.addAll(
             JFXButton().apply {
-                this.text = "Okay"
+                this.text = "OK"
                 this.styleClass.addAll("button-text", "button-confirm")
                 this.onAction = EventHandler { close() }
             }
@@ -170,7 +170,7 @@ fun dateTimeDialog(
                 this.onAction = EventHandler { close() }
             },
             JFXButton().apply {
-                this.text = "Okay"
+                this.text = "OK"
                 this.styleClass.addAll("button-text", "button-confirm")
                 this.onAction = EventHandler {
                     close()

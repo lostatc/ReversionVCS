@@ -30,7 +30,7 @@ import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
 import javafx.scene.control.Tooltip
 import javafx.scene.input.MouseEvent
-import javafx.scene.shape.Shape
+import javafx.scene.shape.Circle
 import org.kordamp.ikonli.javafx.FontIcon
 
 /**
@@ -47,7 +47,7 @@ class LabeledIconButton : JFXRippler() {
      * The click box of the button.
      */
     @FXML
-    private lateinit var foreground: Shape
+    private lateinit var foreground: Circle
 
     /**
      * The label to display for the button.
@@ -95,6 +95,16 @@ class LabeledIconButton : JFXRippler() {
      */
     var label: String by labelProperty
 
+    /**
+     * A property for [radius].
+     */
+    val radiusProperty: Property<Float> = SimpleObjectProperty(18.0f)
+
+    /**
+     * The radius of the button.
+     */
+    var radius: Float by radiusProperty
+
     init {
         FXMLLoader(this::class.java.getResource("/fxml/LabeledIconButton.fxml")).apply {
             classLoader = this@LabeledIconButton::class.java.classLoader
@@ -118,5 +128,7 @@ class LabeledIconButton : JFXRippler() {
         }
 
         foreground.setOnMouseClicked { event -> onAction.handle(event) }
+
+        foreground.radiusProperty().bind(radiusProperty)
     }
 }

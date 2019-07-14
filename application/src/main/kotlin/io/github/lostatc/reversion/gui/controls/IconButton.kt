@@ -29,6 +29,7 @@ import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.control.Tooltip
 import javafx.scene.input.MouseEvent
+import javafx.scene.shape.Circle
 import javafx.scene.shape.Shape
 import org.kordamp.ikonli.javafx.FontIcon
 
@@ -44,10 +45,16 @@ class IconButton : JFXRippler() {
     private lateinit var fontIcon: FontIcon
 
     /**
-     * The click box of the button.
+     * The clickable area of the button.
      */
     @FXML
-    private lateinit var foreground: Shape
+    private lateinit var foreground: Circle
+
+    /**
+     * The background of the button.
+     */
+    @FXML
+    private lateinit var background: Circle
 
     /**
      * A property for [icon].
@@ -79,6 +86,16 @@ class IconButton : JFXRippler() {
      */
     var tooltip: Tooltip? by tooltipProperty
 
+    /**
+     * A property for [radiusProperty].
+     */
+    val radiusProperty: Property<Float> = SimpleObjectProperty(18.0f)
+
+    /**
+     * The radius of the button.
+     */
+    var radius: Float by radiusProperty
+
     init {
         FXMLLoader(this::class.java.getResource("/fxml/IconButton.fxml")).apply {
             classLoader = this@IconButton::class.java.classLoader
@@ -99,5 +116,8 @@ class IconButton : JFXRippler() {
         }
 
         foreground.setOnMouseClicked { event -> onAction.handle(event) }
+
+        foreground.radiusProperty().bind(radiusProperty)
+        background.radiusProperty().bind(radiusProperty)
     }
 }

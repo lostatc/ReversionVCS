@@ -26,6 +26,7 @@ import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
+import javafx.scene.Group
 import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.AnchorPane.setBottomAnchor
 import javafx.scene.layout.AnchorPane.setLeftAnchor
@@ -147,7 +148,7 @@ class HelpPane : StackPane() {
 
     @FXML
     fun openHelp() {
-        infoDialog(title = "Help", text = helpText).show(this)
+        infoDialog(title = "Help", text = helpText).show(scene.root as StackPane)
     }
 
     override fun layoutChildren() {
