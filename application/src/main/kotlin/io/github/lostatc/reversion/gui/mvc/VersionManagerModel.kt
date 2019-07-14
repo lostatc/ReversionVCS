@@ -178,8 +178,11 @@ class VersionManagerModel : CoroutineScope by MainScope() {
         }
 
         selected.executeAsync {
+            // Manually create the snapshot instead of using [WorkDirectory.commit] so that it is created even if the
+            // file hasn't changed and even if the file is ignored. The user should always have the power to create a
+            // new version of a file manually.
             val relativePath = workDirectory.path.relativize(path)
-            workDirectory.commit(listOf(path), force = true)
+            workDirectory.timeline.createSnapshot(listOf(relativePath), workDirectory.path)
             workDirectory.timeline.clean(listOf(relativePath))
         } ui {
             reloadVersions()
