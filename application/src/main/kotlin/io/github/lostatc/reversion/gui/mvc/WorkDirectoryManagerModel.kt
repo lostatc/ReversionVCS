@@ -51,10 +51,15 @@ import java.time.format.DateTimeFormatter
 private val MOUNT_DIR: Path = DATA_DIR.resolve("Directory as of")
 
 /**
+ * The time separator character to use in file names where certain characters may not be allowed.
+ */
+private const val TIME_SEPARATOR: String = "\ua789"
+
+/**
  * Format this instant to a string which can be used in file names.
  */
 private fun Instant.formatPathSafe(): String = DateTimeFormatter
-    .ofPattern("yyyy-MM-dd HH.mm.ss")
+    .ofPattern("yyyy-MM-dd HH${TIME_SEPARATOR}mm${TIME_SEPARATOR}ss")
     .withZone(ZoneId.systemDefault())
     .format(this)
 
