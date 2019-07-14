@@ -203,7 +203,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * Creates a new snapshot containing the given [paths] and returns it.
      *
      * Passing the path of a directory commits all the files contained in it. By default, this only commits files with
-     * uncommitted changes.
+     * uncommitted changes. Ignored files are not committed.
      *
      * @param [paths] The paths of files to commit.
      * @param [force] If `true`, commit files that have no uncommitted changes. If `false`, don't commit them.
