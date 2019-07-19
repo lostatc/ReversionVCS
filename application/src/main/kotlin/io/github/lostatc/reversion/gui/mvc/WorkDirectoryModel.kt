@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
+import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.gui.ActorEvent
 import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.getValue
@@ -41,7 +42,20 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalUnit
+
+/**
+ * The default cleanup policies to use for new working directories.
+ */
+private val Repository.defaultPolicies: Set<CleanupPolicy>
+    get() = setOf(
+        policyFactory.ofUnit(1, ChronoUnit.SECONDS, 1),
+        policyFactory.ofUnit(60, ChronoUnit.MINUTES, 1),
+        policyFactory.ofUnit(24, ChronoUnit.HOURS, 1),
+        policyFactory.ofUnit(30, ChronoUnit.DAYS, 1),
+        policyFactory.ofUnit(52, ChronoUnit.WEEKS, 1)
+    )
 
 /**
  * Mutable state associated with a working directory.
@@ -213,7 +227,9 @@ data class WorkDirectoryModel(
             val workDirectory = if (WorkDirectory.isWorkDirectory(path)) {
                 WorkDirectory.open(path)
             } else {
-                WorkDirectory.init(path, DEFAULT_PROVIDER)
+                WorkDirectory.init(path, DEFAULT_PROVIDER).apply {
+                    timeline.cleanupPolicies = repository.defaultPolicies
+                }
             }
 
             WorkDirectoryModel(workDirectory)
