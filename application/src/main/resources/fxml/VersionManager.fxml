@@ -32,19 +32,23 @@
             </top>
         </JFXToolbar>
         <HBox prefHeight="100.0" prefWidth="640.0" styleClass="pane-box" VBox.vgrow="ALWAYS">
-            <StackPane alignment="BOTTOM_CENTER" minWidth="200.0" prefWidth="400.0">
-                <JFXListView fx:id="versionList" depth="2" styleClass="card-list-view">
-                    <placeholder>
-                        <Card styleClass="placeholder" subtitle="Choose a file to show versions" title="No versions"/>
-                    </placeholder>
-                </JFXListView>
-                <IconButton icon="gmi-add" maxHeight="-Infinity" maxWidth="-Infinity" onAction="#createVersion"
-                            styleClass="fab-light">
-                    <tooltip>
-                        <Tooltip text="Create a new version of this file."/>
-                    </tooltip>
-                </IconButton>
-            </StackPane>
+            <HelpPane position="BOTTOM_LEFT" styleClass="fab-light"
+                      helpText="Select a file to see all past versions of it. You can also create new versions of that file manually. Old versions can be restored, which reverts the file back to that version while also saving the current version. Versions can also be opened in their default application without restoring them.">
+                <StackPane alignment="BOTTOM_CENTER" minWidth="200.0" prefWidth="400.0">
+                    <JFXListView fx:id="versionList" depth="2" styleClass="card-list-view">
+                        <placeholder>
+                            <Card styleClass="placeholder" subtitle="Choose a file to show versions"
+                                  title="No versions"/>
+                        </placeholder>
+                    </JFXListView>
+                    <IconButton icon="gmi-add" maxHeight="-Infinity" maxWidth="-Infinity" onAction="#createVersion"
+                                styleClass="fab-light">
+                        <tooltip>
+                            <Tooltip text="Create a new version of this file."/>
+                        </tooltip>
+                    </IconButton>
+                </StackPane>
+            </HelpPane>
             <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" styleClass="pane" HBox.hgrow="SOMETIMES">
                 <VBox fx:id="infoPane" spacing="50.0">
                     <FlowPane hgap="50.0" vgap="25.0">

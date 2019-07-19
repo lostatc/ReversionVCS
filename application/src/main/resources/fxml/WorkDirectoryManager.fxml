@@ -15,7 +15,8 @@
             <String fx:value="background"/>
             <String fx:value="pane-box"/>
         </styleClass>
-        <HelpPane position="BOTTOM_LEFT" styleClass="fab-light" helpText="TODO: Add help text">
+        <HelpPane position="BOTTOM_LEFT" styleClass="fab-light"
+                  helpText="To start tracking changes to your files, you need to specify a directory to track changes in. Whenever a file in that directory changes, a new version of it will be saved automatically. You can stop new versions from being automatically created by toggling the 'track changes' button. You can always create new versions manually.">
             <StackPane alignment="BOTTOM_CENTER" minWidth="200.0" prefWidth="400.0">
                 <JFXListView fx:id="workDirectoryList" depth="2" styleClass="card-list-view">
                     <placeholder>
@@ -96,8 +97,8 @@
                     </VBox>
                 </Tab>
                 <Tab text="Cleanup Rules">
-                    <HelpPane position="BOTTOM_RIGHT" styleClass="icon-button-light"
-                              helpText="To conserve disk space, the program can automatically delete old versions of files based on rules that you set. By default, all versions are kept forever. Adding rules allows you to decide how many versions to keep and how long to keep them for.">
+                    <HelpPane position="BOTTOM_LEFT" styleClass="icon-button-light"
+                              helpText="To conserve disk space, the program can automatically delete old versions of files based on rules that you set. Adding rules allows you to decide how many versions to keep and how long to keep them for. A file is only deleted if there are no rules specifying that it should be kept.">
                         <padding>
                             <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                         </padding>
@@ -156,7 +157,7 @@
                     </HelpPane>
                 </Tab>
                 <Tab text="Ignored Files">
-                    <HelpPane position="BOTTOM_RIGHT" styleClass="icon-button-light"
+                    <HelpPane position="BOTTOM_LEFT" styleClass="icon-button-light"
                               helpText="You can ignore files to keep the program from automatically creating new versions of them. You can ignore directories to ignore all the files in them. You can still manually create new versions of ignored files, and new versions won't be automatically created for any files if tracking changes is disabled for the directory.">
                         <padding>
                             <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
