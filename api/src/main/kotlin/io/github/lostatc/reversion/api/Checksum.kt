@@ -96,5 +96,16 @@ class Checksum(private val bytes: ByteArray) {
          */
         fun fromFile(path: Path, algorithm: String): Checksum =
             Checksum(DigestUtils(algorithm).digest(path.toFile()))
+
+        /**
+         * Calculates a [Checksum] of the given [data].
+         *
+         * This accepts any [algorithm] accepted by [MessageDigest].
+         *
+         * @param [data] The data to calculate the checksum of.
+         * @param [algorithm] The name of the hash algorithm to use.
+         */
+        fun fromString(data: String, algorithm: String): Checksum =
+            Checksum(DigestUtils(algorithm).digest(data))
     }
 }

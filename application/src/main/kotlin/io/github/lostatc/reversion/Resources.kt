@@ -21,21 +21,26 @@ package io.github.lostatc.reversion
 
 import ch.qos.logback.core.PropertyDefinerBase
 import ch.qos.logback.core.spi.PropertyDefiner
+import freemarker.template.Configuration
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.storage.DatabaseStorageProvider
+import java.io.StringWriter
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.MissingResourceException
 
 /**
  * The path of the user's home directory.
  */
-private val HOME_DIRECTORY: Path = Paths.get(System.getProperty("user.home"))
+val HOME_DIRECTORY: Path = Paths.get(System.getProperty("user.home"))
 
 /**
- * Resolves this path against a list of path [segments].
+ * Resolves [firstSegment] and each of the given [segments] against this path.
+ *
+ * @see [Path.resolve]
  */
-private fun Path.resolve(vararg segments: String): Path =
-    segments.fold(this) { path, segment -> path.resolve(segment) }
+fun Path.resolve(firstSegment: String, vararg segments: String): Path =
+    segments.fold(resolve(firstSegment)) { path, segment -> path.resolve(segment) }
 
 /**
  * Returns the [Path] stored in the given environment [variable], or `null` if it is unset.
@@ -44,12 +49,54 @@ private fun pathFromEnv(variable: String): Path? =
     System.getenv(variable)?.let { Paths.get(it) }
 
 /**
+ * An exception which signals that a resource is missing.
+ *
+ * @param [name] The name of the resource.
+ */
+data class MissingResourceException(override val message: String, val name: String) : Exception(message)
+
+/**
+ * Returns the [Path] of the resource with the given [name] or `null` if it doesn't exist.
+ */
+fun findResourcePath(name: String): Path? =
+    OperatingSystem::class.java.getResource(name)?.let { Paths.get(it.toURI()) }
+
+/**
+ * Returns the [Path] of the resource with the given [name].
+ *
+ * @throws [MissingResourceException] A resource with the given [name] doesn't exist.
+ */
+fun getResourcePath(name: String): Path =
+    findResourcePath(name) ?: throw MissingResourceException("The resource '$name' doesn't exist.", name)
+
+/**
+ * The Freemarker template [Configuration] instance to use for processing templates.
+ */
+private val templateConfig: Configuration = Configuration(Configuration.VERSION_2_3_28).apply {
+    setDirectoryForTemplateLoading(getResourcePath("/templates").toFile())
+}
+
+/**
+ * Executes a Freemarker [template] with a given data [model].
+ *
+ * @param [template] The file name of the template file.
+ * @param [model] The data model containing data for the template.
+ *
+ * @return The contents of the newly created file.
+ */
+fun processTemplate(template: String, model: Any): String {
+    val writer = StringWriter()
+    templateConfig.getTemplate(template).process(model, writer)
+    return writer.toString()
+}
+
+/**
  * A supported operating system.
  *
  * @param [dataDirectory] The directory where application data is stored.
  * @param [configDirectory] The directory where application configuration is stored.
  */
-private enum class OperatingSystem(val dataDirectory: Path, val configDirectory: Path = dataDirectory) {
+enum class OperatingSystem(val dataDirectory: Path, val configDirectory: Path = dataDirectory) {
     WINDOWS(dataDirectory = pathFromEnv("APPDATA") ?: HOME_DIRECTORY),
 
     MAC(dataDirectory = HOME_DIRECTORY.resolve("Library", "Application Support")),
