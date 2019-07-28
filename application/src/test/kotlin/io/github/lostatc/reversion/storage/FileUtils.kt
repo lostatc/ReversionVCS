@@ -19,16 +19,9 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.resolve
 import java.nio.file.Files
 import java.nio.file.Path
-
-/**
- * Resolves [firstSegment] and each of the given [segments] against this path.
- *
- * @see [Path.resolve]
- */
-fun Path.resolve(firstSegment: String, vararg segments: String): Path =
-    segments.fold(resolve(firstSegment)) { path, segment -> path.resolve(segment) }
 
 data class FileCreateContext(val parent: Path) {
 
