@@ -191,7 +191,7 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
             if (Files.notExists(directoryListFile)) return@withContext emptyList<Path>()
 
             Files.newBufferedReader(directoryListFile).use {
-                gson.fromJson<List<Path>>(it)
+                gson.fromJson(it)
             }
         }
 

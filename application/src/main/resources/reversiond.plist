@@ -3,13 +3,9 @@
 <plist version="1.0">
     <dict>
         <key>Label</key>
-        <string>${label}</string>
+        <string>io.github.lostatc.reversiond</string>
         <key>Program</key>
-        <string>${executable}</string>
-        <key>ProgramArguments</key>
-        <array>
-            <string>${argument}</string>
-        </array>
+        <string>reversiond</string>
         <key>RunAtLoad</key>
         <true/>
     </dict>

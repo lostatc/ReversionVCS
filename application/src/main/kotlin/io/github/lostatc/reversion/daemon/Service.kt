@@ -83,8 +83,8 @@ interface Service {
 data class WindowsService(
     val name: String,
     val executable: String,
-    val args: List<String>,
-    val config: Map<String, String>
+    val args: List<String> = emptyList(),
+    val config: Map<String, String> = emptyMap()
 ) : Service {
     override fun start(): Boolean {
         if (!isInstalled()) throw IllegalStateException("This service is not installed.")
@@ -106,10 +106,15 @@ data class WindowsService(
 
     override fun install(): Boolean {
         if (isInstalled()) return false
-        ProcessBuilder(elevateCommand, nssmCommand, "install", name, executable).start().waitFor()
+
+        ProcessBuilder(elevateCommand, nssmCommand, "install", name, executable, *args.toTypedArray())
+            .start()
+            .waitFor()
+
         for ((property, value) in config.entries) {
             ProcessBuilder(nssmCommand, "set", name, property, value).start()
         }
+
         return true
     }
 
@@ -139,11 +144,11 @@ data class WindowsService(
 /**
  * A [Service] that uses a launchd agent.
  *
- * @param [propertyList] The contents of the property list file which describes the agent.
  * @param [name] The unique name of the service.
+ * @param [propertyList] The property list file which describes the agent.
  */
 // TODO: Add support for specifying an argument.
-data class LaunchdService(val propertyList: String, val name: String) : Service {
+data class LaunchdService(val name: String, val propertyList: Path) : Service {
     override fun start(): Boolean {
         TODO("not implemented")
     }
@@ -173,53 +178,52 @@ data class LaunchdService(val propertyList: String, val name: String) : Service 
 /**
  * A [Service] which uses a systemd user service.
  *
- * @param [serviceFile] The contents of the systemd unit file which describes the service.
- * @param [serviceName] The unique name of the service without the '.service' suffix.
- * @param [argument] The argument to pass to instantiate the service with, or `null` for no argument.
+ * @param [name] The unique name of the service.
+ * @param [serviceFile] The path of the systemd unit file which describes the service.
  */
-data class SystemdService(val serviceFile: String, val serviceName: String, val argument: String?) : Service {
+data class SystemdService(val name: String, val serviceFile: Path) : Service {
     /**
      * The full name of the service to pass to `systemctl`.
      */
-    private val serviceSpecifier: String
-        get() = if (argument == null) "$serviceName.service" else "$serviceName@$argument.service"
+    private val unitName: String
+        get() = name.removeSuffix(".service") + ".service"
 
     /**
      * The path to install the systemd service file to.
      */
-    private val installPath: Path
-        get() = unitDirectory.resolve(if (argument == null) "$serviceName.service" else "$serviceName@.service")
+    private val unitPath: Path
+        get() = unitDirectory.resolve(unitName)
 
     override fun start(): Boolean {
         if (!isInstalled()) throw IllegalStateException("This service is not installed.")
         if (isRunning()) return false
-        ProcessBuilder("systemctl", "--user", "start", serviceSpecifier).start()
-        ProcessBuilder("systemctl", "--user", "enable", serviceSpecifier).start()
+        ProcessBuilder("systemctl", "--user", "start", unitName).start()
+        ProcessBuilder("systemctl", "--user", "enable", unitName).start()
         return true
     }
 
     override fun stop(): Boolean {
         if (!isInstalled()) throw IllegalStateException("This service is not installed.")
         if (!isRunning()) return false
-        ProcessBuilder("systemctl", "--user", "stop", serviceSpecifier).start()
-        ProcessBuilder("systemctl", "--user", "disable", serviceSpecifier).start()
+        ProcessBuilder("systemctl", "--user", "stop", unitName).start()
+        ProcessBuilder("systemctl", "--user", "disable", unitName).start()
         return true
     }
 
     override fun isRunning(): Boolean {
-        val process = ProcessBuilder("systemctl", "--user", "is-active", serviceSpecifier).start()
+        val process = ProcessBuilder("systemctl", "--user", "is-active", unitName).start()
         return process.waitFor() == 0
     }
 
     override fun install(): Boolean {
         if (isInstalled()) return false
-        Files.writeString(installPath, serviceFile)
+        Files.copy(serviceFile, unitPath)
         return true
     }
 
-    override fun uninstall(): Boolean = Files.deleteIfExists(installPath)
+    override fun uninstall(): Boolean = Files.deleteIfExists(unitPath)
 
-    override fun isInstalled(): Boolean = Files.isRegularFile(installPath)
+    override fun isInstalled(): Boolean = Files.isRegularFile(unitPath)
 
     companion object {
         /**

@@ -20,7 +20,7 @@
 package io.github.lostatc.reversion.daemon
 
 import io.github.lostatc.reversion.OperatingSystem
-import io.github.lostatc.reversion.processTemplate
+import io.github.lostatc.reversion.getResourcePath
 import java.nio.file.Path
 
 /**
@@ -30,34 +30,19 @@ import java.nio.file.Path
  */
 fun createWatchService(workDirectory: Path): Service = when (OperatingSystem.current()) {
     OperatingSystem.WINDOWS -> WindowsService(
-        name = "reversiond@$workDirectory",
+        name = "io.github.lostatc.reversiond",
         executable = "reversiond",
-        args = listOf(workDirectory.toString()),
         config = mapOf(
             "DisplayName" to "Reversion File Watcher",
-            "Description" to "Watches a directory for changes and saves new versions of files"
+            "Description" to "Watches a directory for changes and saves new versions of files."
         )
     )
     OperatingSystem.MAC -> LaunchdService(
-        propertyList = processTemplate(
-            "launchd.plist.ftl",
-            mapOf(
-                "label" to "io.github.lostatc.reversion@$workDirectory",
-                "executable" to "reversiond",
-                "argument" to workDirectory.toString()
-            )
-        ),
-        name = "io.github.lostatc.reversion@$workDirectory"
+        name = "io.github.lostatc.reversiond",
+        propertyList = getResourcePath("/reversiond.plist")
     )
     OperatingSystem.LINUX -> SystemdService(
-        serviceFile = processTemplate(
-            "systemd.service.ftl",
-            mapOf(
-                "description" to "Reversion File Watcher",
-                "executable" to "reversiond"
-            )
-        ),
-        serviceName = "reversiond",
-        argument = workDirectory.toString()
+        name = "reversiond",
+        serviceFile = getResourcePath("/reversiond.service")
     )
 }

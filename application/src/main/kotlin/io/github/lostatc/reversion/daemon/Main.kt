@@ -19,8 +19,9 @@
 
 package io.github.lostatc.reversion.daemon
 
+import io.github.lostatc.reversion.DATA_DIR
 import org.slf4j.LoggerFactory
-import java.nio.file.Paths
+import java.nio.file.Path
 
 /**
  * An exception handler that logs uncaught exceptions and prints them to stderr.
@@ -33,13 +34,17 @@ val loggingExceptionHandler: Thread.UncaughtExceptionHandler =
     }
 
 /**
+ * The path of the file where the list of watched directories is stored.
+ */
+val DAEMON_DATA_FILE: Path = DATA_DIR.resolve("watchedDirectories.json")
+
+/**
  * Start the daemon.
  */
-fun main(args: Array<String>) {
+fun main() {
     // Log any uncaught exceptions and print them to stderr.
     Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
 
     // Start the daemon.
-    val daemon = WatchDaemon(Paths.get(args[0]))
-    daemon.run()
+    WatchDaemon(DAEMON_DATA_FILE).run()
 }
