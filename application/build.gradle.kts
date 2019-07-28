@@ -41,9 +41,6 @@ dependencies {
     // FUSE file system
     implementation(group = "com.github.serceman", name = "jnr-fuse", version = "0.5.3")
 
-    // Templating
-    implementation(group = "org.freemarker", name = "freemarker", version = "2.3.28")
-
     // Unit testing
     testImplementation(group = "org.junit.jupiter", name = "junit-jupiter", version = "5.4.2")
 }

@@ -21,10 +21,8 @@ package io.github.lostatc.reversion
 
 import ch.qos.logback.core.PropertyDefinerBase
 import ch.qos.logback.core.spi.PropertyDefiner
-import freemarker.template.Configuration
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.storage.DatabaseStorageProvider
-import java.io.StringWriter
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.MissingResourceException
@@ -68,27 +66,6 @@ fun findResourcePath(name: String): Path? =
  */
 fun getResourcePath(name: String): Path =
     findResourcePath(name) ?: throw MissingResourceException("The resource '$name' doesn't exist.", name)
-
-/**
- * The Freemarker template [Configuration] instance to use for processing templates.
- */
-private val templateConfig: Configuration = Configuration(Configuration.VERSION_2_3_28).apply {
-    setDirectoryForTemplateLoading(getResourcePath("/templates").toFile())
-}
-
-/**
- * Executes a Freemarker [template] with a given data [model].
- *
- * @param [template] The file name of the template file.
- * @param [model] The data model containing data for the template.
- *
- * @return The contents of the newly created file.
- */
-fun processTemplate(template: String, model: Any): String {
-    val writer = StringWriter()
-    templateConfig.getTemplate(template).process(model, writer)
-    return writer.toString()
-}
 
 /**
  * A supported operating system.

@@ -1,9 +1,9 @@
 [Unit]
-Description=${description}
+Description=Reversion File Watcher
 
 [Service]
 Type=simple
-ExecStart=${executable} %i
+ExecStart=reversiond
 Restart=always
 StandardOutput=journal
 StandardError=journal
