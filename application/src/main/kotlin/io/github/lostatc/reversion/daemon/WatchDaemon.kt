@@ -19,13 +19,7 @@
 
 package io.github.lostatc.reversion.daemon
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import io.github.lostatc.reversion.daemon.WatchDaemon.Companion.addWatch
-import io.github.lostatc.reversion.daemon.WatchDaemon.Companion.removeWatch
-import io.github.lostatc.reversion.storage.PathTypeAdapter
 import io.github.lostatc.reversion.storage.WorkDirectory
-import io.github.lostatc.reversion.storage.fromJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,55 +27,42 @@ import kotlinx.coroutines.launch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 
 
 /**
- * A daemon which watches a working directory and commits any changes.
+ * A daemon which directories a working directory and commits any changes.
  *
- * This class stores a list of directories being watched in [dataFile] and automatically starts or stops watching them
- * when [dataFile] is updated. This file can be modified with [addWatch] and [removeWatch]. Each time a file is created
- * or modified in a watched directory, it is committed and past versions of it are cleaned up.
+ * This class watches each directory in [directories] for changes. Each time a file is created or modified in a watched
+ * directory, it is committed and past versions of it are cleaned up. This class automatically starts or stops watching
+ * directories as they are added to or removed from [directories].
  *
- * @param [dataFile] The path of the file where the list of watched directories is stored.
+ * @param [directories] The set of directories to watch.
  */
-data class WatchDaemon(val dataFile: Path) : CoroutineScope by CoroutineScope(Dispatchers.Default) {
+data class WatchDaemon(val directories: PersistentSet<Path>) : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     /**
      * A map of directories being watched to the jobs which are watching them.
      */
     private val watches: MutableMap<Path, Job> = mutableMapOf()
 
     /**
-     * Start watching directories based on the contents of the [dataFile].
-     *
-     * @throws [NoSuchFileException] The file [dataFile] does not exist.
-     * @throws [IOException] An I/O error occurred.
+     * Starts watching each directory in [directories].
      */
     fun run() {
         reload()
-
-        FileSystemWatcher(dataFile.parent, recursive = false).use {
-            for (event in it.events) {
-                if (event.type == ENTRY_MODIFY && event.path == dataFile) {
-                    reload()
-                }
-            }
-        }
+        directories.onChange { reload() }
     }
 
     /**
-     * Add and remove [watches] based on the contents of the [dataFile].
+     * Adds and removes [watches] based on the contents of [directories].
      */
     private fun reload() {
-        val directories = getWatched(dataFile)
-
-        for (addedDirectory in directories - watches.keys) {
+        for (addedDirectory in directories.elements - watches.keys) {
             watches[addedDirectory] = launch { watch(addedDirectory) }
         }
-        for (removedDirectory in watches.keys - directories) {
+        for (removedDirectory in watches.keys - directories.elements) {
             watches.remove(removedDirectory)?.cancel()
         }
     }
@@ -111,55 +92,6 @@ data class WatchDaemon(val dataFile: Path) : CoroutineScope by CoroutineScope(Di
                     }
                 }
             }
-        }
-
-        /**
-         * The object for serializing/de-serializing objects as JSON.
-         */
-        private val gson: Gson = GsonBuilder()
-            .setPrettyPrinting()
-            .registerTypeHierarchyAdapter(Path::class.java, PathTypeAdapter)
-            .create()
-
-        /**
-         * Returns the list of directories being watched by the daemon with the given [dataFile].
-         *
-         * @throws [NoSuchFileException] The file [dataFile] does not exist.
-         * @throws [IOException] An I/O error occurred.
-         */
-        private fun getWatched(dataFile: Path): Set<Path> =
-            Files.newBufferedReader(dataFile).use { gson.fromJson(it) }
-
-        /**
-         * Tell the daemon with the given [dataFile] to start watching [directory].
-         *
-         * @return `true` if a watch was added for [directory], `false` if it was already being watched.
-         */
-        fun addWatch(directory: Path, dataFile: Path): Boolean {
-            val directories = getWatched(dataFile)
-
-            if (directory in directories) return false
-            Files.newBufferedWriter(dataFile).use {
-                gson.toJson(directories.plusElement(directory))
-            }
-
-            return true
-        }
-
-        /**
-         * Tell the daemon with the given [dataFile] to stop watching [directory].
-         *
-         * @return `true` if a watch was stopped for [directory], `false` if it was not being watched.
-         */
-        fun removeWatch(directory: Path, dataFile: Path): Boolean {
-            val directories = getWatched(dataFile)
-
-            if (directory !in directories) return false
-            Files.newBufferedReader(dataFile).use {
-                gson.toJson(directories.minusElement(directory))
-            }
-
-            return true
         }
     }
 }

@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.daemon
 
 import io.github.lostatc.reversion.DATA_DIR
+import io.github.lostatc.reversion.storage.PathTypeAdapter
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
@@ -34,9 +35,10 @@ val loggingExceptionHandler: Thread.UncaughtExceptionHandler =
     }
 
 /**
- * The path of the file where the list of watched directories is stored.
+ * The set of directories which are watched by the daemon.
  */
-val DAEMON_DATA_FILE: Path = DATA_DIR.resolve("watchedDirectories.json")
+val watchedDirectories: PersistentSet<Path> =
+    JsonPersistentSet.of(DATA_DIR.resolve("watchedDirectories.json"), PathTypeAdapter)
 
 /**
  * Start the daemon.
@@ -46,5 +48,5 @@ fun main() {
     Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
 
     // Start the daemon.
-    WatchDaemon(DAEMON_DATA_FILE).run()
+    WatchDaemon(watchedDirectories).run()
 }
