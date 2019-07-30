@@ -20,56 +20,87 @@
 package io.github.lostatc.reversion.daemon
 
 import io.github.lostatc.reversion.HOME_DIRECTORY
+import io.github.lostatc.reversion.OperatingSystem
 import io.github.lostatc.reversion.getResourcePath
 import io.github.lostatc.reversion.resolve
+import org.apache.commons.io.IOUtils
+import java.io.IOException
+import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+
+/**
+ * An exception which signals that a process returned a non-zero exit code.
+ *
+ * @param [process] The process which returned a non-zero exit code.
+ */
+data class ProcessFailedException(
+    override val message: String,
+    val process: Process,
+    override val cause: Throwable? = null
+) : Exception(message, cause)
+
+/**
+ * An exception which signals that there was a problem interacting with a service.
+ */
+data class ServiceException(
+    override val message: String,
+    override val cause: Throwable? = null
+) : Exception(message, cause)
+
+/**
+ * Waits for this process to complete and returns its stdout as a string.
+ */
+private fun Process.getOutput(): String = IOUtils.toString(inputStream, Charset.defaultCharset()).trim()
+
+/**
+ * Waits for this process to complete and returns its stderr as a string.
+ */
+private fun Process.getError(): String = IOUtils.toString(errorStream, Charset.defaultCharset()).trim()
+
+/**
+ * Waits for this process to complete and executes the [handler] if it returns with a non-zero exit code.
+ *
+ * @param [handler] A function which is passed an exception providing information about the process.
+ */
+private fun Process.onFail(handler: (ProcessFailedException) -> Unit) {
+    if (waitFor() != 0) handler(ProcessFailedException(message = getError(), process = this))
+}
 
 /**
  * A wrapper for managing a service.
+ *
+ * If the current platform is not supported, the constructor throws an [UnsupportedOperationException].
  */
 interface Service {
     /**
-     * Starts the service and enables it to start on boot.
+     * Starts the service and configures it to start on boot.
      *
-     * @return `true` if the service was successfully started, `false` if it was already started.
-     *
-     * @throws [IllegalStateException] The service is not installed.
+     * @throws [ServiceException] The service failed to start.
      */
-    fun start(): Boolean
+    fun start()
 
     /**
-     * Stops the service and disables it from starting on boot.
+     * Stops the service and configures it to not start of boot.
      *
-     * @return `true` if the service was successfully stopped, `false` if it wasn't running.
-     *
-     * @throws [IllegalStateException] The service is not installed.
+     * @throws [ServiceException] The service failed to stop.
      */
-    fun stop(): Boolean
-
-    /**
-     * Returns whether the service is currently running.
-     */
-    fun isRunning(): Boolean
+    fun stop()
 
     /**
      * Installs the service.
      *
-     * @return `true` if the service was successfully installed, `false` if it was already installed.
+     * @throws [ServiceException] The service failed to install.
      */
-    fun install(): Boolean
+    fun install()
 
     /**
      * Uninstalls the service.
      *
-     * @return `true` if the service was successfully uninstalled, `false` if it wasn't installed.
+     * @throws [ServiceException] The service failed to uninstall.
      */
-    fun uninstall(): Boolean
-
-    /**
-     * Returns whether the service is currently installed.
-     */
-    fun isInstalled(): Boolean
+    fun uninstall()
 }
 
 /**
@@ -86,56 +117,48 @@ data class WindowsService(
     val args: List<String> = emptyList(),
     val config: Map<String, String> = emptyMap()
 ) : Service {
-    override fun start(): Boolean {
-        if (!isInstalled()) throw IllegalStateException("This service is not installed.")
-        if (isRunning()) return false
-        ProcessBuilder(elevateCommand, nssmCommand, "start", name).start()
-        return true
+
+    init {
+        if (!OperatingSystem.WINDOWS.isCurrent) {
+            throw UnsupportedOperationException("This implementation does not support the current platform.")
+        }
     }
 
-    override fun stop(): Boolean {
-        if (!isInstalled()) throw IllegalStateException("This service is not installed.")
-        if (!isRunning()) return false
-        ProcessBuilder(elevateCommand, nssmCommand, "stop", name).start()
-        return true
+    override fun start() {
+        ProcessBuilder(nssmCommand, "start", name).start().apply {
+            onFail { throw ServiceException("The service failed to start.", it) }
+        }
     }
 
-    override fun isRunning(): Boolean {
-        TODO("not implemented")
+    override fun stop() {
+        ProcessBuilder(nssmCommand, "stop", name).start().apply {
+            onFail { throw ServiceException("The service failed to stop.", it) }
+        }
     }
 
-    override fun install(): Boolean {
-        if (isInstalled()) return false
-
-        ProcessBuilder(elevateCommand, nssmCommand, "install", name, executable, *args.toTypedArray())
-            .start()
-            .waitFor()
-
-        for ((property, value) in config.entries) {
-            ProcessBuilder(nssmCommand, "set", name, property, value).start()
+    override fun install() {
+        ProcessBuilder(nssmCommand, "install", name, executable, *args.toTypedArray()).start().apply {
+            onFail { throw ServiceException("The service failed to install.", it) }
         }
 
-        return true
+        for ((property, value) in config.entries) {
+            ProcessBuilder(nssmCommand, "set", name, property, value).start().apply {
+                onFail { throw ServiceException("The service failed to install.", it) }
+            }
+        }
     }
 
-    override fun uninstall(): Boolean {
-        if (!isInstalled()) return false
-        ProcessBuilder(elevateCommand, nssmCommand, "remove", name).start()
-        return true
-    }
-
-    override fun isInstalled(): Boolean {
-        TODO("not implemented")
+    override fun uninstall() {
+        ProcessBuilder(nssmCommand, "remove", name, "confirm").start().apply {
+            onFail { throw ServiceException("The service failed to uninstall.", it) }
+        }
     }
 
     companion object {
         /**
-         * The command to use for triggering a UAC prompt to elevate privileges.
-         */
-        private val elevateCommand: String = getResourcePath("/bin/elevate.exe").toString()
-
-        /**
          * The command to use for managing services.
+         *
+         * This command will automatically trigger a UAC prompt if executed without privileges.
          */
         private val nssmCommand: String = getResourcePath("/bin/nssm.exe").toString()
     }
@@ -147,32 +170,58 @@ data class WindowsService(
  * @param [name] The unique name of the service.
  * @param [propertyList] The property list file which describes the agent.
  */
-// TODO: Add support for specifying an argument.
 data class LaunchdService(val name: String, val propertyList: Path) : Service {
-    override fun start(): Boolean {
-        TODO("not implemented")
+
+    init {
+        if (!OperatingSystem.MAC.isCurrent) {
+            throw UnsupportedOperationException("This implementation does not support the current platform.")
+        }
     }
 
-    override fun stop(): Boolean {
-        TODO("not implemented")
+    /**
+     * The path to install the plist file to.
+     */
+    private val agentPath: Path = agentDirectory.resolve("$name.plist")
+
+    override fun start() {
+        ProcessBuilder("launchctl", "bootstrap", "user/${getUid()}", agentPath.toString()).start().apply {
+            onFail { throw ServiceException("The service failed to start.", it) }
+        }
     }
 
-    override fun isRunning(): Boolean {
-        TODO("not implemented")
+    override fun stop() {
+        ProcessBuilder("launchctl", "bootout", "user/${getUid()}", agentPath.toString()).start().apply {
+            onFail { throw ServiceException("The service failed to stop.", it) }
+        }
     }
 
-    override fun install(): Boolean {
-        TODO("not implemented")
+    override fun install() {
+        try {
+            Files.copy(propertyList, agentPath, StandardCopyOption.REPLACE_EXISTING)
+        } catch (e: IOException) {
+            throw ServiceException("The service failed to install.", e)
+        }
     }
 
-    override fun uninstall(): Boolean {
-        TODO("not implemented")
+    override fun uninstall() {
+        try {
+            Files.deleteIfExists(agentPath)
+        } catch (e: IOException) {
+            throw ServiceException("The service failed to uninstall.", e)
+        }
     }
 
-    override fun isInstalled(): Boolean {
-        TODO("not implemented")
-    }
+    companion object {
+        /**
+         * The path of the directory containing user agents.
+         */
+        private val agentDirectory: Path = HOME_DIRECTORY.resolve("Library", "LaunchAgents")
 
+        /**
+         * Returns the current user's UID as a string.
+         */
+        private fun getUid(): String = ProcessBuilder("id", "-u").start().getOutput()
+    }
 }
 
 /**
@@ -182,6 +231,13 @@ data class LaunchdService(val name: String, val propertyList: Path) : Service {
  * @param [serviceFile] The path of the systemd unit file which describes the service.
  */
 data class SystemdService(val name: String, val serviceFile: Path) : Service {
+
+    init {
+        if (!OperatingSystem.LINUX.isCurrent) {
+            throw UnsupportedOperationException("This implementation does not support the current platform.")
+        }
+    }
+
     /**
      * The full name of the service to pass to `systemctl`.
      */
@@ -194,36 +250,39 @@ data class SystemdService(val name: String, val serviceFile: Path) : Service {
     private val unitPath: Path
         get() = unitDirectory.resolve(unitName)
 
-    override fun start(): Boolean {
-        if (!isInstalled()) throw IllegalStateException("This service is not installed.")
-        if (isRunning()) return false
-        ProcessBuilder("systemctl", "--user", "start", unitName).start()
-        ProcessBuilder("systemctl", "--user", "enable", unitName).start()
-        return true
+    override fun start() {
+        ProcessBuilder("systemctl", "--user", "start", unitName).start().apply {
+            onFail { throw ServiceException("The service failed to start.", it) }
+        }
+        ProcessBuilder("systemctl", "--user", "enable", unitName).start().apply {
+            onFail { throw ServiceException("The service failed to start.", it) }
+        }
     }
 
-    override fun stop(): Boolean {
-        if (!isInstalled()) throw IllegalStateException("This service is not installed.")
-        if (!isRunning()) return false
-        ProcessBuilder("systemctl", "--user", "stop", unitName).start()
-        ProcessBuilder("systemctl", "--user", "disable", unitName).start()
-        return true
+    override fun stop() {
+        ProcessBuilder("systemctl", "--user", "stop", unitName).start().apply {
+            onFail { throw ServiceException("The service failed to stop.", it) }
+        }
+        ProcessBuilder("systemctl", "--user", "disable", unitName).start().apply {
+            onFail { throw ServiceException("The service failed to stop.", it) }
+        }
     }
 
-    override fun isRunning(): Boolean {
-        val process = ProcessBuilder("systemctl", "--user", "is-active", unitName).start()
-        return process.waitFor() == 0
+    override fun install() {
+        try {
+            Files.copy(serviceFile, unitPath, StandardCopyOption.REPLACE_EXISTING)
+        } catch (e: IOException) {
+            throw ServiceException("The service failed to install.", e)
+        }
     }
 
-    override fun install(): Boolean {
-        if (isInstalled()) return false
-        Files.copy(serviceFile, unitPath)
-        return true
+    override fun uninstall() {
+        try {
+            Files.deleteIfExists(unitPath)
+        } catch (e: IOException) {
+            throw ServiceException("The service failed to uninstall.", e)
+        }
     }
-
-    override fun uninstall(): Boolean = Files.deleteIfExists(unitPath)
-
-    override fun isInstalled(): Boolean = Files.isRegularFile(unitPath)
 
     companion object {
         /**

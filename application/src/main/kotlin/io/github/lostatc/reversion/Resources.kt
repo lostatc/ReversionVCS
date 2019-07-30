@@ -84,6 +84,12 @@ enum class OperatingSystem(val dataDirectory: Path, val configDirectory: Path = 
     );
 
     /**
+     * Returns whether this [OperatingSystem] is the current operating system.
+     */
+    val isCurrent: Boolean
+        get() = current() == this
+
+    /**
      * Get the data directory for the program with the given [name].
      */
     fun getDataDirectory(name: String): Path = dataDirectory.resolve(name)
