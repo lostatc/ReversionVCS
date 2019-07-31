@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.StorageProvider
+import io.github.lostatc.reversion.resolve
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
