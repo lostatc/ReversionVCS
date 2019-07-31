@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Checksum
+import io.github.lostatc.reversion.resolve
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
