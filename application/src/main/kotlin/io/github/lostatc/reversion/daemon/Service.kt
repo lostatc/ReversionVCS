@@ -77,13 +77,15 @@ interface Service {
     /**
      * Starts the service and configures it to start on boot.
      *
+     * @throws [IllegalStateException] The service is not installed.
      * @throws [ServiceException] The service failed to start.
      */
     fun start()
 
     /**
-     * Stops the service and configures it to not start of boot.
+     * Stops the service and configures it to not start on boot.
      *
+     * @throws [IllegalStateException] The service is not installed.
      * @throws [ServiceException] The service failed to stop.
      */
     fun stop()
@@ -91,16 +93,25 @@ interface Service {
     /**
      * Installs the service.
      *
+     * @return `true` if the service was successfully installed, `false` if it was already installed.
+     *
      * @throws [ServiceException] The service failed to install.
      */
-    fun install()
+    fun install(): Boolean
 
     /**
      * Uninstalls the service.
      *
+     * @return `true` if the service was successfully uninstalled, `false` if it wasn't installed.
+     *
      * @throws [ServiceException] The service failed to uninstall.
      */
-    fun uninstall()
+    fun uninstall(): Boolean
+
+    /**
+     * Returns whether the service is installed.
+     */
+    fun isInstalled(): Boolean
 }
 
 /**
@@ -125,18 +136,24 @@ data class WindowsService(
     }
 
     override fun start() {
+        if (!isInstalled()) throw IllegalStateException("The service is not installed.")
+
         ProcessBuilder(nssmCommand, "start", name).start().apply {
             onFail { throw ServiceException("The service failed to start.", it) }
         }
     }
 
     override fun stop() {
+        if (!isInstalled()) throw IllegalStateException("The service is not installed.")
+
         ProcessBuilder(nssmCommand, "stop", name).start().apply {
             onFail { throw ServiceException("The service failed to stop.", it) }
         }
     }
 
-    override fun install() {
+    override fun install(): Boolean {
+        if (isInstalled()) return false
+
         ProcessBuilder(nssmCommand, "install", name, executable, *args.toTypedArray()).start().apply {
             onFail { throw ServiceException("The service failed to install.", it) }
         }
@@ -146,13 +163,21 @@ data class WindowsService(
                 onFail { throw ServiceException("The service failed to install.", it) }
             }
         }
+
+        return true
     }
 
-    override fun uninstall() {
+    override fun uninstall(): Boolean {
+        if (!isInstalled()) return false
+
         ProcessBuilder(nssmCommand, "remove", name, "confirm").start().apply {
             onFail { throw ServiceException("The service failed to uninstall.", it) }
         }
+
+        return true
     }
+
+    override fun isInstalled(): Boolean = ProcessBuilder("sc", "query", name).start().waitFor() == 0
 
     companion object {
         /**
@@ -184,32 +209,46 @@ data class LaunchdService(val name: String, val propertyList: Path) : Service {
     private val agentPath: Path = agentDirectory.resolve("$name.plist")
 
     override fun start() {
+        if (!isInstalled()) throw IllegalStateException("The service is not installed.")
+
         ProcessBuilder("launchctl", "bootstrap", "user/${getUid()}", agentPath.toString()).start().apply {
             onFail { throw ServiceException("The service failed to start.", it) }
         }
     }
 
     override fun stop() {
+        if (!isInstalled()) throw IllegalStateException("The service is not installed.")
+
         ProcessBuilder("launchctl", "bootout", "user/${getUid()}", agentPath.toString()).start().apply {
             onFail { throw ServiceException("The service failed to stop.", it) }
         }
     }
 
-    override fun install() {
+    override fun install(): Boolean {
+        if (isInstalled()) return false
+
         try {
             Files.copy(propertyList, agentPath, StandardCopyOption.REPLACE_EXISTING)
         } catch (e: IOException) {
             throw ServiceException("The service failed to install.", e)
         }
+
+        return true
     }
 
-    override fun uninstall() {
+    override fun uninstall(): Boolean {
+        if (!isInstalled()) return false
+
         try {
             Files.deleteIfExists(agentPath)
         } catch (e: IOException) {
             throw ServiceException("The service failed to uninstall.", e)
         }
+
+        return true
     }
+
+    override fun isInstalled(): Boolean = Files.isRegularFile(agentPath)
 
     companion object {
         /**
@@ -251,6 +290,8 @@ data class SystemdService(val name: String, val serviceFile: Path) : Service {
         get() = unitDirectory.resolve(unitName)
 
     override fun start() {
+        if (!isInstalled()) throw IllegalStateException("The service is not installed.")
+
         ProcessBuilder("systemctl", "--user", "start", unitName).start().apply {
             onFail { throw ServiceException("The service failed to start.", it) }
         }
@@ -260,6 +301,8 @@ data class SystemdService(val name: String, val serviceFile: Path) : Service {
     }
 
     override fun stop() {
+        if (!isInstalled()) throw IllegalStateException("The service is not installed.")
+
         ProcessBuilder("systemctl", "--user", "stop", unitName).start().apply {
             onFail { throw ServiceException("The service failed to stop.", it) }
         }
@@ -268,21 +311,31 @@ data class SystemdService(val name: String, val serviceFile: Path) : Service {
         }
     }
 
-    override fun install() {
+    override fun install(): Boolean {
+        if (isInstalled()) return false
+
         try {
             Files.copy(serviceFile, unitPath, StandardCopyOption.REPLACE_EXISTING)
         } catch (e: IOException) {
             throw ServiceException("The service failed to install.", e)
         }
+
+        return true
     }
 
-    override fun uninstall() {
+    override fun uninstall(): Boolean {
+        if (!isInstalled()) return false
+
         try {
             Files.deleteIfExists(unitPath)
         } catch (e: IOException) {
             throw ServiceException("The service failed to uninstall.", e)
         }
+
+        return true
     }
+
+    override fun isInstalled(): Boolean = Files.isRegularFile(unitPath)
 
     companion object {
         /**

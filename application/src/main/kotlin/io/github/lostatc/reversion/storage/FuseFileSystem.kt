@@ -80,7 +80,7 @@ private class SeekableDataSource(private val inputStream: InputStream) : Closeab
         get() = cacheChannel.position()
 
     /**
-     * Write read [bytes] bytes of input and write it to the cache.
+     * Read [bytes] bytes of input and write it to the cache.
      *
      * @return The number of bytes read.
      */
