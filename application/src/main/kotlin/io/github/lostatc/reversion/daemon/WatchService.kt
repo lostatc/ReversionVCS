@@ -21,14 +21,11 @@ package io.github.lostatc.reversion.daemon
 
 import io.github.lostatc.reversion.OperatingSystem
 import io.github.lostatc.reversion.getResourcePath
-import java.nio.file.Path
 
 /**
- * Creates a [Service] which executes [WatchDaemon] and is compatible with the current platform.
- *
- * @param [workDirectory] The path of the working directory to watch for changes.
+ * A [Service] compatible with the current platform which executes [WatchDaemon].
  */
-fun createWatchService(workDirectory: Path): Service = when (OperatingSystem.current()) {
+val watchService: Service = when (OperatingSystem.current()) {
     OperatingSystem.WINDOWS -> WindowsService(
         name = "io.github.lostatc.reversiond",
         executable = "reversiond",
