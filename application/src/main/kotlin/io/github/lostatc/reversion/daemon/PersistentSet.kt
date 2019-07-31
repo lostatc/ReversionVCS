@@ -23,10 +23,27 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import io.github.lostatc.reversion.storage.fromJson
+import java.nio.channels.FileChannel
+import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.StandardOpenOption.WRITE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 import kotlin.reflect.KClass
+
+/**
+ * Waits for an exclusive lock the given [file] and executes [block].
+ *
+ * The lock is released after [block] executes.
+ *
+ * @param [file] The path of the file to lock.
+ * @param [block] A function which is passed the [FileLock].
+ */
+private fun <R> withLock(file: Path, block: (FileLock) -> R): R =
+    FileChannel.open(file, WRITE).use { channel ->
+        channel.lock().use { block(it) }
+    }
 
 /**
  * A persistent set of elements.
@@ -65,42 +82,52 @@ interface PersistentSet<E> {
  *
  * @param [storageFile] The path of the file where the set is stored.
  * @param [type] The type of the elements in the set.
- * @param [typeAdapter] A type adapter for serializing elements as JSON.
+ * @param [typeAdapter] A type adapter for serializing elements as JSON, or `null` if no type adapter is needed.
  */
 data class JsonPersistentSet<E>(
     val storageFile: Path,
     val type: KClass<*>,
-    val typeAdapter: TypeAdapter<E>
+    val typeAdapter: TypeAdapter<E>? = null
 ) : PersistentSet<E> {
     /**
      * The object for serializing/de-serializing objects as JSON.
      */
-    private val gson: Gson = GsonBuilder()
-        .setPrettyPrinting()
-        .registerTypeHierarchyAdapter(type.java, typeAdapter)
-        .create()
+    private val gson: Gson = GsonBuilder().run {
+        setPrettyPrinting()
+        if (typeAdapter != null) registerTypeHierarchyAdapter(type.java, typeAdapter)
+        create()
+    }
 
     override val elements: Set<E>
         get() = Files.newBufferedReader(storageFile).use { gson.fromJson(it) }
 
-    override fun add(element: E): Boolean {
-        if (element in elements) return false
-
-        Files.newBufferedWriter(storageFile).use {
-            gson.toJson(elements.plusElement(element))
+    init {
+        // Create an empty JSON file if it doesn't exist.
+        try {
+            Files.newBufferedWriter(storageFile, WRITE, CREATE_NEW).use { gson.toJson(emptySet<E>(), it) }
+        } catch (e: java.nio.file.FileAlreadyExistsException) {
+            // Ignore
         }
-
-        return true
     }
 
-    override fun remove(element: E): Boolean {
-        if (element !in elements) return false
-
-        Files.newBufferedReader(storageFile).use {
-            gson.toJson(elements.minusElement(element))
+    override fun add(element: E): Boolean = withLock(storageFile) {
+        // Lock the file to prevent a race condition.
+        val currentElements = elements
+        if (element in currentElements) return@withLock false
+        Files.newBufferedWriter(storageFile).use {
+            gson.toJson(currentElements.plusElement(element), it)
         }
+        true
+    }
 
-        return true
+    override fun remove(element: E): Boolean = withLock(storageFile) {
+        // Lock the file to prevent a race condition.
+        val currentElements = elements
+        if (element !in currentElements) return@withLock false
+        Files.newBufferedWriter(storageFile).use {
+            gson.toJson(currentElements.minusElement(element), it)
+        }
+        true
     }
 
     override fun onChange(handler: (Set<E>) -> Unit) {
@@ -117,7 +144,7 @@ data class JsonPersistentSet<E>(
         /**
          * Create a [JsonPersistentSet] with an inferred [type].
          */
-        inline fun <reified T> of(storageFile: Path, typeAdapter: TypeAdapter<T>): JsonPersistentSet<T> =
+        inline fun <reified T> of(storageFile: Path, typeAdapter: TypeAdapter<T>? = null): JsonPersistentSet<T> =
             JsonPersistentSet(storageFile, T::class, typeAdapter)
     }
 }
