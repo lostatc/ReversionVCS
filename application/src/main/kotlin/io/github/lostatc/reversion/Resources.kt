@@ -30,7 +30,7 @@ import java.util.MissingResourceException
 /**
  * The path of the user's home directory.
  */
-val HOME_DIRECTORY: Path = Paths.get(System.getProperty("user.home"))
+val HOME_DIRECTORY: Path by lazy { Paths.get(System.getProperty("user.home")) }
 
 /**
  * Resolves [firstSegment] and each of the given [segments] against this path.
@@ -118,12 +118,12 @@ enum class OperatingSystem(val dataDirectory: Path, val configDirectory: Path = 
 /**
  * The path of the program's data directory.
  */
-val DATA_DIR: Path = OperatingSystem.current().getDataDirectory("Reversion")
+val DATA_DIR: Path by lazy { OperatingSystem.current().getDataDirectory("Reversion") }
 
 /**
  * The default storage provider.
  */
-val DEFAULT_PROVIDER: StorageProvider = DatabaseStorageProvider()
+val DEFAULT_PROVIDER: StorageProvider by lazy { DatabaseStorageProvider() }
 
 /**
  * A [PropertyDefiner] for getting the path of the directory where log files are stored.

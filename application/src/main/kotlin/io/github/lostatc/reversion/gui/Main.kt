@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.gui
 
 import com.jfoenix.assets.JFoenixResources
 import com.jfoenix.controls.JFXSnackbar
+import io.github.lostatc.reversion.daemon.watchService
 import io.github.lostatc.reversion.gui.controls.sendNotification
 import io.github.lostatc.reversion.gui.mvc.MainSceneController
 import javafx.application.Application
@@ -45,11 +46,14 @@ fun sendNotification(message: String) {
 
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
-        val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/MainScene.fxml"))
-        val rootNode = rootLoader.load<Pane>()
-        val rootControl = rootLoader.getController<MainSceneController>()
-        notificationBar.registerSnackbarContainer(rootNode)
 
+        // Start the daemon if it's not already running.
+        watchService.apply {
+            if (!isInstalled()) install()
+            start()
+        }
+
+        // Log uncaught exceptions.
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.gui")
             logger.error(throwable.message, throwable)
@@ -58,6 +62,11 @@ class Reversion : Application() {
 
             throwable.message?.let { sendNotification(it) }
         }
+
+        val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/MainScene.fxml"))
+        val rootNode = rootLoader.load<Pane>()
+        val rootControl = rootLoader.getController<MainSceneController>()
+        notificationBar.registerSnackbarContainer(rootNode)
 
         primaryStage.apply {
             title = "Reversion"
