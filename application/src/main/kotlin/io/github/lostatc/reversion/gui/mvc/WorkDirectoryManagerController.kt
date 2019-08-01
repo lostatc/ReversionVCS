@@ -23,6 +23,7 @@ import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXTextField
+import com.jfoenix.controls.JFXToggleButton
 import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MappedObservableList
@@ -143,6 +144,12 @@ class WorkDirectoryManagerController {
     @FXML
     private lateinit var trackedFilesDefinition: Definition
 
+    /**
+     * A toggle button which toggles tracking changes for the selected working directory.
+     */
+    @FXML
+    private lateinit var trackChangesToggle: JFXToggleButton
+
     private val model: WorkDirectoryManagerModel = WorkDirectoryManagerModel()
 
     @FXML
@@ -180,6 +187,9 @@ class WorkDirectoryManagerController {
                 ignorePathList.items = MappedObservableList(newValue.ignoredPaths.toSorted()) {
                     ListItem(it.toString())
                 }
+
+                // Bind whether this working directory is tracking changes.
+                trackChangesToggle.selectedProperty().bind(newValue.trackingChangesProperty)
 
                 // Bind statistics in the view to the model.
                 snapshotsDefinition.valueProperty.bind(
@@ -290,6 +300,9 @@ class WorkDirectoryManagerController {
         model.selected?.ignoredPaths?.removeAt(selectedIndex)
     }
 
+    /**
+     * Prompt the user for whether they want to delete the selected working directory.
+     */
     @FXML
     fun deleteWorkDirectory() {
         val dialog = approvalDialog(
@@ -299,6 +312,14 @@ class WorkDirectoryManagerController {
         )
 
         dialog.show(root)
+    }
+
+    /**
+     * Toggle whether changes are being tracked for the selected working directory.
+     */
+    @FXML
+    fun toggleTrackChanges() {
+        model.selected?.setTrackChanges(trackChangesToggle.isSelected)
     }
 
 

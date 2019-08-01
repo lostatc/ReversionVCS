@@ -88,7 +88,8 @@
                                 </tooltip>
                             </LabeledIconButton>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <JFXToggleButton contentDisplay="TOP" size="8.0" text="Track Changes">
+                            <JFXToggleButton fx:id="trackChangesToggle" onAction="#toggleTrackChanges"
+                                             contentDisplay="TOP" size="8.0" text="Track Changes">
                                 <tooltip>
                                     <Tooltip text="Start or stop the program from automatically saving new versions."/>
                                 </tooltip>

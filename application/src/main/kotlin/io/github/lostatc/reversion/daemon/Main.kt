@@ -37,8 +37,9 @@ val loggingExceptionHandler: Thread.UncaughtExceptionHandler =
 /**
  * The set of directories which are watched by the daemon.
  */
-val watchedDirectories: PersistentSet<Path> =
+val watchedDirectories: PersistentSet<Path> by lazy {
     JsonPersistentSet.of(DATA_DIR.resolve("watchedDirectories.json"), PathTypeAdapter)
+}
 
 /**
  * Start the daemon.
