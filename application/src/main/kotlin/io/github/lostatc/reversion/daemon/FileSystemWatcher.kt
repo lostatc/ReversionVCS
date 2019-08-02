@@ -22,6 +22,7 @@ package io.github.lostatc.reversion.daemon
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.PathMatcher
 import java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
 import java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
@@ -43,8 +44,15 @@ data class FileSystemEvent(val path: Path, val type: WatchEvent.Kind<Path>)
  *
  * @param [watchDirectory] The path of the directory to watch.
  * @param [recursive] Watch the directory and all its descendants.
+ * @param [coalesce] Combine identical file system events.
+ * @param [includeMatcher] A path matcher which matches paths to watch, or `null` to watch all paths.
  */
-data class FileSystemWatcher(val watchDirectory: Path, val recursive: Boolean) : Closeable {
+data class FileSystemWatcher(
+    val watchDirectory: Path,
+    val recursive: Boolean,
+    val coalesce: Boolean,
+    val includeMatcher: PathMatcher? = null
+) : Closeable {
     /**
      * The watcher for watching the file system.
      */
@@ -90,14 +98,17 @@ data class FileSystemWatcher(val watchDirectory: Path, val recursive: Boolean) :
             }
 
             val directory: Path = pathsByKey[key] ?: continue
+            val events = if (coalesce) key.pollEvents().toSet() else key.pollEvents()
 
-            for (event in key.pollEvents()) {
+            for (event in events) {
                 @Suppress("UNCHECKED_CAST")
                 event as WatchEvent<Path>
 
                 val absolutePath = event.context()?.let { directory.resolve(it) } ?: continue
 
+                if (includeMatcher != null && !includeMatcher.matches(absolutePath)) continue
                 if (event.kind() == OVERFLOW) continue
+
                 if (recursive && event.kind() == ENTRY_CREATE) register(absolutePath)
 
                 yield(FileSystemEvent(absolutePath, event.kind()))

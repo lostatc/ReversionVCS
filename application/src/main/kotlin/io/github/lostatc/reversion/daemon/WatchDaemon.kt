@@ -28,6 +28,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Path
+import java.nio.file.PathMatcher
 import java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 
@@ -80,7 +81,14 @@ data class WatchDaemon(val directories: PersistentSet<Path>) : CoroutineScope by
         private fun watch(directory: Path) {
             val workDirectory = WorkDirectory.open(directory)
 
-            FileSystemWatcher(directory, recursive = true).use {
+            // We only exclude the default ignored paths because reading the ignore pattern file on each watch event
+            // would be expensive.
+            FileSystemWatcher(
+                directory,
+                recursive = true,
+                coalesce = true,
+                includeMatcher = PathMatcher { path -> workDirectory.defaultIgnoredPaths.all { !path.startsWith(it) } }
+            ).use {
                 for (event in it.events) {
                     if (event.type == ENTRY_CREATE || event.type == ENTRY_MODIFY) {
                         try {

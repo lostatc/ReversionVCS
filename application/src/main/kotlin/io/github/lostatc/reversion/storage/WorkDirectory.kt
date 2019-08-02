@@ -103,8 +103,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * This is a list that is backed by the ignore pattern file. Getting this list returns values from the file and
      * setting the list sets the contents of the file.
      *
-     * This list includes only the paths in the ignore pattern file and does not include paths ignored by the program
-     * by default.
+     * This list includes only the paths in the ignore pattern file and does not include paths in [defaultIgnoredPaths].
      *
      * This list does not include paths from the ignore pattern file which are absolute and not descendants of this
      * working directory. All paths are converted to relative paths before being written to the ignore pattern file and
@@ -123,13 +122,18 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         }
 
     /**
+     * The list of paths which are always ignored regardless of the contents of the ignore file.
+     */
+    val defaultIgnoredPaths: List<Path> = listOf(hiddenPath)
+
+    /**
      * The [PathMatcher] used to match paths to ignore.
+     *
+     * This ignores paths in [ignoredPaths] and [defaultIgnoredPaths].
      */
     private val ignoreMatcher: PathMatcher
         get() = MultiPathMatcher(
-            ignoredPaths
-                .plusElement(hiddenPath)
-                .map { path -> PathMatcher { it.startsWith(path) } }
+            (ignoredPaths + defaultIgnoredPaths).map { path -> PathMatcher { it.startsWith(path) } }
         )
 
     /**
