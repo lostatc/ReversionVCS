@@ -236,7 +236,7 @@ data class WorkDirectoryModel(
      */
     fun setTrackChanges(value: Boolean) {
         trackingChanges = value
-        if (value) {
+        if (trackingChanges) {
             execute { watchedDirectories.add(path) }
         } else {
             execute { watchedDirectories.remove(path) }

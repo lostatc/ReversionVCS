@@ -67,12 +67,15 @@ data class FileSystemWatcher(val watchDirectory: Path, val recursive: Boolean) :
 
     /**
      * Watch the given [path] if it is the path of a directory.
+     *
+     * @return `true` if the [path] was registered, `false` if it was not a directory.
      */
-    private fun register(path: Path) {
-        if (Files.isDirectory(path)) {
-            val key = path.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
-            pathsByKey[key] = path
-        }
+    private fun register(path: Path): Boolean = if (Files.isDirectory(path)) {
+        val key = path.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
+        pathsByKey[key] = path
+        true
+    } else {
+        false
     }
 
     /**
@@ -92,7 +95,7 @@ data class FileSystemWatcher(val watchDirectory: Path, val recursive: Boolean) :
                 @Suppress("UNCHECKED_CAST")
                 event as WatchEvent<Path>
 
-                val absolutePath = directory.resolve(event.context())
+                val absolutePath = event.context()?.let { directory.resolve(it) } ?: continue
 
                 if (event.kind() == OVERFLOW) continue
                 if (recursive && event.kind() == ENTRY_CREATE) register(absolutePath)
