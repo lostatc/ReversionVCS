@@ -188,8 +188,11 @@ class WorkDirectoryManagerController {
                     ListItem(it.toString())
                 }
 
-                // Bind whether this working directory is tracking changes.
-                trackChangesToggle.selectedProperty().bind(newValue.trackingChangesProperty)
+                // Set whether this working directory is tracking changes.
+                trackChangesToggle.isSelected = newValue.trackingChanges
+                newValue.trackingChangesProperty.addListener { _, _, newTrackingValue ->
+                    trackChangesToggle.isSelected = newTrackingValue
+                }
 
                 // Bind statistics in the view to the model.
                 snapshotsDefinition.valueProperty.bind(

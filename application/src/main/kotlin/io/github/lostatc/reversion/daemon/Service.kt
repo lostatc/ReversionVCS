@@ -228,6 +228,7 @@ data class LaunchdService(val name: String, val propertyList: Path) : Service {
         if (isInstalled()) return false
 
         try {
+            Files.createDirectories(agentPath.parent)
             Files.copy(propertyList, agentPath, StandardCopyOption.REPLACE_EXISTING)
         } catch (e: IOException) {
             throw ServiceException("The service failed to install.", e)
@@ -315,6 +316,7 @@ data class SystemdService(val name: String, val serviceFile: Path) : Service {
         if (isInstalled()) return false
 
         try {
+            Files.createDirectories(unitPath.parent)
             Files.copy(serviceFile, unitPath, StandardCopyOption.REPLACE_EXISTING)
         } catch (e: IOException) {
             throw ServiceException("The service failed to install.", e)
