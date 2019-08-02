@@ -47,12 +47,6 @@ fun sendNotification(message: String) {
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
 
-        // Start the daemon if it's not already running.
-        watchService.apply {
-            if (!isInstalled()) install()
-            start()
-        }
-
         // Log uncaught exceptions.
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.gui")
@@ -61,6 +55,12 @@ class Reversion : Application() {
             System.err.println("Error: ${throwable.message}")
 
             throwable.message?.let { sendNotification(it) }
+        }
+
+        // Start the daemon if it's not already running.
+        watchService.apply {
+            if (!isInstalled()) install()
+            start()
         }
 
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/MainScene.fxml"))

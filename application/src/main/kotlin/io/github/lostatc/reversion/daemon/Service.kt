@@ -138,7 +138,7 @@ data class WindowsService(
     override fun start() {
         if (!isInstalled()) throw IllegalStateException("The service is not installed.")
 
-        ProcessBuilder(nssmCommand, "start", name).start().apply {
+        ProcessBuilder(elevateCommand, nssmCommand, "start", name).start().apply {
             onFail { throw ServiceException("The service failed to start.", it) }
         }
     }
@@ -146,7 +146,7 @@ data class WindowsService(
     override fun stop() {
         if (!isInstalled()) throw IllegalStateException("The service is not installed.")
 
-        ProcessBuilder(nssmCommand, "stop", name).start().apply {
+        ProcessBuilder(elevateCommand, nssmCommand, "stop", name).start().apply {
             onFail { throw ServiceException("The service failed to stop.", it) }
         }
     }
@@ -154,7 +154,7 @@ data class WindowsService(
     override fun install(): Boolean {
         if (isInstalled()) return false
 
-        ProcessBuilder(nssmCommand, "install", name, executable, *args.toTypedArray()).start().apply {
+        ProcessBuilder(elevateCommand, nssmCommand, "install", name, executable, *args.toTypedArray()).start().apply {
             onFail { throw ServiceException("The service failed to install.", it) }
         }
 
@@ -170,7 +170,7 @@ data class WindowsService(
     override fun uninstall(): Boolean {
         if (!isInstalled()) return false
 
-        ProcessBuilder(nssmCommand, "remove", name, "confirm").start().apply {
+        ProcessBuilder(elevateCommand, nssmCommand, "remove", name, "confirm").start().apply {
             onFail { throw ServiceException("The service failed to uninstall.", it) }
         }
 
@@ -182,10 +182,13 @@ data class WindowsService(
     companion object {
         /**
          * The command to use for managing services.
-         *
-         * This command will automatically trigger a UAC prompt if executed without privileges.
          */
         private val nssmCommand: String = getResourcePath("/bin/nssm.exe").toString()
+
+        /**
+         * The command used for elevating privileges.
+         */
+        private val elevateCommand: String = getResourcePath("/bin/elevate.exe").toString()
     }
 }
 
