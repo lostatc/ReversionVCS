@@ -19,10 +19,9 @@
 
 package io.github.lostatc.reversion.daemon
 
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
-import io.github.lostatc.reversion.storage.fromJson
+import com.google.gson.reflect.TypeToken
 import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.Files
@@ -81,30 +80,38 @@ interface PersistentSet<E> {
  * A persistent set of elements backed by a JSON file.
  *
  * @param [storageFile] The path of the file where the set is stored.
- * @param [type] The type of the elements in the set.
- * @param [typeAdapter] A type adapter for serializing elements as JSON, or `null` if no type adapter is needed.
+ * @param [type] The type of [E].
+ * @param [typeAdapter] A type adapter for serializing and de-serializing objects of type [E].
  */
 data class JsonPersistentSet<E>(
     val storageFile: Path,
-    val type: KClass<*>,
-    val typeAdapter: TypeAdapter<E>? = null
+    private val type: KClass<*>,
+    private val typeAdapter: TypeAdapter<E>? = null
 ) : PersistentSet<E> {
+
     /**
-     * The object for serializing/de-serializing objects as JSON.
+     * An object for serializing/de-serializing objects as JSON.
      */
-    private val gson: Gson = GsonBuilder().run {
+    private val gson = GsonBuilder().run {
         setPrettyPrinting()
-        if (typeAdapter != null) registerTypeHierarchyAdapter(type.java, typeAdapter)
+        typeAdapter?.let { registerTypeHierarchyAdapter(type.java, typeAdapter) }
         create()
     }
 
+    /**
+     * A type token representing the set of elements.
+     */
+    private val setToken = TypeToken.getParameterized(Set::class.java, type.java)
+
     override val elements: Set<E>
-        get() = Files.newBufferedReader(storageFile).use { gson.fromJson(it) }
+        get() = Files.newBufferedReader(storageFile).use { gson.fromJson(it, setToken.type) }
 
     init {
         // Create an empty JSON file if it doesn't exist.
         try {
-            Files.newBufferedWriter(storageFile, WRITE, CREATE_NEW).use { gson.toJson(emptySet<E>(), it) }
+            Files.newBufferedWriter(storageFile, WRITE, CREATE_NEW).use {
+                gson.toJson(emptySet<E>(), it)
+            }
         } catch (e: java.nio.file.FileAlreadyExistsException) {
             // Ignore
         }
