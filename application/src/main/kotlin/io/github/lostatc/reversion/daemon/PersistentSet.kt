@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.PathMatcher
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.StandardOpenOption.WRITE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
@@ -138,9 +139,14 @@ data class JsonPersistentSet<E>(
     }
 
     override fun onChange(handler: (Set<E>) -> Unit) {
-        FileSystemWatcher(storageFile.parent, recursive = false).use {
+        FileSystemWatcher(
+            storageFile.parent,
+            recursive = false,
+            coalesce = true,
+            includeMatcher = PathMatcher { it == storageFile }
+        ).use {
             for (event in it.events) {
-                if (event.type == ENTRY_MODIFY && event.path == storageFile) {
+                if (event.type == ENTRY_MODIFY) {
                     handler(elements)
                 }
             }
