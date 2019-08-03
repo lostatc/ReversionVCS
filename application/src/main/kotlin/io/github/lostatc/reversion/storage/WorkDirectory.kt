@@ -28,7 +28,6 @@ import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
-import io.github.lostatc.reversion.api.deleteIfEmpty
 import org.apache.commons.io.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -207,13 +206,15 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * Creates a new snapshot containing the given [paths] and returns it.
      *
      * Passing the path of a directory commits all the files contained in it. By default, this only commits files with
-     * uncommitted changes. Ignored files are not committed.
+     * uncommitted changes. Ignored files are not committed. If there are no files to commit, a snapshot is not created.
      *
      * @param [paths] The paths of files to commit.
      * @param [force] If `true`, commit files that have no uncommitted changes. If `false`, don't commit them.
      * @param [name] The initial name of the snapshot.
      * @param [description] The initial description of the snapshot.
      * @param [pinned] Whether the snapshot is pinned.
+     *
+     * @return The new snapshot or `null` if there were no files to commit.
      */
     fun commit(
         paths: Iterable<Path>,
@@ -221,10 +222,12 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         name: String? = null,
         description: String = "",
         pinned: Boolean = false
-    ): Snapshot {
+    ): Snapshot? {
         val allFiles = walkDirectory(paths)
+        val filesToCommit = if (force) allFiles else filterModified(allFiles)
+        if (filesToCommit.isEmpty()) return null
         return timeline.createSnapshot(
-            paths = if (force) allFiles else filterModified(allFiles),
+            paths = filesToCommit,
             workDirectory = path,
             name = name,
             description = description,
@@ -284,11 +287,10 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      * @param [revision] The revision number. If `null`, use the most recent revision.
      */
     fun restore(paths: Iterable<Path>, revision: Int? = null) {
-        val snapshot = commit(
+        commit(
             paths = paths,
             description = "This version was created to save the file before it was overwritten by a restore."
         )
-        snapshot.deleteIfEmpty()
         update(paths = paths, revision = revision)
     }
 

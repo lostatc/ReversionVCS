@@ -49,7 +49,7 @@ abstract class Notification : HBox() {
     /**
      * The message to display in the notification.
      */
-    var message by messageProperty
+    var message: String by messageProperty
 
     init {
         FXMLLoader(this::class.java.getResource("/fxml/Notification.fxml")).apply {
