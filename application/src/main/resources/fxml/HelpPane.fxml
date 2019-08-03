@@ -6,6 +6,6 @@
 <fx:root xmlns:fx="http://javafx.com/fxml/1" type="StackPane" xmlns="http://javafx.com/javafx/11.0.1"
          styleClass="help-pane">
     <AnchorPane fx:id="buttonPane" pickOnBounds="false">
-        <IconButton fx:id="helpButton" icon="gmi-help" onAction="#openHelp" radius="14.0" styleClass="help-button"/>
+        <IconButton fx:id="helpButton" icon="gmi-help" onAction="#openHelp" radius="12.0" styleClass="help-button"/>
     </AnchorPane>
 </fx:root>

@@ -321,6 +321,6 @@
 }
 
 /* A container which displays a help icon. */
-.help-pane .help-button .icon-button {
-    -fx-font-size: 18;
+.help-pane .help-button .button-icon {
+    -fx-icon-size: 20px;
 }
