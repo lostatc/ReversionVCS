@@ -209,7 +209,7 @@ interface WorkDirectoryTest {
         val snapshot = workDirectory.commit(listOf(workPath.resolve("a")))
         Files.writeString(workPath.resolve("a"), "new contents")
         workDirectory.commit(listOf(workPath.resolve("a")))
-        workDirectory.update(listOf(workPath.resolve("a")), revision = snapshot.revision)
+        workDirectory.update(listOf(workPath.resolve("a")), revision = snapshot?.revision)
 
         assertEquals("apple", Files.readString(workPath.resolve("a")))
     }
