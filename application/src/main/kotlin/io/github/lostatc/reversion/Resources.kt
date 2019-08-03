@@ -129,5 +129,5 @@ val DEFAULT_PROVIDER: StorageProvider by lazy { DatabaseStorageProvider() }
  * A [PropertyDefiner] for getting the path of the directory where log files are stored.
  */
 class LogDirectoryPropertyDefiner : PropertyDefinerBase() {
-    override fun getPropertyValue(): String = DATA_DIR.toString()
+    override fun getPropertyValue(): String = DATA_DIR.resolve("logs").toString()
 }
