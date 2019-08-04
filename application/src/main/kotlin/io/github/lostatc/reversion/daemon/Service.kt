@@ -111,8 +111,16 @@ data class WindowsService(
     }
 
     override fun install() {
-        ProcessBuilder(elevateCommand, nssmCommand, "install", name, executable, *args.toTypedArray()).start()
-            .apply { onFail { throw ServiceException("The service failed to install.", it) } }
+        ProcessBuilder(
+            elevateCommand,
+            nssmCommand,
+            "install",
+            name,
+            findExecutable(executable),
+            *args.toTypedArray()
+        ).start().apply {
+            onFail { throw ServiceException("The service failed to install.", it) }
+        }
 
         for ((property, value) in config.entries) {
             ProcessBuilder(elevateCommand, nssmCommand, "set", name, property, value).start().apply {
@@ -145,6 +153,12 @@ data class WindowsService(
          * The command used for elevating privileges.
          */
         private val elevateCommand: String = getResourcePath("/bin/elevate.exe").toString()
+
+        /**
+         * Returns the path of the executable with the given [name].
+         */
+        private fun findExecutable(name: String): String =
+            ProcessBuilder("where", name).start().getOutput().lines().first()
     }
 }
 
