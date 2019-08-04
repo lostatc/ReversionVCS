@@ -29,7 +29,7 @@ val watchService: Service by lazy {
     when (OperatingSystem.current()) {
         OperatingSystem.WINDOWS -> WindowsService(
             name = "io.github.lostatc.reversiond",
-            executable = "reversiond",
+            executable = "reversiond.bat",
             config = mapOf(
                 "DisplayName" to "Reversion File Watcher",
                 "Description" to "Watches a directory for changes and saves new versions of files."
