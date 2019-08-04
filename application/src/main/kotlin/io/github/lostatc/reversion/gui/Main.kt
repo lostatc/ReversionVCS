@@ -58,10 +58,7 @@ class Reversion : Application() {
         }
 
         // Start the daemon if it's not already running.
-        watchService.apply {
-            if (!isInstalled()) install()
-            start()
-        }
+        watchService.install()
 
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/MainScene.fxml"))
         val rootNode = rootLoader.load<Pane>()
