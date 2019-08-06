@@ -22,12 +22,13 @@ package io.github.lostatc.reversion.daemon
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import com.google.gson.reflect.TypeToken
+import java.nio.channels.Channels
 import java.nio.channels.FileChannel
-import java.nio.channels.FileLock
-import java.nio.file.Files
+import java.nio.charset.Charset
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.StandardOpenOption.READ
 import java.nio.file.StandardOpenOption.WRITE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 import kotlin.reflect.KClass
@@ -38,11 +39,11 @@ import kotlin.reflect.KClass
  * The lock is released after [block] executes.
  *
  * @param [file] The path of the file to lock.
- * @param [block] A function which is passed the [FileLock].
+ * @param [block] A function which is passed the channel which created the lock.
  */
-private fun <R> withLock(file: Path, block: (FileLock) -> R): R =
-    FileChannel.open(file, WRITE).use { channel ->
-        channel.lock().use { block(it) }
+private fun <R> withLock(file: Path, block: (FileChannel) -> R): R =
+    FileChannel.open(file, READ, WRITE).use { channel ->
+        channel.lock().use { block(channel) }
     }
 
 /**
@@ -74,7 +75,6 @@ interface PersistentSet<E> {
      * @param [handler] A function which is passed the new set of elements.
      */
     fun onChange(handler: (Set<E>) -> Unit)
-
 }
 
 /**
@@ -82,7 +82,8 @@ interface PersistentSet<E> {
  *
  * @param [storageFile] The path of the file where the set is stored.
  * @param [type] The type of [E].
- * @param [typeAdapter] A type adapter for serializing and de-serializing objects of type [E].
+ * @param [typeAdapter] A type adapter for serializing and de-serializing objects of type [E], or `null` if none is
+ * required.
  */
 data class JsonPersistentSet<E>(
     val storageFile: Path,
@@ -105,36 +106,52 @@ data class JsonPersistentSet<E>(
     private val setToken = TypeToken.getParameterized(Set::class.java, type.java)
 
     override val elements: Set<E>
-        get() = Files.newBufferedReader(storageFile).use { gson.fromJson(it, setToken.type) }
+        get() = FileChannel.open(storageFile).use { it.fromJson() }
 
     init {
         // Create an empty JSON file if it doesn't exist.
         try {
-            Files.newBufferedWriter(storageFile, WRITE, CREATE_NEW).use {
-                gson.toJson(emptySet<E>(), it)
-            }
+            FileChannel.open(storageFile, WRITE, CREATE_NEW).use { it.toJson(emptySet()) }
         } catch (e: java.nio.file.FileAlreadyExistsException) {
             // Ignore
         }
     }
 
+    /**
+     * Serializes the given [elements] to this channel as JSON.
+     *
+     * The file is truncated before anything is written. This does not close the channel.
+     */
+    private fun FileChannel.toJson(elements: Set<E>) {
+        truncate(0)
+        val writer = Channels.newWriter(this, Charset.defaultCharset())
+        gson.toJson(elements, writer)
+        writer.flush()
+    }
+
+    /**
+     * De-serializes the elements from this channel as JSON.
+     *
+     * This does not close the channel.
+     */
+    private fun FileChannel.fromJson(): Set<E> {
+        val reader = Channels.newReader(this, Charset.defaultCharset())
+        return gson.fromJson(reader, setToken.type)
+    }
+
     override fun add(element: E): Boolean = withLock(storageFile) {
         // Lock the file to prevent a race condition.
-        val currentElements = elements
+        val currentElements = it.fromJson()
         if (element in currentElements) return@withLock false
-        Files.newBufferedWriter(storageFile).use {
-            gson.toJson(currentElements.plusElement(element), it)
-        }
+        it.toJson(currentElements.plusElement(element))
         true
     }
 
     override fun remove(element: E): Boolean = withLock(storageFile) {
         // Lock the file to prevent a race condition.
-        val currentElements = elements
+        val currentElements = it.fromJson()
         if (element !in currentElements) return@withLock false
-        Files.newBufferedWriter(storageFile).use {
-            gson.toJson(currentElements.minusElement(element), it)
-        }
+        it.toJson(currentElements.minusElement(element))
         true
     }
 
