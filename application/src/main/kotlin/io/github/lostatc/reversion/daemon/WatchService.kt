@@ -29,11 +29,9 @@ val watchService: Service by lazy {
     when (OperatingSystem.current()) {
         OperatingSystem.WINDOWS -> WindowsService(
             name = "io.github.lostatc.reversiond",
-            executable = "reversiond.bat",
-            config = mapOf(
-                "DisplayName" to "Reversion File Watcher",
-                "Description" to "Watches a directory for changes and saves new versions of files."
-            )
+            className = "io.github.lostatc.reversion.daemon.MainKt",
+            displayName = "Reversion File Watcher",
+            description = "Watches a directory for changes and saves new versions of files."
         )
         OperatingSystem.MAC -> LaunchdService(
             name = "io.github.lostatc.reversiond",

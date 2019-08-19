@@ -29,6 +29,7 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import kotlin.system.exitProcess
 
 /**
  * An exception which signals that a process returned a non-zero exit code.
@@ -69,6 +70,15 @@ private fun Process.onFail(handler: (ProcessFailedException) -> Unit) {
 }
 
 /**
+ * Exit the process.
+ *
+ * This is necessary because `prunsrv.exe` expects a method with this signature.
+ */
+fun exitProcess(args: Array<String>) {
+    exitProcess(0)
+}
+
+/**
  * A wrapper for managing a service.
  *
  * If the current platform is not supported, the constructor throws an [UnsupportedOperationException].
@@ -93,15 +103,17 @@ interface Service {
  * A [Service] that uses a Windows service.
  *
  * @param [name] The unique name of the service.
- * @param [executable] The name of the binary to execute when the service is started.
- * @param [args] The list of arguments to pass to the [executable].
- * @param [config] A map of config keys to their values.
+ * @param [className] The name of the class to execute.
+ * @param [methodName] The name of the method to execute.
+ * @param [displayName] The display name of the service.
+ * @param [description] The description of the service.
  */
 data class WindowsService(
     val name: String,
-    val executable: String,
-    val args: List<String> = emptyList(),
-    val config: Map<String, String> = emptyMap()
+    val className: String,
+    val methodName: String = "main",
+    val displayName: String = name,
+    val description: String = ""
 ) : Service {
 
     init {
@@ -113,52 +125,44 @@ data class WindowsService(
     override fun install() {
         ProcessBuilder(
             elevateCommand,
-            nssmCommand,
+            serviceCommand,
             "install",
             name,
-            findExecutable(executable),
-            *args.toTypedArray()
+            "--Install", serviceCommand,
+            "--Startup", "auto",
+            "--DisplayName", displayName,
+            "--Description", description,
+            "--StartMode", "jvm",
+            "--StartClass", className,
+            "--StartMethod", methodName,
+            "--StopMode", "jvm",
+            "--StopClass", "io.github.lostatc.reversion.daemon.ServiceKt",
+            "--StopMethod", "exitProcess"
         ).start().apply {
             onFail { throw ServiceException("The service failed to install.", it) }
         }
 
-        for ((property, value) in config.entries) {
-            ProcessBuilder(elevateCommand, nssmCommand, "set", name, property, value).start().apply {
-                onFail { throw ServiceException("The service failed to install.", it) }
-            }
-        }
-
-        ProcessBuilder(elevateCommand, nssmCommand, "start", name).start().apply {
+        ProcessBuilder(elevateCommand, serviceCommand, "start", name).start().apply {
             onFail { throw ServiceException("The service failed to start.", it) }
         }
     }
 
     override fun uninstall() {
-        ProcessBuilder(elevateCommand, nssmCommand, "stop", name).start().apply {
-            onFail { throw ServiceException("The service failed to stop.", it) }
-        }
-
-        ProcessBuilder(elevateCommand, nssmCommand, "remove", name, "confirm").start().apply {
+        ProcessBuilder(elevateCommand, serviceCommand, "delete", name).start().apply {
             onFail { throw ServiceException("The service failed to uninstall.", it) }
         }
     }
 
     companion object {
         /**
-         * The command to use for managing services.
+         * The path of the binary for managing windows services.
          */
-        private val nssmCommand: String = getResourcePath("/bin/nssm.exe").toString()
+        private val serviceCommand: String = getResourcePath("/bin/prunsrv.exe").toString()
 
         /**
-         * The command used for elevating privileges.
+         * The path of the binary for elevating privileges.
          */
         private val elevateCommand: String = getResourcePath("/bin/elevate.exe").toString()
-
-        /**
-         * Returns the path of the executable with the given [name].
-         */
-        private fun findExecutable(name: String): String =
-            ProcessBuilder("where", name).start().getOutput().lines().first()
     }
 }
 

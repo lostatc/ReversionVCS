@@ -74,7 +74,7 @@ fun getResourcePath(name: String): Path =
  * @param [configDirectory] The directory where application configuration is stored.
  */
 enum class OperatingSystem(val dataDirectory: Path, val configDirectory: Path = dataDirectory) {
-    WINDOWS(dataDirectory = pathFromEnv("APPDATA") ?: HOME_DIRECTORY),
+    WINDOWS(dataDirectory = pathFromEnv("APPDATA") ?: HOME_DIRECTORY.resolve("AppData", "Roaming")),
 
     MAC(dataDirectory = HOME_DIRECTORY.resolve("Library", "Application Support")),
 
