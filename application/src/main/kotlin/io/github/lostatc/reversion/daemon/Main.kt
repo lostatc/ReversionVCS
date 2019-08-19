@@ -44,7 +44,7 @@ val watchedDirectories: PersistentSet<Path> by lazy {
 /**
  * Start the daemon.
  */
-fun main() {
+fun main(args: Array<String>) {
     // Log any uncaught exceptions and print them to stderr.
     Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
 
