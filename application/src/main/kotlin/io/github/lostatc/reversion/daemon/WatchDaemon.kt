@@ -19,7 +19,10 @@
 
 package io.github.lostatc.reversion.daemon
 
+import com.google.gson.GsonBuilder
+import io.github.lostatc.reversion.storage.PathTypeAdapter
 import io.github.lostatc.reversion.storage.WorkDirectory
+import io.github.lostatc.reversion.storage.fromJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,45 +30,121 @@ import kotlinx.coroutines.launch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.net.URI
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.nio.file.Paths
 import java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
-
+import java.rmi.Remote
+import java.rmi.RemoteException
 
 /**
- * A daemon which directories a working directory and commits any changes.
+ * A daemon which watches a working directory.
  *
- * This class watches each directory in [directories] for changes. Each time a file is created or modified in a watched
- * directory, it is committed and past versions of it are cleaned up. This class automatically starts or stops watching
- * directories as they are added to or removed from [directories].
- *
- * @param [directories] The set of directories to watch.
+ * This class watches a set of directories for changes.
  */
-data class WatchDaemon(val directories: PersistentSet<Path>) : CoroutineScope by CoroutineScope(Dispatchers.Default) {
+// Use [URI] instead of [Path] because all parameters must be [Serializable].
+interface WatchDaemon : Remote {
+    /**
+     * Returns whether the given [directory] is being watched.
+     *
+     * @param [directory] The URI of the directory.
+     */
+    @Throws(RemoteException::class)
+    operator fun contains(directory: URI): Boolean
+
+    /**
+     * Starts watching the given [directory].
+     *
+     * @param [directory] The URI of the directory.
+     *
+     * @return `true` if the watch was added, `false` if the directory was already being watched.
+     */
+    @Throws(RemoteException::class)
+    fun addWatch(directory: URI): Boolean
+
+    /**
+     * Stops watching the given [directory].
+     *
+     * @param [directory] The URI of the directory.
+     *
+     * @return `true` if the watch was removed, `false` if the directory wasn't being watched.
+     */
+    @Throws(RemoteException::class)
+    fun removeWatch(directory: URI): Boolean
+}
+
+/**
+ * Returns whether the given [directory] is being watched.
+ */
+operator fun WatchDaemon.contains(directory: Path): Boolean = directory.toUri() in this
+
+/**
+ * Starts watching the given [directory].
+ *
+ * @return `true` if the watch was added, `false` if the directory was already being watched.
+ */
+fun WatchDaemon.addWatch(directory: Path): Boolean = addWatch(directory.toUri())
+
+/**
+ * Stops watching the given [directory].
+ *
+ * @return `true` if the watch was removed, `false` if the directory wasn't being watched.
+ */
+fun WatchDaemon.removeWatch(directory: Path): Boolean = removeWatch(directory.toUri())
+
+/**
+ * A daemon which watches a working directory and commits any changes.
+ *
+ * This class watches a set of directories for changes. Each time a file is created or modified in a watched directory,
+ * it is committed and past versions of it are cleaned up. The set of watched directories is persisted to [persistFile].
+ *
+ * @param [persistFile] The file containing the set of watched directories.
+ */
+data class PersistentWatchDaemon(
+    val persistFile: Path
+) : WatchDaemon, CoroutineScope by CoroutineScope(Dispatchers.Default) {
     /**
      * A map of directories being watched to the jobs which are watching them.
      */
-    private val watches: MutableMap<Path, Job> = mutableMapOf()
+    private val watchJobs: MutableMap<Path, Job> = mutableMapOf()
 
-    /**
-     * Starts watching each directory in [directories].
-     */
-    fun run() {
-        reload()
-        directories.onChange { reload() }
+    init {
+        // Start watching all directories in the [persistFile].
+        val watchedDirectories = Files.newBufferedReader(persistFile).use { gson.fromJson<Set<Path>>(it) }
+        for (directory in watchedDirectories) {
+            watchJobs[directory] = launch { watch(directory) }
+        }
     }
 
-    /**
-     * Adds and removes [watches] based on the contents of [directories].
-     */
-    private fun reload() {
-        for (addedDirectory in directories.elements - watches.keys) {
-            watches[addedDirectory] = launch { watch(addedDirectory) }
-        }
-        for (removedDirectory in watches.keys - directories.elements) {
-            watches.remove(removedDirectory)?.cancel()
-        }
+    @Throws(RemoteException::class)
+    override fun contains(directory: URI): Boolean = Paths.get(directory) in watchJobs.keys
+
+    @Throws(RemoteException::class)
+    override fun addWatch(directory: URI): Boolean {
+        val directoryPath = Paths.get(directory)
+
+        if (directoryPath in watchJobs) return false
+        watchJobs[directoryPath] = launch { watch(directoryPath) }
+
+        val newWatches = watchJobs.keys.plusElement(directoryPath)
+        Files.newBufferedWriter(persistFile).use { gson.toJson(newWatches, it) }
+
+        return true
+    }
+
+    @Throws(RemoteException::class)
+    override fun removeWatch(directory: URI): Boolean {
+        val directoryPath = Paths.get(directory)
+
+        watchJobs.remove(directoryPath)?.cancel() ?: return false
+
+        val newWatches = watchJobs.keys.minusElement(directoryPath)
+        Files.newBufferedWriter(persistFile).use { gson.toJson(newWatches, it) }
+
+        return true
     }
 
 
@@ -73,7 +152,15 @@ data class WatchDaemon(val directories: PersistentSet<Path>) : CoroutineScope by
         /**
          * The logger for the daemon.
          */
-        private val logger: Logger = LoggerFactory.getLogger(WatchDaemon::class.java)
+        private val logger: Logger = LoggerFactory.getLogger(PersistentWatchDaemon::class.java)
+
+        /**
+         * An object for serializing/de-serializing objects as JSON.
+         */
+        private val gson = GsonBuilder()
+            .setPrettyPrinting()
+            .registerTypeHierarchyAdapter(Path::class.java, PathTypeAdapter)
+            .create()
 
         /**
          * Watches the given [directory] for changes and commits them.

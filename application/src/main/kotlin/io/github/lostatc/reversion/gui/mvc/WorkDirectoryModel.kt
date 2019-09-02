@@ -22,7 +22,11 @@ package io.github.lostatc.reversion.gui.mvc
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.daemon.watchedDirectories
+import io.github.lostatc.reversion.daemon.STUB_NAME
+import io.github.lostatc.reversion.daemon.WatchDaemon
+import io.github.lostatc.reversion.daemon.addWatch
+import io.github.lostatc.reversion.daemon.contains
+import io.github.lostatc.reversion.daemon.removeWatch
 import io.github.lostatc.reversion.gui.ActorEvent
 import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.getValue
@@ -42,6 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
+import java.rmi.registry.LocateRegistry
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalUnit
@@ -156,6 +161,11 @@ data class WorkDirectoryModel(
      */
     var trackingChanges: Boolean by trackingChangesProperty
 
+    /**
+     * The currently-running daemon instance.
+     */
+    val daemon: WatchDaemon = LocateRegistry.getRegistry().lookup(STUB_NAME) as WatchDaemon
+
     init {
         // Load the cleanup policies in the UI.
         executeAsync { workDirectory.timeline.cleanupPolicies } ui { cleanupPolicies.addAll(it) }
@@ -164,7 +174,7 @@ data class WorkDirectoryModel(
         executeAsync { workDirectory.ignoredPaths } ui { ignoredPaths.addAll(it) }
 
         // Set whether the working directory is tracking changes.
-        executeAsync { path in watchedDirectories.elements } ui { trackingChanges = it }
+        executeAsync { path in daemon } ui { trackingChanges = it }
 
         // Load statistics about the working directory.
         updateStatistics()
@@ -236,10 +246,11 @@ data class WorkDirectoryModel(
      */
     fun setTrackChanges(value: Boolean) {
         trackingChanges = value
+
         if (trackingChanges) {
-            execute { watchedDirectories.add(path) }
+            daemon.addWatch(path)
         } else {
-            execute { watchedDirectories.remove(path) }
+            daemon.removeWatch(path)
         }
     }
 

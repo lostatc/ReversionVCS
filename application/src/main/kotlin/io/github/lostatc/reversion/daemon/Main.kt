@@ -20,9 +20,10 @@
 package io.github.lostatc.reversion.daemon
 
 import io.github.lostatc.reversion.DATA_DIR
-import io.github.lostatc.reversion.storage.PathTypeAdapter
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import java.rmi.registry.LocateRegistry
+import java.rmi.server.UnicastRemoteObject
 
 /**
  * An exception handler that logs uncaught exceptions and prints them to stderr.
@@ -35,11 +36,19 @@ val loggingExceptionHandler: Thread.UncaughtExceptionHandler =
     }
 
 /**
- * The set of directories which are watched by the daemon.
+ * The path of the file which stores the list of watched directories.
  */
-val watchedDirectories: PersistentSet<Path> by lazy {
-    JsonPersistentSet.of(DATA_DIR.resolve("watchedDirectories.json"), PathTypeAdapter)
-}
+private val WATCHED_DIRECTORIES_FILE: Path = DATA_DIR.resolve("watchedDirectories.json")
+
+/**
+ * The port on which the RMI registry accepts requests.
+ */
+private const val REGISTRY_PORT: Int = 1099
+
+/**
+ * The name to bind the [WatchDaemon] stub to in the RMI registry.
+ */
+const val STUB_NAME: String = "io.github.lostatc.reversiond"
 
 /**
  * Start the daemon.
@@ -49,5 +58,8 @@ fun main() {
     Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
 
     // Start the daemon.
-    WatchDaemon(watchedDirectories).run()
+    val daemon = PersistentWatchDaemon(WATCHED_DIRECTORIES_FILE)
+    val daemonStub = UnicastRemoteObject.exportObject(daemon, 0) as WatchDaemon
+    val registry = LocateRegistry.createRegistry(REGISTRY_PORT)
+    registry.bind(STUB_NAME, daemonStub)
 }
