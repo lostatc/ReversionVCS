@@ -118,16 +118,16 @@ interface TaskActor<K> {
 }
 
 /**
- * An event to send to a [ChannelTaskActor].
+ * A task to send to a [ChannelTaskActor].
  */
-private data class TaskActorEvent<K>(val key: K, val task: Task<Unit>)
+private data class ActorTask<K>(val key: K, val task: Task<Unit>)
 
 /**
  * A [TaskActor] backed by a [Channel].
  */
 private class ChannelTaskActor<K>(
     override val defaultKey: K,
-    private val channel: Channel<TaskActorEvent<K>>
+    private val channel: Channel<ActorTask<K>>
 ) : TaskActor<K> {
 
     /**
@@ -161,7 +161,7 @@ private class ChannelTaskActor<K>(
     override suspend fun <T> sendAsync(key: K, task: Task<T>): Deferred<T> {
         val result = CompletableDeferred<T>()
         channel.send(
-            TaskActorEvent(key) {
+            ActorTask(key) {
                 try {
                     result.complete(task())
                 } catch (e: Throwable) {
@@ -175,7 +175,7 @@ private class ChannelTaskActor<K>(
     override fun <T> sendBlockingAsync(key: K, task: Task<T>): Deferred<T> {
         val result = CompletableDeferred<T>()
         channel.sendBlocking(
-            TaskActorEvent(key) {
+            ActorTask(key) {
                 try {
                     result.complete(task())
                 } catch (e: Throwable) {
@@ -214,7 +214,7 @@ fun <K> CoroutineScope.taskActor(
     capacity: Int = Channel.UNLIMITED,
     start: CoroutineStart = CoroutineStart.DEFAULT
 ): TaskActor<K> {
-    val channel = Channel<TaskActorEvent<K>>(capacity)
+    val channel = Channel<ActorTask<K>>(capacity)
     val actor = ChannelTaskActor(defaultKey, channel)
 
     launch(context = context, start = start) {

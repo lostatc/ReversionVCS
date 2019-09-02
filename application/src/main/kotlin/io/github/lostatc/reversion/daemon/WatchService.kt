@@ -23,7 +23,7 @@ import io.github.lostatc.reversion.OperatingSystem
 import io.github.lostatc.reversion.getResourcePath
 
 /**
- * A [Service] compatible with the current platform which executes [WatchDaemon].
+ * A [Service] compatible with the current platform which executes [PersistentWatchDaemon].
  */
 val watchService: Service by lazy {
     when (OperatingSystem.current()) {
