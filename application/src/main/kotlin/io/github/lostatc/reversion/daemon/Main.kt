@@ -51,6 +51,13 @@ private const val REGISTRY_PORT: Int = 1099
 const val STUB_NAME: String = "io.github.lostatc.reversiond"
 
 /**
+ * The daemon which watches files for changes.
+ */
+// This must be a file-level property to keep it from being garbage collected.
+// If it is garbage collected, the object is un-exported by the RMI server and the daemon exits.
+private val daemon: WatchDaemon by lazy { PersistentWatchDaemon(WATCHED_DIRECTORIES_FILE) }
+
+/**
  * Start the daemon.
  */
 fun main() {
@@ -58,7 +65,6 @@ fun main() {
     Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
 
     // Start the daemon.
-    val daemon = PersistentWatchDaemon(WATCHED_DIRECTORIES_FILE)
     val daemonStub = UnicastRemoteObject.exportObject(daemon, 0) as WatchDaemon
     val registry = LocateRegistry.createRegistry(REGISTRY_PORT)
     registry.bind(STUB_NAME, daemonStub)
