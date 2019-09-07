@@ -19,8 +19,10 @@
 
 package io.github.lostatc.reversion.api
 
+import kotlinx.coroutines.delay
 import java.io.IOException
 import java.nio.file.Path
+import java.time.Duration
 import java.util.UUID
 
 /**
@@ -84,6 +86,19 @@ interface Repository : Configurable {
     override val config: Config
 
     /**
+     * A set of jobs to be executed in the background.
+     *
+     * When the daemon is running, each job in this set will be [run][Job.run] by the daemon in a background thread.
+     * This can be used to schedule jobs which should be executed in regular intervals, even when the application isn't
+     * running. Jobs which are added to this set while the daemon is running may not be run until the daemon is
+     * restarted.
+     *
+     * Examples of how this could be used include cleaning up unused data or making backups.
+     */
+    val jobs: Set<Job>
+        get() = emptySet()
+
+    /**
      * A factory for creating [CleanupPolicy] instances.
      */
     val policyFactory: CleanupPolicyFactory
@@ -94,10 +109,10 @@ interface Repository : Configurable {
     val timelines: Map<UUID, Timeline>
 
     /**
-     * The amount of storage space being used by the repository in bytes.
+     * The estimated amount of storage space being used by the repository in bytes.
      *
      * This is an estimate of the amount of storage space being used in the file system by the repository, which may be
-     * different from the [totalSize]. This does not include space taken up by metadata.
+     * different from the [totalSize].
      */
     val storedSize: Long
 
@@ -146,4 +161,19 @@ interface Repository : Configurable {
      * @throws [IOException] An I/O error occurred.
      */
     fun delete()
+
+    /**
+     * An [action] which executes in the background on a fixed [interval].
+     */
+    data class Job(val interval: Duration, val action: () -> Unit) {
+        /**
+         * Run this job, executing [action] every [interval].
+         */
+        suspend fun run() {
+            while (true) {
+                delay(interval.toMillis())
+                action()
+            }
+        }
+    }
 }
