@@ -6,6 +6,7 @@ version = "0.1.0"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
+    implementation(group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version = "1.2.1")
 
     api(group = "org.slf4j", name = "slf4j-api", version = "1.7.26")
     implementation(group = "commons-codec", name = "commons-codec", version = "1.12")

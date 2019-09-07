@@ -20,12 +20,14 @@
 package io.github.lostatc.reversion.daemon
 
 import com.google.gson.GsonBuilder
+import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.storage.PathTypeAdapter
 import io.github.lostatc.reversion.storage.WorkDirectory
 import io.github.lostatc.reversion.storage.fromJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -45,7 +47,7 @@ import java.rmi.RemoteException
  *
  * This class watches a set of directories for changes.
  */
-// Use [URI] instead of [Path] because all parameters must be [Serializable].
+// We use [URI] instead of [Path] because all parameters must be [Serializable].
 interface WatchDaemon : Remote {
     /**
      * Returns whether the given [directory] is being watched.
@@ -100,6 +102,8 @@ fun WatchDaemon.removeWatch(directory: Path): Boolean = removeWatch(directory.to
  *
  * This class watches a set of directories for changes. Each time a file is created or modified in a watched directory,
  * it is committed and past versions of it are cleaned up. The set of watched directories is persisted to [persistFile].
+ *
+ * This class also runs repository [jobs][Repository.jobs] for watched working directories in the background.
  *
  * @param [persistFile] The file containing the set of watched directories.
  */
@@ -163,15 +167,31 @@ data class PersistentWatchDaemon(
             .create()
 
         /**
-         * Watches the given [directory] for changes and commits them.
+         * The set of repository jobs which have been started by a daemon instance.
          */
-        private fun watch(directory: Path) {
+        private val runningJobs: MutableSet<Repository.Job> = mutableSetOf()
+
+        /**
+         * Watches the given [directory] for changes and commits them.
+         *
+         * This also starts any [jobs][Repository.jobs] defined by the working directory's repository if they haven't
+         * already been started.
+         */
+        private suspend fun watch(directory: Path) {
             val workDirectory = WorkDirectory.open(directory)
+
+            // Because multiple working directories can share a repository, we need to make sure another working
+            // directory hasn't already started this job.
+            for (job in workDirectory.repository.jobs) {
+                if (job in runningJobs) continue
+                coroutineScope { launch { job.run() } }
+                runningJobs.add(job)
+            }
 
             // We only exclude the default ignored paths because reading the ignore pattern file on each watch event
             // would be expensive.
             FileSystemWatcher(
-                directory,
+                workDirectory.path,
                 recursive = true,
                 coalesce = true,
                 includeMatcher = PathMatcher { path -> workDirectory.defaultIgnoredPaths.all { !path.startsWith(it) } }
