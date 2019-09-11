@@ -19,8 +19,8 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.api.IncompatibleRepositoryException
 import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.api.UnsupportedFormatException
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -43,7 +43,7 @@ interface StorageProviderTest {
         val repoPath = tempPath.resolve("repository")
         Files.createDirectories(repoPath)
 
-        assertThrows<UnsupportedFormatException> {
+        assertThrows<IncompatibleRepositoryException> {
             provider.openRepository(repoPath)
         }
     }

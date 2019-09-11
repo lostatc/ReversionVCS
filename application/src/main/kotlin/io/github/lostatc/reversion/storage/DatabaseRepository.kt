@@ -27,10 +27,10 @@ import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.CleanupPolicyFactory
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
+import io.github.lostatc.reversion.api.IncompatibleRepositoryException
 import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
-import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.api.delete
 import io.github.lostatc.reversion.schema.BlobEntity
@@ -489,11 +489,11 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          *
          * @param [path] The path of the repository.
          *
-         * @throws [UnsupportedFormatException] There is no compatible repository at [path].
+         * @throws [IncompatibleRepositoryException] There is no compatible repository at [path].
          */
         fun open(path: Path): DatabaseRepository {
             if (!checkRepository(path))
-                throw UnsupportedFormatException("The format of the repository at '$path' is not supported.")
+                throw IncompatibleRepositoryException("The format of the repository at '$path' is not supported.")
 
             val configPath = path.resolve(relativeConfigPath)
             val config = Files.newBufferedReader(configPath).use {

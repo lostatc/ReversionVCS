@@ -22,11 +22,11 @@ package io.github.lostatc.reversion.storage
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.api.Config
+import io.github.lostatc.reversion.api.IncompatibleRepositoryException
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.Timeline
-import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
 import org.apache.commons.io.FileUtils
 import org.slf4j.Logger
@@ -387,8 +387,8 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         /**
          * Opens the working directory at [path] and returns it.
          *
-         * @throws [UnsupportedFormatException] There is no installed provider compatible with the repository associated
-         * with this working directory.
+         * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
+         * associated with this working directory.
          * @throws [InvalidWorkDirException] The working directory has not been initialized.
          */
         fun open(path: Path): WorkDirectory = instanceCache.getOrPut(path) { openNew(path) }
@@ -398,8 +398,8 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          *
          * The working directory associated with [path] is the working directory that [path] is a descendant of.
          *
-         * @throws [UnsupportedFormatException] There is no installed provider compatible with the repository associated
-         * with this working directory.
+         * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
+         * associated with this working directory.
          * @throws [InvalidWorkDirException] There is no working directory associated with the given [path].
          */
         fun openFromDescendant(path: Path): WorkDirectory {
@@ -416,8 +416,8 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         /**
          * Opens the working directory at [path] whether or not it already exists.
          *
-         * @throws [UnsupportedFormatException] There is no installed provider compatible with the repository associated
-         * with this working directory.
+         * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
+         * associated with this working directory.
          * @throws [InvalidWorkDirException] The working directory has not been initialized.
          */
         private fun openNew(path: Path): WorkDirectory {

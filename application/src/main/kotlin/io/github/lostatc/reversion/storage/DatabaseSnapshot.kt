@@ -22,7 +22,6 @@ package io.github.lostatc.reversion.storage
 import io.github.lostatc.reversion.api.Blob
 import io.github.lostatc.reversion.api.Checksum
 import io.github.lostatc.reversion.api.PermissionSet
-import io.github.lostatc.reversion.api.RecordAlreadyExistsException
 import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
@@ -135,9 +134,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
         get() = transaction(db) { DatabaseTimeline(entity.timeline, repository) }
 
     fun createVersion(path: Path, workDirectory: Path): DatabaseVersion {
-        if (path in versions) {
-            throw RecordAlreadyExistsException("A version with the path '$path' already exists in this snapshot.")
-        }
+        check(path !in versions) { "A version with the path '$path' already exists in this snapshot." }
 
         val version = transaction(db) {
             val absolutePath = workDirectory.resolve(path)
