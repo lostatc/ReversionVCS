@@ -23,7 +23,13 @@ import io.github.lostatc.reversion.api.Checksum
 import io.github.lostatc.reversion.api.PermissionSet
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IdTable
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.DateColumnType
+import org.jetbrains.exposed.sql.IColumnType
+import org.jetbrains.exposed.sql.LongColumnType
+import org.jetbrains.exposed.sql.ReferenceOption
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.VarCharColumnType
 import org.joda.time.DateTime
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -134,7 +140,7 @@ class ChecksumColumnType : DelegateColumnType {
     override val column: IColumnType = VarCharColumnType(128)
 
     override fun notNullValueToDB(value: Any): Any = column.notNullValueToDB(
-        if (value is Checksum) value.hex else value
+        if (value is Checksum) value.toHex() else value
     )
 
     override fun valueFromDB(value: Any): Any {

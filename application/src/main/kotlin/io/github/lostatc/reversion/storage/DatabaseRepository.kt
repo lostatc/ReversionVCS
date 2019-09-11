@@ -333,7 +333,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      * Returns the storage location of the blob with the given [checksum].
      */
     fun getBlobPath(checksum: Checksum): Path =
-        blobsPath.resolve(checksum.hex.slice(0..1)).resolve(checksum.hex)
+        blobsPath.resolve(checksum.toHex().slice(0..1)).resolve(checksum.toHex())
 
     /**
      * Adds the given [blob] to this repository.

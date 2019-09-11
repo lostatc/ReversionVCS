@@ -56,5 +56,5 @@ val Version.info: String
         Last Modified: ${lastModifiedTime.toInstant().format()}
         Size: ${FileUtils.byteCountToDisplaySize(size)}
         Permissions: ${permissions.toString()}
-        Checksum: ${checksum.hex}
+        Checksum: ${checksum.toHex()}
     """.trimIndent()
