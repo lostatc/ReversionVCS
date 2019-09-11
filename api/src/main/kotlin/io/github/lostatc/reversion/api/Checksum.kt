@@ -33,22 +33,19 @@ import java.security.MessageDigest
  */
 class Checksum(private val bytes: ByteArray) {
     /**
-     * A byte array containing the bytes of the checksum.
+     * Returns a byte array containing the bytes of the checksum.
      */
-    val array: ByteArray
-        get() = bytes.copyOf()
+    fun toArray(): ByteArray = bytes.copyOf()
 
     /**
-     * A read-only byte buffer containing the bytes of the checksum.
+     * Returns a read-only byte buffer containing the bytes of the checksum.
      */
-    val buffer: ByteBuffer
-        get() = ByteBuffer.wrap(array).asReadOnlyBuffer()
+    fun toBuffer(): ByteBuffer = ByteBuffer.wrap(toArray()).asReadOnlyBuffer()
 
     /**
-     * A hexadecimal string representing this checksum.
+     * Returns a hexadecimal string representing this checksum.
      */
-    val hex: String
-        get() = Hex.encodeHexString(bytes)
+    fun toHex(): String = Hex.encodeHexString(bytes)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -58,7 +55,7 @@ class Checksum(private val bytes: ByteArray) {
 
     override fun hashCode(): Int = bytes.contentHashCode()
 
-    override fun toString(): String = hex
+    override fun toString(): String = toHex()
 
     companion object {
         /**
