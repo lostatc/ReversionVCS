@@ -24,6 +24,22 @@ import java.nio.file.Path
 import java.util.ServiceLoader
 
 /**
+ * An exception which is thrown when a repository cannot be opened because it's incompatible with the storage provider.
+ */
+data class IncompatibleRepositoryException(
+    override val message: String,
+    override val cause: Throwable? = null
+) : IOException(message, cause)
+
+/**
+ * An exception which is thrown when a repository cannot be opened because it is corrupt or otherwise unreadable.
+ */
+data class InvalidRepositoryException(
+    override val message: String,
+    override val cause: Throwable? = null
+) : IOException(message, cause)
+
+/**
  * An interface for service providers that provide mechanisms for storing file version history.
  */
 interface StorageProvider {
@@ -45,11 +61,19 @@ interface StorageProvider {
     /**
      * Opens the repository at [path] and returns it.
      *
-     * @param [path] The path of the repository.
+     * The [force] parameter can be used to attempt to open a repository that otherwise cannot be opened, but it may do
+     * so destructively. If [force] is `false` and the repository cannot be opened without data loss, an exception will
+     * be thrown. If [force] is `true`, opening the repository may result in data loss. Opening a repository may still
+     * fail even if [force] is `true`.
      *
-     * @throws [UnsupportedFormatException] There is no compatible repository at [path].
+     * @param [path] The path of the repository.
+     * @param [force] Whether to attempt to open the repository destructively.
+     *
+     * @throws [IncompatibleRepositoryException] There is no compatible repository at [path].
+     * @throws [InvalidRepositoryException] The repository is compatible but cannot be read.
+     * @throws [IOException] An I/O error occurred.
      */
-    fun openRepository(path: Path): Repository
+    fun openRepository(path: Path, force: Boolean = false): Repository
 
     /**
      * Creates a repository at [path] and returns it.
@@ -63,7 +87,9 @@ interface StorageProvider {
     fun createRepository(path: Path, config: Config = getConfig()): Repository
 
     /**
-     * Returns whether there is a repository compatible with this storage provider at [path].
+     * Returns whether there is a repository at [path] which is compatible with this storage provider.
+     *
+     * Just because a repository is compatible with this storage provider does not mean that it can be opened.
      */
     fun checkRepository(path: Path): Boolean
 
@@ -75,19 +101,19 @@ interface StorageProvider {
             ServiceLoader.load(StorageProvider::class.java).asSequence()
 
         /**
-         * Opens the repository at [path] with the first [StorageProvider] that supports it.
+         * Opens the repository at [path] with the first [StorageProvider] that it is compatible with.
          *
-         * @throws [UnsupportedFormatException] There is no installed provider that can open the repository.
+         * @throws [IncompatibleRepositoryException] There is no installed provider that can open the repository.
+         * @throws [InvalidRepositoryException] The repository is compatible with an installed provider but cannot be
+         * read.
          *
          * @see [StorageProvider.checkRepository]
          * @see [StorageProvider.openRepository]
          */
-        fun openRepository(path: Path): Repository {
-            return listProviders()
-                .find { it.checkRepository(path) }
-                ?.openRepository(path)
-                ?: throw UnsupportedFormatException("No installed provider can open the repository at '$path'.")
-        }
+        fun openRepository(path: Path): Repository = listProviders()
+            .find { it.checkRepository(path) }
+            ?.openRepository(path)
+            ?: throw IncompatibleRepositoryException("No installed provider can open the repository at '$path'.")
 
     }
 }
