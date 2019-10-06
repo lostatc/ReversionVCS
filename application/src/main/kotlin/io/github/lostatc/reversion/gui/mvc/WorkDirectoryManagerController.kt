@@ -36,7 +36,6 @@ import io.github.lostatc.reversion.gui.dateTimeDialog
 import io.github.lostatc.reversion.gui.infoDialog
 import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.processingDialog
-import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.toDisplayProperty
 import io.github.lostatc.reversion.gui.toSorted
 import io.github.lostatc.reversion.gui.ui
@@ -308,13 +307,14 @@ class WorkDirectoryManagerController {
      */
     @FXML
     fun deleteWorkDirectory() {
-        val dialog = approvalDialog(
+        val approved = approvalDialog(
             title = "Delete version history",
-            text = "Are you sure you want to permanently delete all past versions in this directory? This will not affect the current versions of your files.",
-            action = { model.deleteWorkDirectory() }
-        )
+            text = "Are you sure you want to permanently delete all past versions in this directory? This will not affect the current versions of your files."
+        ).show(root)
 
-        dialog.show(root)
+        if (approved) {
+            model.deleteWorkDirectory()
+        }
     }
 
     /**
@@ -339,19 +339,21 @@ class WorkDirectoryManagerController {
      * Prompt the user for whether they want to repair the repository.
      */
     private fun promptRepair(report: IntegrityReport) {
-        val dialog = if (report.isValid) {
+        if (report.isValid) {
             infoDialog(
                 title = "No corruption detected",
                 text = "There are no corrupt versions in this directory."
-            )
+            ).show(root)
         } else {
-            confirmationDialog(
+            val confirmed = confirmationDialog(
                 title = "Corruption detected",
-                text = "There are ${report.corrupt.size} corrupt versions in this directory. ${report.repaired.size} of them will be repaired. ${report.deleted.size} of them cannot be repaired and will be deleted. This may take a while. Do you want to repair?",
-                action = { repair(report) }
-            )
+                text = "There are ${report.corrupt.size} corrupt versions in this directory. ${report.repaired.size} of them will be repaired. ${report.deleted.size} of them cannot be repaired and will be deleted. This may take a while. Do you want to repair?"
+            ).show(root)
+
+            if (confirmed) {
+                repair(report)
+            }
         }
-        dialog.show(root)
     }
 
     /**
@@ -369,12 +371,14 @@ class WorkDirectoryManagerController {
      */
     @FXML
     fun promptVerify() {
-        val dialog = confirmationDialog(
+        val confirmed = confirmationDialog(
             title = "Check for corruption",
-            text = "This will check the versions in this directory for corruption. If corrupt data is found, you will have the option to repair it. This may take a while. Do you want to check for corruption?",
-            action = { verify() }
-        )
-        dialog.show(root)
+            text = "This will check the versions in this directory for corruption. If corrupt data is found, you will have the option to repair it. This may take a while. Do you want to check for corruption?"
+        ).show(root)
+
+        if (confirmed) {
+            verify()
+        }
     }
 
     /**
@@ -382,13 +386,14 @@ class WorkDirectoryManagerController {
      */
     @FXML
     fun mountSnapshot() {
-        val dialog = dateTimeDialog(
+        val instant = dateTimeDialog(
             title = "Choose a time and date",
             text = "Choose the time and date that you want to see files from.",
             default = Instant.now()
-        ) { time ->
-            time?.let { model.mountSnapshot(it) } ?: sendNotification("You must select a time and date.")
+        ).show(root)
+
+        if (instant != null) {
+            model.mountSnapshot(instant)
         }
-        dialog.show(root)
     }
 }
