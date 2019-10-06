@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
+import io.github.lostatc.reversion.api.OpenOption
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.daemon.STUB_NAME
 import io.github.lostatc.reversion.daemon.WatchDaemon
@@ -259,10 +260,14 @@ data class WorkDirectoryModel(
          * Returns a new [WorkDirectoryModel] for the working directory with the given [path].
          *
          * If there is not working directory at [path], a new one is created.
+         *
+         * @param [path] The path of the working directory.
+         * @param [options] The options to open the repository with if it already exists.
          */
-        suspend fun fromPath(path: Path): WorkDirectoryModel = withContext(Dispatchers.IO) {
+        suspend fun fromPath(path: Path, options: Set<OpenOption> = emptySet()): WorkDirectoryModel =
+            withContext(Dispatchers.IO) {
             val workDirectory = if (WorkDirectory.isWorkDirectory(path)) {
-                WorkDirectory.open(path)
+                WorkDirectory.open(path, options)
             } else {
                 WorkDirectory.init(path, DEFAULT_PROVIDER).apply {
                     timeline.cleanupPolicies = repository.defaultPolicies
