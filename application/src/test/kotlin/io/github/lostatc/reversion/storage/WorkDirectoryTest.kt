@@ -58,7 +58,7 @@ interface WorkDirectoryTest {
 
     @Test
     fun `initializing an initialized directory throws`() {
-        assertThrows<InvalidWorkDirException> {
+        assertThrows<NotAWorkDirException> {
             WorkDirectory.init(workPath, provider)
         }
     }
@@ -227,7 +227,7 @@ interface WorkDirectoryTest {
     @Test
     fun `a deleted work directory cannot be opened`() {
         workDirectory.delete()
-        assertThrows<InvalidWorkDirException> {
+        assertThrows<NotAWorkDirException> {
             WorkDirectory.open(workPath)
         }
     }

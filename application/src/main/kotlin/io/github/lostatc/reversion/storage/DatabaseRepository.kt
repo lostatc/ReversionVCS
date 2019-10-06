@@ -29,6 +29,8 @@ import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
 import io.github.lostatc.reversion.api.IncompatibleRepositoryException
 import io.github.lostatc.reversion.api.IntegrityReport
+import io.github.lostatc.reversion.api.InvalidRepositoryException
+import io.github.lostatc.reversion.api.OpenOption
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
 import io.github.lostatc.reversion.api.Version
@@ -55,6 +57,8 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteConfig
+import org.sqlite.SQLiteConnection
+import org.sqlite.core.DB
 import java.io.IOException
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -62,12 +66,24 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.sql.Connection
+import java.sql.SQLException
+import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.streams.asSequence
 
+/**
+ * A simple data class implementing [Map.Entry].
+ */
 data class SimpleEntry<out K, out V>(override val key: K, override val value: V) : Map.Entry<K, V>
+
+/**
+ * A [DB.ProgressObserver] that does nothing.
+ */
+private object NullProgressObserver : DB.ProgressObserver {
+    override fun progress(remaining: Int, pageCount: Int) = Unit
+}
 
 /**
  * A factory for [Database] instances.
@@ -97,17 +113,48 @@ private object DatabaseFactory {
     }
 
     /**
-     * Connect to the database at the given [path].
+     * Returns the URI of the database at [path].
+     */
+    private fun getUri(path: Path): String = "jdbc:sqlite:${path.toUri().path}"
+
+    /**
+     * Connects to the database at the given [path].
+     *
+     * @throws [SQLException] The database could not be connected to.
      */
     fun connect(path: Path): Database = databases.getOrPut(path) {
         val connection = Database.connect(
-            "jdbc:sqlite:${path.toUri().path}",
+            url = getUri(path),
             driver = "org.sqlite.JDBC",
             setupConnection = { configure(it) }
         )
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
         logger.debug("Connecting to database at '$path'.")
         connection
+    }
+
+    /**
+     * Creates a backup of a database.
+     *
+     * @param [source] The path of the database to back up.
+     * @param [destination] The path to back up the database to.
+     */
+    fun backup(source: Path, destination: Path) {
+        val db = connect(source)
+        transaction(db) {
+            val connection = TransactionManager.current().connection as SQLiteConnection
+            connection.database.backup("main", destination.toString(), NullProgressObserver)
+        }
+    }
+
+    /**
+     * Restores a backup of a database.
+     *
+     * @param [source] The path of the backup to restore.
+     * @param [destination] The path to restore the backup to.
+     */
+    fun restore(source: Path, destination: Path) {
+        Files.copy(destination, source, StandardCopyOption.REPLACE_EXISTING)
     }
 }
 
@@ -134,6 +181,25 @@ private data class IncrementalIntegrityReport(
  * An implementation of [Repository] which is backed by a relational database.
  */
 data class DatabaseRepository(override val path: Path, override val config: Config) : Repository {
+
+    /**
+     * The hash algorithm used by this repository.
+     */
+    val hashAlgorithm: String by hashAlgorithmProperty
+
+    /**
+     * The block size used by this repository.
+     */
+    val blockSize: Long by blockSizeProperty
+
+    /**
+     * The number of minutes to wait between database backups.
+     */
+    val backupInterval: Long by backupIntervalProperty
+
+    override val jobs: Set<Repository.Job> = setOf(
+        Repository.Job(Duration.ofMinutes(backupInterval)) { DatabaseFactory.backup(databasePath, databaseBackupPath) }
+    )
 
     override val policyFactory: CleanupPolicyFactory = TruncatingCleanupPolicyFactory(ChronoUnit.MILLIS)
 
@@ -188,7 +254,12 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     /**
      * The path of the repository's database.
      */
-    private val databasePath = path.resolve(relativeDatabasePath)
+    private val databasePath: Path = path.resolve(relativeDatabasePath)
+
+    /**
+     * The path of the repository's database backup.
+     */
+    private val databaseBackupPath: Path = path.resolve(relativeDatabaseBackupPath)
 
     /**
      * The path of the directory where blobs are stored.
@@ -199,16 +270,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      * The connection to the repository's database.
      */
     val db: Database = DatabaseFactory.connect(databasePath)
-
-    /**
-     * The hash algorithm used by this repository.
-     */
-    val hashAlgorithm: String by hashAlgorithmProperty
-
-    /**
-     * The block size used by this repository.
-     */
-    val blockSize: Long by blockSizeProperty
 
     override fun createTimeline(policies: Set<CleanupPolicy>): DatabaseTimeline {
         val timeline = transaction(db) {
@@ -437,6 +498,11 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         private val relativeDatabasePath: Path = Paths.get("manifest.db")
 
         /**
+         * The relative path of the backup copy of the database.
+         */
+        private val relativeDatabaseBackupPath: Path = Paths.get("manifest.db.bak")
+
+        /**
          * The relative path of the file containing the repository version.
          */
         private val relativeVersionPath: Path = Paths.get("version")
@@ -474,6 +540,17 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         )
 
         /**
+         * The property which stores the backup interval.
+         */
+        val backupIntervalProperty: ConfigProperty<Long> = ConfigProperty.of(
+            key = "backupInterval",
+            name = "Backup interval",
+            default = 15L,
+            description = "The number of minutes to wait between database backups.",
+            validator = { require(it > 0) { "The given value must be greater than 0." } }
+        )
+
+        /**
          * An object used for serializing data as JSON.
          */
         private val gson: Gson = GsonBuilder()
@@ -482,7 +559,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             .registerTypeAdapter(Config::class.java, ConfigDeserializer(getConfig().properties))
             .create()
 
-        fun getConfig(): Config = Config(hashAlgorithmProperty, blockSizeProperty)
+        fun getConfig(): Config = Config(hashAlgorithmProperty, blockSizeProperty, backupIntervalProperty)
 
         /**
          * Opens the repository at [path] and returns it.
@@ -490,8 +567,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          * @param [path] The path of the repository.
          *
          * @throws [IncompatibleRepositoryException] There is no compatible repository at [path].
+         * @throws [InvalidRepositoryException] The repository is compatible but cannot be read.
+         * @throws [IOException] An I/O error occurred.
          */
-        fun open(path: Path): DatabaseRepository {
+        fun open(path: Path, options: Set<OpenOption> = emptySet()): DatabaseRepository {
             if (!checkRepository(path))
                 throw IncompatibleRepositoryException("The format of the repository at '$path' is not supported.")
 
@@ -500,9 +579,41 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                 gson.fromJson(it, Config::class.java)
             }
 
-            val repository = DatabaseRepository(path, config)
+            val repository = try {
+                DatabaseRepository(path, config)
+            } catch (e: SQLException) {
+                logger.warn("The database could not be read.", e)
 
-            logger.debug("Opened repository $repository.")
+                val backupTime = Files.getLastModifiedTime(path.resolve(relativeDatabaseBackupPath))
+
+                if (OpenOption.DESTRUCTIVE in options) {
+                    // Attempt to restore from a database backup.
+                    DatabaseFactory.restore(
+                        source = path.resolve(relativeDatabaseBackupPath),
+                        destination = path.resolve(relativeDatabasePath)
+                    )
+
+                    logger.info("Restored database backup from $backupTime.")
+
+                    // Try to open the repository again.
+                    try {
+                        DatabaseRepository(path, config)
+                    } catch (e: SQLException) {
+                        throw InvalidRepositoryException(
+                            "After restoring from a backup, the database still could not be read.",
+                            e
+                        )
+                    }
+                } else {
+                    // Don't attempt to restore from a database backup.
+                    throw InvalidRepositoryException(
+                        "The database could not be read. The most recent backup was made at $backupTime. Restoring from this backup will lose all versions created after it. Do you want to restore?",
+                        e
+                    )
+                }
+            }
+
+            logger.info("Opened repository $repository.")
 
             return repository
         }
@@ -566,8 +677,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             val version = UUID.fromString(Files.readString(versionPath))
             version in supportedVersions
         } catch (e: IOException) {
+            logger.warn("There is not a compatible repository at '$path'.", e)
             false
         } catch (e: IllegalArgumentException) {
+            logger.warn("There is not a compatible repository at '$path'.", e)
             false
         }
     }

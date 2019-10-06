@@ -40,6 +40,22 @@ data class InvalidRepositoryException(
 ) : IOException(message, cause)
 
 /**
+ * Options for opening a [Repository].
+ *
+ * All values in this enum represent optional operations which may not be supported by a [StorageProvider]
+ * implementation.
+ */
+enum class OpenOption {
+    /**
+     * Attempt to open the repository destructively.
+     *
+     * Without this option, a repository that cannot be opened without data loss will throw an exception. This option
+     * can be used to open repositories that otherwise cannot be opened because doing so would result in data loss
+     */
+    DESTRUCTIVE
+}
+
+/**
  * An interface for service providers that provide mechanisms for storing file version history.
  */
 interface StorageProvider {
@@ -61,19 +77,14 @@ interface StorageProvider {
     /**
      * Opens the repository at [path] and returns it.
      *
-     * The [force] parameter can be used to attempt to open a repository that otherwise cannot be opened, but it may do
-     * so destructively. If [force] is `false` and the repository cannot be opened without data loss, an exception will
-     * be thrown. If [force] is `true`, opening the repository may result in data loss. Opening a repository may still
-     * fail even if [force] is `true`.
-     *
      * @param [path] The path of the repository.
-     * @param [force] Whether to attempt to open the repository destructively.
+     * @param [options] The options which determine how the repository is opened.
      *
      * @throws [IncompatibleRepositoryException] There is no compatible repository at [path].
      * @throws [InvalidRepositoryException] The repository is compatible but cannot be read.
      * @throws [IOException] An I/O error occurred.
      */
-    fun openRepository(path: Path, force: Boolean = false): Repository
+    fun openRepository(path: Path, options: Set<OpenOption> = emptySet()): Repository
 
     /**
      * Creates a repository at [path] and returns it.
@@ -101,19 +112,14 @@ interface StorageProvider {
             ServiceLoader.load(StorageProvider::class.java).asSequence()
 
         /**
-         * Opens the repository at [path] with the first [StorageProvider] that it is compatible with.
+         * Returns the first [StorageProvider] which is compatible with the repository at [path].
          *
-         * @throws [IncompatibleRepositoryException] There is no installed provider that can open the repository.
-         * @throws [InvalidRepositoryException] The repository is compatible with an installed provider but cannot be
-         * read.
+         * @throws [IncompatibleRepositoryException] There is not installed provider compatible with the repository at
+         * [path].
          *
          * @see [StorageProvider.checkRepository]
-         * @see [StorageProvider.openRepository]
          */
-        fun openRepository(path: Path): Repository = listProviders()
-            .find { it.checkRepository(path) }
-            ?.openRepository(path)
-            ?: throw IncompatibleRepositoryException("No installed provider can open the repository at '$path'.")
-
+        fun findProvider(path: Path): StorageProvider = listProviders().find { it.checkRepository(path) }
+            ?: throw IncompatibleRepositoryException("There is no installed provider compatible with the repository at '$path'.")
     }
 }
