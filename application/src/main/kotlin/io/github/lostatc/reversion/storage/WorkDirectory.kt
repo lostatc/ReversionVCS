@@ -23,6 +23,8 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.IncompatibleRepositoryException
+import io.github.lostatc.reversion.api.InvalidRepositoryException
+import io.github.lostatc.reversion.api.OpenOption
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.StorageProvider
@@ -41,9 +43,9 @@ import java.util.UUID
 import kotlin.streams.toList
 
 /**
- * An exception that is thrown when a working directory is invalid.
+ * An exception indicating that a directory is not a working directory.
  */
-class InvalidWorkDirException(message: String) : Exception(message)
+class NotAWorkDirException(message: String) : Exception(message)
 
 /**
  * Filters out paths with are descendants of another path in the iterable.
@@ -387,30 +389,41 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         /**
          * Opens the working directory at [path] and returns it.
          *
+         * @param [path] The path of the working directory.
+         * @param [options] The options which determine how the repository is opened.
+         *
          * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
          * associated with this working directory.
-         * @throws [InvalidWorkDirException] The working directory has not been initialized.
+         * @throws [InvalidRepositoryException] There is an installed provider compatible with the repository associated
+         * with this working directory but the repository cannot be read.
+         * @throws [NotAWorkDirException] The working directory has not been initialized.
          */
-        fun open(path: Path): WorkDirectory = instanceCache.getOrPut(path) { openNew(path) }
+        fun open(path: Path, options: Set<OpenOption> = emptySet()): WorkDirectory =
+            instanceCache.getOrPut(path) { openNew(path, options) }
 
         /**
          * Opens the working directory associated with the file at the given [path].
          *
          * The working directory associated with [path] is the working directory that [path] is a descendant of.
          *
+         * @param [path] The path of the working directory.
+         * @param [options] The options which determine how the repository is opened.
+         *
          * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
          * associated with this working directory.
-         * @throws [InvalidWorkDirException] There is no working directory associated with the given [path].
+         * @throws [InvalidRepositoryException] There is an installed provider compatible with the repository associated
+         * with this working directory but the repository cannot be read.
+         * @throws [NotAWorkDirException] There is no working directory associated with the given [path].
          */
-        fun openFromDescendant(path: Path): WorkDirectory {
+        fun openFromDescendant(path: Path, options: Set<OpenOption> = emptySet()): WorkDirectory {
             var directory = path
 
             do {
                 directory = directory.parent
-                    ?: throw InvalidWorkDirException("There is no working directory associated with this path.")
+                    ?: throw NotAWorkDirException("There is no working directory associated with this path.")
             } while (!isWorkDirectory(directory))
 
-            return open(directory)
+            return open(directory, options)
         }
 
         /**
@@ -418,21 +431,24 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          *
          * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
          * associated with this working directory.
-         * @throws [InvalidWorkDirException] The working directory has not been initialized.
+         * @throws [InvalidRepositoryException] There is an installed provider compatible with the repository associated
+         * with this working directory but the repository cannot be read.
+         * @throws [NotAWorkDirException] The working directory has not been initialized.
          */
-        private fun openNew(path: Path): WorkDirectory {
+        private fun openNew(path: Path, options: Set<OpenOption> = emptySet()): WorkDirectory {
             val infoFile = path.resolve(relativeInfoPath)
             val repositoryPath = path.resolve(relativeRepoPath)
 
             if (!isWorkDirectory(path)) {
-                throw InvalidWorkDirException("This directory has not been initialized.")
+                throw NotAWorkDirException("This directory has not been initialized.")
             }
 
             val (timelineID) = Files.newBufferedReader(infoFile).use {
                 gson.fromJson(it, Info::class.java)
             }
 
-            val repository = StorageProvider.openRepository(repositoryPath)
+            val provider = StorageProvider.findProvider(repositoryPath)
+            val repository = provider.openRepository(repositoryPath, options)
             val timeline = repository.timelines[timelineID] ?: error(
                 "The timeline associated with this working directory is not in the repository."
             )
@@ -453,14 +469,14 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * @param [provider] The storage provider to create the repository with.
          * @param [config] The configuration for the repository.
          *
-         * @throws [InvalidWorkDirException] This directory has already been initialized.
+         * @throws [NotAWorkDirException] This directory has already been initialized.
          */
         fun init(path: Path, provider: StorageProvider, config: Config = provider.getConfig()): WorkDirectory {
             val hiddenDirectory = path.resolve(relativeHiddenPath)
             val infoFile = path.resolve(relativeInfoPath)
             val repositoryPath = path.resolve(relativeRepoPath)
 
-            if (Files.exists(hiddenDirectory)) throw InvalidWorkDirException(
+            if (Files.exists(hiddenDirectory)) throw NotAWorkDirException(
                 "This directory has already been initialized."
             )
             Files.createDirectories(hiddenDirectory)
