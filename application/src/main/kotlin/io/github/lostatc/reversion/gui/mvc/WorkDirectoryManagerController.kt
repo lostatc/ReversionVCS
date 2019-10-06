@@ -25,6 +25,8 @@ import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXTextField
 import com.jfoenix.controls.JFXToggleButton
 import io.github.lostatc.reversion.api.IntegrityReport
+import io.github.lostatc.reversion.api.InvalidRepositoryException
+import io.github.lostatc.reversion.api.OpenOption
 import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.approvalDialog
@@ -168,7 +170,24 @@ class WorkDirectoryManagerController {
             }
         }
 
-        model.loadWorkDirectories()
+        // Load working directories and handle errors by prompting the user.
+        model.loadWorkDirectories {
+            try {
+                WorkDirectoryModel.fromPath(it)
+            } catch (e: InvalidRepositoryException) {
+                val approved = approvalDialog("Unable to read repository", e.message).show(root)
+                if (approved) {
+                    try {
+                        WorkDirectoryModel.fromPath(it, setOf(OpenOption.DESTRUCTIVE))
+                    } catch (e: InvalidRepositoryException) {
+                        infoDialog("Backup restore failed", e.message).show(root)
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+        }
 
         // Make the working directory information pane initially invisible.
         workDirectoryTabPane.setContentsVisible(false)

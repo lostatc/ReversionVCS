@@ -89,11 +89,16 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
 
     /**
      * Loads the user's [workDirectories] asynchronously.
+     *
+     * @param [handler] A function which is passed the path of a working directory and returns a model representing it,
+     * or `null` if that model should be skipped.
      */
-    fun loadWorkDirectories() {
+    fun loadWorkDirectories(handler: suspend (Path) -> WorkDirectoryModel?) {
         launch {
             selected = null
-            _workDirectories.setAll(loadWorkPaths().map { WorkDirectoryModel.fromPath(it) })
+            for (path in loadWorkPaths()) {
+                launch { handler(path)?.let { _workDirectories.add(it) } }
+            }
         }
     }
 
