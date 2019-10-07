@@ -12,7 +12,7 @@
         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
     </padding>
     <FontIcon fx:id="fontIcon" styleClass="definition-icon"/>
-    <Label fx:id="nameLabel" styleClass="definition-name" text="Name"/>
+    <Label fx:id="nameLabel" text="Name"/>
     <Region HBox.hgrow="ALWAYS"/>
-    <Label fx:id="valueLabel" styleClass="definition-value" text="Value"/>
+    <Label fx:id="valueLabel" text="Value"/>
 </fx:root>

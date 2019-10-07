@@ -26,7 +26,6 @@ import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
-import javafx.scene.Group
 import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.AnchorPane.setBottomAnchor
 import javafx.scene.layout.AnchorPane.setLeftAnchor
@@ -86,7 +85,7 @@ class HelpPane : StackPane() {
     var position: AnchorPoint by positionProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/HelpPane.fxml")).apply {
+        FXMLLoader(this::class.java.getResource("/fxml/controls/HelpPane.fxml")).apply {
             classLoader = this@HelpPane::class.java.classLoader
             setRoot(this@HelpPane)
             setController(this@HelpPane)

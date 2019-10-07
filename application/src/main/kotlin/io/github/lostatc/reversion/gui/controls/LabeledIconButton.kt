@@ -106,7 +106,7 @@ class LabeledIconButton : JFXRippler() {
     var radius: Float by radiusProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/LabeledIconButton.fxml")).apply {
+        FXMLLoader(this::class.java.getResource("/fxml/controls/LabeledIconButton.fxml")).apply {
             classLoader = this@LabeledIconButton::class.java.classLoader
             setRoot(this@LabeledIconButton)
             setController(this@LabeledIconButton)

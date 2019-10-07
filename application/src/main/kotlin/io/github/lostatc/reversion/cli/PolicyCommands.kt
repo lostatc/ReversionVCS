@@ -103,7 +103,7 @@ class PolicyCreateCommand(val parent: PolicyCommand) : CliktCommand(
             if (versions == null) {
                 policyFactory.ofDuration(amount, unit)
             } else {
-                policyFactory.ofUnit(amount, unit, versions)
+                policyFactory.ofStaggered(amount.toInt(), unit)
             }
         } else {
             throw CliktError("The options '--unit' and '--amount' must be specified together.")

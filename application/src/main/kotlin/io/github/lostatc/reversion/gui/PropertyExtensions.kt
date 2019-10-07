@@ -19,11 +19,14 @@
 
 package io.github.lostatc.reversion.gui
 
+import javafx.beans.Observable
+import javafx.beans.binding.Bindings
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.property.ReadOnlyProperty
 import javafx.collections.ObservableList
 import javafx.collections.transformation.SortedList
+import java.util.concurrent.Callable
 import kotlin.reflect.KProperty
 
 operator fun <T> ReadOnlyProperty<T>.getValue(thisRef: Any?, property: KProperty<*>): T = value
@@ -59,3 +62,13 @@ fun <T : Comparable<T>> ObservableList<T>.toSorted(): SortedList<T> = SortedList
  */
 fun <T> ObservableList<T>.toSortedBy(selector: (T) -> Comparable<T>): SortedList<T> =
     SortedList(this, compareBy(selector))
+
+/**
+ * Create a binding on this property.
+ *
+ * @param [dependencies] This binding's dependencies.
+ * @param [transform] The function which yields the new value.
+ */
+fun <T> Property<T>.createBinding(vararg dependencies: Observable, transform: () -> T) {
+    bind(Bindings.createObjectBinding(Callable { transform() }, *dependencies))
+}

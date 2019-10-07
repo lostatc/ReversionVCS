@@ -17,30 +17,36 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.mvc
+package io.github.lostatc.reversion.gui.controllers
 
 import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTabPane
-import com.jfoenix.controls.JFXTextField
 import com.jfoenix.controls.JFXToggleButton
 import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.cli.format
+import io.github.lostatc.reversion.gui.MapCellFactory
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.approvalDialog
 import io.github.lostatc.reversion.gui.confirmationDialog
 import io.github.lostatc.reversion.gui.controls.Card
 import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ListItem
+import io.github.lostatc.reversion.gui.controls.PolicyForm
+import io.github.lostatc.reversion.gui.controls.StaggeredPolicyForm
+import io.github.lostatc.reversion.gui.controls.TimePolicyForm
+import io.github.lostatc.reversion.gui.controls.VersionPolicyForm
 import io.github.lostatc.reversion.gui.dateTimeDialog
 import io.github.lostatc.reversion.gui.infoDialog
-import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
+import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
+import io.github.lostatc.reversion.gui.models.WorkDirectoryManagerModel
 import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.toDisplayProperty
 import io.github.lostatc.reversion.gui.toSorted
 import io.github.lostatc.reversion.gui.ui
 import javafx.fxml.FXML
+import javafx.scene.Group
 import javafx.scene.control.Label
 import javafx.scene.control.TabPane
 import javafx.scene.layout.StackPane
@@ -49,7 +55,6 @@ import javafx.stage.FileChooser
 import org.apache.commons.io.FileUtils
 import java.time.Instant
 import java.time.format.FormatStyle
-import java.time.temporal.ChronoUnit
 
 /**
  * Set the visibility of the contents of the tab pane.
@@ -59,6 +64,15 @@ private fun TabPane.setContentsVisible(visible: Boolean) {
         tab.content.isVisible = visible
     }
 }
+
+/**
+ * The combo box options for selecting a type of cleanup policy.
+ */
+private val policyTypes: Map<PolicyForm, String> = linkedMapOf(
+    VersionPolicyForm() to "Keep a specific number of backups",
+    TimePolicyForm() to "Delete backups which are older than",
+    StaggeredPolicyForm() to "Keep staggered backups"
+)
 
 
 /**
@@ -73,24 +87,6 @@ class WorkDirectoryManagerController {
     private lateinit var root: StackPane
 
     /**
-     * The text field where the user inputs the number of versions to keep for a new cleanup policy.
-     */
-    @FXML
-    private lateinit var versionsTextField: JFXTextField
-
-    /**
-     * The text field where the user inputs the amount of time to keep files for for a new cleanup policy.
-     */
-    @FXML
-    private lateinit var timeField: JFXTextField
-
-    /**
-     * The text field where the user inputs the unit of time to use for for a new cleanup policy.
-     */
-    @FXML
-    private lateinit var unitComboBox: JFXComboBox<String>
-
-    /**
      * The list view that displays the user's working directories.
      */
     @FXML
@@ -101,6 +97,18 @@ class WorkDirectoryManagerController {
      */
     @FXML
     private lateinit var cleanupPolicyList: JFXListView<Label>
+
+    /**
+     * The combo box used for selecting a cleanup policy input form.
+     */
+    @FXML
+    private lateinit var policyTypeComboBox: JFXComboBox<PolicyForm>
+
+    /**
+     * A container which holds the selected cleanup policy input form.
+     */
+    @FXML
+    private lateinit var policyFormContainer: Group
 
     /**
      * The list view that displays the files being ignored.
@@ -150,11 +158,26 @@ class WorkDirectoryManagerController {
     @FXML
     private lateinit var trackChangesToggle: JFXToggleButton
 
-    private val model: WorkDirectoryManagerModel = WorkDirectoryManagerModel()
+    /**
+     * The model which contains state for this controller.
+     */
+    private val model: WorkDirectoryManagerModel =
+        WorkDirectoryManagerModel()
 
     @FXML
     fun initialize() {
-        unitComboBox.items.setAll("", "Seconds", "Minutes", "Hours", "Days", "Weeks", "Months")
+        // Control how the cleanup policy types are displayed in the combo box.
+        policyTypeComboBox.cellFactory = MapCellFactory(policyTypes)
+        policyTypeComboBox.buttonCell = MapCellFactory(policyTypes).call(null)
+
+        // Bind the contents of a node so that it contains the selected cleanup policy form.
+        policyTypeComboBox.selectionModel.selectedItemProperty().addListener { _, _, newValue ->
+            policyFormContainer.children.setAll(newValue.node)
+        }
+
+        // Set the items in the combo box for selecting a type of cleanup policy.
+        policyTypeComboBox.items.setAll(policyTypes.keys)
+        policyTypeComboBox.selectionModel.select(0)
 
         // Bind the selected working directory in the model to the selected working directory in the view.
         workDirectoryList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
@@ -223,34 +246,20 @@ class WorkDirectoryManagerController {
     fun addWorkDirectory() {
         val directory = DirectoryChooser().run {
             title = "Select directory"
-            showDialog(versionsTextField.scene.window)?.toPath() ?: return
+            showDialog(root.scene.window)?.toPath() ?: return
         }
         model.addWorkDirectory(directory)
     }
 
     /**
-     * Add a new cleanup policy for the selected working directory with the values provided in the fields.
+     * Add a new cleanup policy for the selected working directory with the values provided in the cleanup policy form.
      */
     @FXML
     fun addCleanupPolicy() {
-        model.selected?.addCleanupPolicy(
-            versionsTextField.text?.toIntOrNull(),
-            timeField.text?.toLongOrNull(),
-            when (unitComboBox.selectionModel.selectedItem) {
-                "Seconds" -> ChronoUnit.SECONDS
-                "Minutes" -> ChronoUnit.MINUTES
-                "Hours" -> ChronoUnit.HOURS
-                "Days" -> ChronoUnit.DAYS
-                "Weeks" -> ChronoUnit.WEEKS
-                "Months" -> ChronoUnit.MONTHS
-                else -> null
-            }
-        )
-
-        // Clear the input.
-        versionsTextField.text = ""
-        timeField.text = ""
-        unitComboBox.selectionModel.select(null)
+        val policyForm = policyTypeComboBox.selectionModel.selectedItem
+        val policy = policyForm.result ?: return
+        model.selected?.cleanupPolicies?.add(policy) ?: return
+        policyForm.clear()
     }
 
     /**

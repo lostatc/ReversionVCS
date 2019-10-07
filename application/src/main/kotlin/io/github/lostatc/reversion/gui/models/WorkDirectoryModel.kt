@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.mvc
+package io.github.lostatc.reversion.gui.models
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
@@ -30,8 +30,7 @@ import io.github.lostatc.reversion.daemon.removeWatch
 import io.github.lostatc.reversion.gui.ActorEvent
 import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.getValue
-import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
-import io.github.lostatc.reversion.gui.sendNotification
+import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.gui.wrap
@@ -49,18 +48,17 @@ import java.nio.file.Path
 import java.rmi.registry.LocateRegistry
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalUnit
 
 /**
  * The default cleanup policies to use for new working directories.
  */
 private val Repository.defaultPolicies: Set<CleanupPolicy>
     get() = setOf(
-        policyFactory.ofUnit(1, ChronoUnit.SECONDS, 1),
-        policyFactory.ofUnit(60, ChronoUnit.MINUTES, 1),
-        policyFactory.ofUnit(24, ChronoUnit.HOURS, 1),
-        policyFactory.ofUnit(30, ChronoUnit.DAYS, 1),
-        policyFactory.ofUnit(52, ChronoUnit.WEEKS, 1)
+        policyFactory.ofStaggered(1, ChronoUnit.SECONDS),
+        policyFactory.ofStaggered(60, ChronoUnit.MINUTES),
+        policyFactory.ofStaggered(24, ChronoUnit.HOURS),
+        policyFactory.ofStaggered(30, ChronoUnit.DAYS),
+        policyFactory.ofStaggered(52, ChronoUnit.WEEKS)
     )
 
 /**
@@ -78,7 +76,9 @@ data class WorkDirectoryState(val workDirectory: WorkDirectory)
 data class WorkDirectoryModel(
     private val workDirectory: WorkDirectory
 ) : CoroutineScope by MainScope(),
-    StateWrapper<TaskType, WorkDirectoryState> by storageActor.wrap(WorkDirectoryState(workDirectory)) {
+    StateWrapper<TaskType, WorkDirectoryState> by storageActor.wrap(
+        WorkDirectoryState(workDirectory)
+    ) {
 
     /**
      * The [CleanupPolicy] objects associated with this [WorkDirectory].
@@ -213,32 +213,6 @@ data class WorkDirectoryModel(
             workDirectory.repository.totalSize - workDirectory.repository.storedSize
         } ui { storageSaved = it }
         executeAsync(TaskType.HANDLER) { workDirectory.listFiles().size } ui { trackedFiles = it }
-    }
-
-    /**
-     * Adds a [CleanupPolicy] to this working directory.
-     */
-    fun addCleanupPolicy(versions: Int?, amount: Long?, unit: TemporalUnit?) {
-        val policyFactory = workDirectory.repository.policyFactory
-
-        val policy = if (unit == null && amount == null) {
-            if (versions == null) {
-                return
-            } else {
-                policyFactory.ofVersions(versions)
-            }
-        } else if (unit != null && amount != null) {
-            if (versions == null) {
-                policyFactory.ofDuration(amount, unit)
-            } else {
-                policyFactory.ofUnit(amount, unit, versions)
-            }
-        } else {
-            sendNotification("The amount of time and unit of time must be specified together.")
-            return
-        }
-
-        cleanupPolicies.add(policy)
     }
 
     /**

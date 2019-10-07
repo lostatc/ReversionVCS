@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.mvc
+package io.github.lostatc.reversion.gui.models
 
 import io.github.lostatc.reversion.gui.ActorEventHandler
 import io.github.lostatc.reversion.gui.TaskActor

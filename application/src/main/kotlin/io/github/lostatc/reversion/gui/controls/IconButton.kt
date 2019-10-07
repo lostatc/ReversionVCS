@@ -30,7 +30,6 @@ import javafx.fxml.FXMLLoader
 import javafx.scene.control.Tooltip
 import javafx.scene.input.MouseEvent
 import javafx.scene.shape.Circle
-import javafx.scene.shape.Shape
 import org.kordamp.ikonli.javafx.FontIcon
 
 /**
@@ -97,7 +96,7 @@ class IconButton : JFXRippler() {
     var radius: Float by radiusProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/IconButton.fxml")).apply {
+        FXMLLoader(this::class.java.getResource("/fxml/controls/IconButton.fxml")).apply {
             classLoader = this@IconButton::class.java.classLoader
             setRoot(this@IconButton)
             setController(this@IconButton)

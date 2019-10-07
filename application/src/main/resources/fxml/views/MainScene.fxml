@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.*?>
 <StackPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
            minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/11.0.1"
-           fx:controller="io.github.lostatc.reversion.gui.mvc.MainSceneController">
+           fx:controller="io.github.lostatc.reversion.gui.controllers.MainSceneController">
     <AnchorPane>
         <JFXTabPane layoutX="10.0" layoutY="10.0" styleClass="navigation-tab-bar" tabClosingPolicy="UNAVAILABLE"
                     AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"

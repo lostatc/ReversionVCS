@@ -101,7 +101,7 @@ class Definition : HBox() {
     var tooltip: Tooltip? by tooltipProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/Definition.fxml")).apply {
+        FXMLLoader(this::class.java.getResource("/fxml/controls/Definition.fxml")).apply {
             classLoader = this@Definition::class.java.classLoader
             setRoot(this@Definition)
             setController(this@Definition)

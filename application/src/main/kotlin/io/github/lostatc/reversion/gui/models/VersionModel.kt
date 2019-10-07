@@ -17,12 +17,12 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.mvc
+package io.github.lostatc.reversion.gui.models
 
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.getValue
-import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
+import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.toMappedProperty
 import io.github.lostatc.reversion.gui.wrap
@@ -132,7 +132,7 @@ data class VersionModel(
      * Suspend and wait for changes applied with [execute] or [executeAsync] to commit.
      */
     suspend fun flush() {
-        StorageModel.storageActor.flush()
+        storageActor.flush()
     }
 
     /**

@@ -60,7 +60,7 @@ class Card : VBox() {
     var subtitle: String by subtitleProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/Card.fxml")).apply {
+        FXMLLoader(this::class.java.getResource("/fxml/controls/Card.fxml")).apply {
             classLoader = this@Card::class.java.classLoader
             setRoot(this@Card)
             setController(this@Card)
