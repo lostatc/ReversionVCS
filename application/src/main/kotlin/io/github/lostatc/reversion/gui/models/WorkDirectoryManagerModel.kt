@@ -17,11 +17,12 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.mvc
+package io.github.lostatc.reversion.gui.models
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.DATA_DIR
+import io.github.lostatc.reversion.gui.controllers.WorkDirectoryManagerController
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
@@ -93,7 +94,11 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     fun loadWorkDirectories() {
         launch {
             selected = null
-            _workDirectories.setAll(loadWorkPaths().map { WorkDirectoryModel.fromPath(it) })
+            _workDirectories.setAll(loadWorkPaths().map {
+                WorkDirectoryModel.fromPath(
+                    it
+                )
+            })
         }
     }
 

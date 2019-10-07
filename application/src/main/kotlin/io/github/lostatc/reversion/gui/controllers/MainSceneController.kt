@@ -17,11 +17,11 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.mvc
+package io.github.lostatc.reversion.gui.controllers
 
 import com.jfoenix.controls.JFXSpinner
 import io.github.lostatc.reversion.gui.ActorEvent
-import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
+import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import javafx.fxml.FXML
 import javafx.scene.layout.Pane
 

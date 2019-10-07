@@ -52,7 +52,7 @@ abstract class Notification : HBox() {
     var message: String by messageProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/Notification.fxml")).apply {
+        FXMLLoader(this::class.java.getResource("/fxml/controls/Notification.fxml")).apply {
             classLoader = this@Notification::class.java.classLoader
             setRoot(this@Notification)
             setController(this@Notification)

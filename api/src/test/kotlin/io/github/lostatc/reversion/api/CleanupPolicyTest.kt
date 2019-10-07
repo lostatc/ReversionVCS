@@ -27,12 +27,12 @@ class CleanupPolicyTest {
 
     @Test
     fun `time-based units don't throw`() {
-        policyFactory.ofUnit(24, ChronoUnit.HOURS, 12)
+        policyFactory.ofStaggered(24, ChronoUnit.HOURS)
     }
 
     @Test
     fun `date-based units don't throw`() {
-        policyFactory.ofUnit(12, ChronoUnit.MONTHS, 6)
+        policyFactory.ofStaggered(12, ChronoUnit.MONTHS)
     }
 
     @Test

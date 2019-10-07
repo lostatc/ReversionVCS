@@ -8,7 +8,7 @@
 <StackPane xmlns:fx="http://javafx.com/fxml/1" fx:id="root" minHeight="-Infinity" minWidth="-Infinity"
            prefHeight="400.0"
            prefWidth="640.0" styleClass="background" xmlns="http://javafx.com/javafx/11.0.1"
-           fx:controller="io.github.lostatc.reversion.gui.mvc.VersionManagerController">
+           fx:controller="io.github.lostatc.reversion.gui.controllers.VersionManagerController">
     <VBox>
         <JFXToolbar>
             <top>

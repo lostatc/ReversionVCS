@@ -38,7 +38,7 @@ interface RepositoryTest {
     @Test
     fun `create timeline`() {
         val policies = setOf(
-            repository.policyFactory.ofUnit(1, ChronoUnit.WEEKS, 7),
+            repository.policyFactory.ofStaggered(1, ChronoUnit.WEEKS),
             repository.policyFactory.ofVersions(100),
             repository.policyFactory.ofDuration(30, ChronoUnit.DAYS)
         )

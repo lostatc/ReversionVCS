@@ -22,8 +22,8 @@ package io.github.lostatc.reversion.gui
 import com.jfoenix.assets.JFoenixResources
 import com.jfoenix.controls.JFXSnackbar
 import io.github.lostatc.reversion.daemon.watchService
+import io.github.lostatc.reversion.gui.controllers.MainSceneController
 import io.github.lostatc.reversion.gui.controls.sendNotification
-import io.github.lostatc.reversion.gui.mvc.MainSceneController
 import javafx.application.Application
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
@@ -60,7 +60,7 @@ class Reversion : Application() {
         // Start the daemon if it's not already running.
         watchService.install()
 
-        val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/MainScene.fxml"))
+        val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/views/MainScene.fxml"))
         val rootNode = rootLoader.load<Pane>()
         val rootControl = rootLoader.getController<MainSceneController>()
         notificationBar.registerSnackbarContainer(rootNode)

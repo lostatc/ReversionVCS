@@ -17,13 +17,14 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.mvc
+package io.github.lostatc.reversion.gui.models
 
 import io.github.lostatc.reversion.api.delete
 import io.github.lostatc.reversion.api.deleteIfEmpty
 import io.github.lostatc.reversion.gui.MutableStateWrapper
+import io.github.lostatc.reversion.gui.controllers.VersionManagerController
 import io.github.lostatc.reversion.gui.getValue
-import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
+import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui

@@ -48,10 +48,32 @@ data class CleanupPolicy(
  */
 interface CleanupPolicyFactory {
     /**
-     * The lower-case name of the unit.
+     * The plural name of the unit.
      */
-    private val TemporalUnit.name: String
-        get() = toString().toLowerCase()
+    private val TemporalUnit.pluralName: String
+        get() = when (this) {
+            ChronoUnit.SECONDS -> "seconds"
+            ChronoUnit.MINUTES -> "minutes"
+            ChronoUnit.HOURS -> "hours"
+            ChronoUnit.DAYS -> "days"
+            ChronoUnit.WEEKS -> "weeks"
+            ChronoUnit.MONTHS -> "months"
+            else -> toString().toLowerCase()
+        }
+
+    /**
+     * The singular name of the unit.
+     */
+    private val TemporalUnit.singularName: String
+        get() = when (this) {
+            ChronoUnit.SECONDS -> "second"
+            ChronoUnit.MINUTES -> "minute"
+            ChronoUnit.HOURS -> "hour"
+            ChronoUnit.DAYS -> "day"
+            ChronoUnit.WEEKS -> "week"
+            ChronoUnit.MONTHS -> "month"
+            else -> toString().toLowerCase()
+        }
 
     /**
      * Creates a [CleanupPolicy].
@@ -64,20 +86,19 @@ interface CleanupPolicyFactory {
     fun of(minInterval: Duration, timeFrame: Duration, maxVersions: Int, description: String): CleanupPolicy
 
     /**
-     * Creates a [CleanupPolicy] based on a unit of time.
+     * Creates a [CleanupPolicy] that keeps staggered versions.
      *
      * The [minInterval][CleanupPolicy.minInterval] and [timeFrame][CleanupPolicy.timeFrame] of the created
      * [CleanupPolicy] may be based on estimated durations.
      *
-     * @param [amount] The maximum amount of time to keep files for in terms of [unit].
-     * @param [unit] The interval of time.
-     * @param [versions] The maximum number of versions to keep for each interval.
+     * @param [versions] The maximum number of versions to keep.
+     * @param [unit] The amount of time between versions.
      */
-    fun ofUnit(amount: Long, unit: TemporalUnit, versions: Int): CleanupPolicy = of(
+    fun ofStaggered(versions: Int, unit: TemporalUnit): CleanupPolicy = of(
         minInterval = unit.duration,
-        timeFrame = unit.duration.multipliedBy(amount),
-        maxVersions = versions,
-        description = "For the first $amount ${unit.name}, keep $versions versions every 1 ${unit.name}."
+        timeFrame = unit.duration.multipliedBy(versions.toLong()),
+        maxVersions = 1,
+        description = "For the last $versions ${unit.pluralName}, keep only the last version from each ${unit.singularName}."
     )
 
     /**
@@ -103,7 +124,7 @@ interface CleanupPolicyFactory {
         minInterval = unit.duration.multipliedBy(amount),
         timeFrame = unit.duration.multipliedBy(amount),
         maxVersions = Int.MAX_VALUE,
-        description = "Keep each version for $amount ${unit.name}."
+        description = "Keep each version for $amount ${unit.pluralName}."
     )
 
     /**

@@ -57,7 +57,7 @@ class DateTimePicker : HBox() {
     var instant: Instant? by instantProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/DateTimePicker.fxml")).apply {
+        FXMLLoader(this::class.java.getResource("/fxml/controls/DateTimePicker.fxml")).apply {
             classLoader = this@DateTimePicker::class.java.classLoader
             setRoot(this@DateTimePicker)
             setController(this@DateTimePicker)
