@@ -49,10 +49,20 @@ enum class OpenOption {
     /**
      * Attempt to open the repository destructively.
      *
-     * Without this option, a repository that cannot be opened without data loss will throw an exception. This option
-     * can be used to open repositories that otherwise cannot be opened because doing so would result in data loss
+     * Without this option, a repository that cannot be opened without data loss will throw an
+     * [InvalidRepositoryException]. This option can be used to open repositories that otherwise cannot be opened
+     * because doing so would result in data loss
      */
-    DESTRUCTIVE
+    DESTRUCTIVE,
+
+    /**
+     * Attempt to convert the repository to a new format.
+     *
+     * Without this option, a repository that cannot be opened because the repository format is no longer supported will
+     * throw an [IncompatibleRepositoryException]. This option can be used to convert repositories to a newer format
+     * which can be opened.
+     */
+    CONVERT
 }
 
 /**
