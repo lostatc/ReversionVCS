@@ -24,12 +24,10 @@ import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.api.Blob
 import io.github.lostatc.reversion.api.Checksum
 import io.github.lostatc.reversion.api.CleanupPolicy
-import io.github.lostatc.reversion.api.CleanupPolicyFactory
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
 import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.api.delete
@@ -63,7 +61,6 @@ import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.sql.Connection
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.streams.asSequence
 
@@ -134,8 +131,6 @@ private data class IncrementalIntegrityReport(
  * An implementation of [Repository] which is backed by a relational database.
  */
 data class DatabaseRepository(override val path: Path, override val config: Config) : Repository {
-
-    override val policyFactory: CleanupPolicyFactory = TruncatingCleanupPolicyFactory(ChronoUnit.MILLIS)
 
     override val timelines: Map<UUID, DatabaseTimeline> = object : AbstractMap<UUID, DatabaseTimeline>() {
         override val entries: Set<Map.Entry<UUID, DatabaseTimeline>>

@@ -26,6 +26,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
+import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.storage.WorkDirectory
 import java.nio.file.Path
 import java.time.temporal.ChronoUnit
@@ -86,7 +87,6 @@ class PolicyCreateCommand(val parent: PolicyCommand) : CliktCommand(
 
     override fun run() {
         val workDirectory = WorkDirectory.open(parent.workPath)
-        val policyFactory = workDirectory.repository.policyFactory
 
         // Allow for smart casts.
         val unit = unit
@@ -95,15 +95,15 @@ class PolicyCreateCommand(val parent: PolicyCommand) : CliktCommand(
 
         val policy = if (unit == null && amount == null) {
             if (versions == null) {
-                policyFactory.forever()
+                CleanupPolicy.forever()
             } else {
-                policyFactory.ofVersions(versions)
+                CleanupPolicy.ofVersions(versions)
             }
         } else if (unit != null && amount != null) {
             if (versions == null) {
-                policyFactory.ofDuration(amount, unit)
+                CleanupPolicy.ofDuration(amount, unit)
             } else {
-                policyFactory.ofStaggered(amount.toInt(), unit)
+                CleanupPolicy.ofStaggered(amount.toInt(), unit)
             }
         } else {
             throw CliktError("The options '--unit' and '--amount' must be specified together.")
