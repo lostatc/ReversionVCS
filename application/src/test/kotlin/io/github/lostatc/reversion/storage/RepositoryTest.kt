@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Repository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -38,9 +39,9 @@ interface RepositoryTest {
     @Test
     fun `create timeline`() {
         val policies = setOf(
-            repository.policyFactory.ofStaggered(1, ChronoUnit.WEEKS),
-            repository.policyFactory.ofVersions(100),
-            repository.policyFactory.ofDuration(30, ChronoUnit.DAYS)
+            CleanupPolicy.ofStaggered(1, ChronoUnit.WEEKS),
+            CleanupPolicy.ofVersions(100),
+            CleanupPolicy.ofDuration(30, ChronoUnit.DAYS)
         )
         val timeline = repository.createTimeline(policies)
 

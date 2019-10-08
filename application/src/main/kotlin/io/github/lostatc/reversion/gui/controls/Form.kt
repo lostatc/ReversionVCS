@@ -22,8 +22,6 @@ package io.github.lostatc.reversion.gui.controls
 import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.api.CleanupPolicy
-import io.github.lostatc.reversion.api.CleanupPolicyFactory
-import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
 import io.github.lostatc.reversion.gui.createBinding
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyProperty
@@ -46,9 +44,6 @@ private val timeUnits: Map<String, TemporalUnit> = linkedMapOf(
     "Weeks" to ChronoUnit.WEEKS,
     "Months" to ChronoUnit.MONTHS
 )
-
-// TODO: This is a stopgap measure until [CleanupPolicyFactory] is removed.
-private val policyFactory: CleanupPolicyFactory = TruncatingCleanupPolicyFactory(ChronoUnit.MILLIS)
 
 /**
  * An form for user input that encapsulates multiple controls.
@@ -107,7 +102,7 @@ class VersionPolicyForm : PolicyForm, HBox() {
     fun initialize() {
         _resultProperty.createBinding(versionsField.textProperty()) {
             val versions = versionsField.text.toIntOrNull() ?: return@createBinding null
-            policyFactory.ofVersions(versions)
+            CleanupPolicy.ofVersions(versions)
         }
     }
 
@@ -151,7 +146,7 @@ class TimePolicyForm : PolicyForm, HBox() {
         ) {
             val amount = timeField.text.toLongOrNull() ?: return@createBinding null
             val unit = timeUnits[timeComboBox.selectionModel.selectedItem] ?: return@createBinding null
-            policyFactory.ofDuration(amount, unit)
+            CleanupPolicy.ofDuration(amount, unit)
         }
     }
 
@@ -196,7 +191,7 @@ class StaggeredPolicyForm : PolicyForm, HBox() {
         ) {
             val versions = versionsField.text.toIntOrNull() ?: return@createBinding null
             val unit = timeUnits[timeComboBox.selectionModel.selectedItem] ?: return@createBinding null
-            policyFactory.ofStaggered(versions, unit)
+            CleanupPolicy.ofStaggered(versions, unit)
         }
     }
 

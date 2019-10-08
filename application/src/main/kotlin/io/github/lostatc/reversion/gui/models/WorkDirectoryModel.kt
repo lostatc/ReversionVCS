@@ -21,7 +21,6 @@ package io.github.lostatc.reversion.gui.models
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
-import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.daemon.STUB_NAME
 import io.github.lostatc.reversion.daemon.WatchDaemon
 import io.github.lostatc.reversion.daemon.addWatch
@@ -52,14 +51,13 @@ import java.time.temporal.ChronoUnit
 /**
  * The default cleanup policies to use for new working directories.
  */
-private val Repository.defaultPolicies: Set<CleanupPolicy>
-    get() = setOf(
-        policyFactory.ofStaggered(1, ChronoUnit.SECONDS),
-        policyFactory.ofStaggered(60, ChronoUnit.MINUTES),
-        policyFactory.ofStaggered(24, ChronoUnit.HOURS),
-        policyFactory.ofStaggered(30, ChronoUnit.DAYS),
-        policyFactory.ofStaggered(52, ChronoUnit.WEEKS)
-    )
+private val defaultPolicies: Set<CleanupPolicy> = setOf(
+    CleanupPolicy.ofStaggered(1, ChronoUnit.SECONDS),
+    CleanupPolicy.ofStaggered(60, ChronoUnit.MINUTES),
+    CleanupPolicy.ofStaggered(24, ChronoUnit.HOURS),
+    CleanupPolicy.ofStaggered(30, ChronoUnit.DAYS),
+    CleanupPolicy.ofStaggered(52, ChronoUnit.WEEKS)
+)
 
 /**
  * Mutable state associated with a working directory.
@@ -239,7 +237,7 @@ data class WorkDirectoryModel(
                 WorkDirectory.open(path)
             } else {
                 WorkDirectory.init(path, DEFAULT_PROVIDER).apply {
-                    timeline.cleanupPolicies = repository.defaultPolicies
+                    timeline.cleanupPolicies = defaultPolicies
                 }
             }
 
