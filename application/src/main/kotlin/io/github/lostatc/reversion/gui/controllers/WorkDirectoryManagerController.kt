@@ -36,6 +36,7 @@ import io.github.lostatc.reversion.gui.controls.PolicyForm
 import io.github.lostatc.reversion.gui.controls.StaggeredPolicyForm
 import io.github.lostatc.reversion.gui.controls.TimePolicyForm
 import io.github.lostatc.reversion.gui.controls.VersionPolicyForm
+import io.github.lostatc.reversion.gui.createBinding
 import io.github.lostatc.reversion.gui.dateTimeDialog
 import io.github.lostatc.reversion.gui.infoDialog
 import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
@@ -69,9 +70,9 @@ private fun TabPane.setContentsVisible(visible: Boolean) {
  * The combo box options for selecting a type of cleanup policy.
  */
 private val policyTypes: Map<PolicyForm, String> = linkedMapOf(
-    VersionPolicyForm() to "Keep a specific number of backups",
-    TimePolicyForm() to "Delete backups which are older than",
-    StaggeredPolicyForm() to "Keep staggered backups"
+    VersionPolicyForm() to "Keep a specific number of versions",
+    TimePolicyForm() to "Delete versions which are older than",
+    StaggeredPolicyForm() to "Keep staggered versions"
 )
 
 
@@ -109,6 +110,12 @@ class WorkDirectoryManagerController {
      */
     @FXML
     private lateinit var policyFormContainer: Group
+
+    /**
+     * A label which shows a preview of the policy to be created.
+     */
+    @FXML
+    private lateinit var policyPreviewLabel: Label
 
     /**
      * The list view that displays the files being ignored.
@@ -173,6 +180,9 @@ class WorkDirectoryManagerController {
         // Bind the contents of a node so that it contains the selected cleanup policy form.
         policyTypeComboBox.selectionModel.selectedItemProperty().addListener { _, _, newValue ->
             policyFormContainer.children.setAll(newValue.node)
+            policyPreviewLabel.textProperty().createBinding(newValue.resultProperty) {
+                newValue.result?.description ?: ""
+            }
         }
 
         // Set the items in the combo box for selecting a type of cleanup policy.

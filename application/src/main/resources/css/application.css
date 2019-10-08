@@ -324,3 +324,9 @@
 .help-pane .help-button .button-icon {
     -fx-icon-size: 20px;
 }
+
+/* Text which displays a preview of information to be entered. */
+.preview-text {
+    -fx-text-fill: -grey-600;
+    -fx-font-style: italic;
+}

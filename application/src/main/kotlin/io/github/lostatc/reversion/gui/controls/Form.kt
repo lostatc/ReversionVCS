@@ -145,7 +145,10 @@ class TimePolicyForm : PolicyForm, HBox() {
     fun initialize() {
         timeComboBox.items.setAll(timeUnits.keys)
 
-        _resultProperty.createBinding(timeField.textProperty(), timeComboBox.selectionModelProperty()) {
+        _resultProperty.createBinding(
+            timeField.textProperty(),
+            timeComboBox.selectionModel.selectedItemProperty()
+        ) {
             val amount = timeField.text.toLongOrNull() ?: return@createBinding null
             val unit = timeUnits[timeComboBox.selectionModel.selectedItem] ?: return@createBinding null
             policyFactory.ofDuration(amount, unit)
@@ -187,7 +190,10 @@ class StaggeredPolicyForm : PolicyForm, HBox() {
     fun initialize() {
         timeComboBox.items.setAll(timeUnits.keys)
 
-        _resultProperty.createBinding(versionsField.textProperty(), timeComboBox.selectionModelProperty()) {
+        _resultProperty.createBinding(
+            versionsField.textProperty(),
+            timeComboBox.selectionModel.selectedItemProperty()
+        ) {
             val versions = versionsField.text.toIntOrNull() ?: return@createBinding null
             val unit = timeUnits[timeComboBox.selectionModel.selectedItem] ?: return@createBinding null
             policyFactory.ofStaggered(versions, unit)

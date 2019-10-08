@@ -69,7 +69,7 @@ class Reversion : Application() {
             title = "Reversion"
             scene = Scene(rootNode).apply {
                 stylesheets.addAll(
-                    JFoenixResources.load("css/jfoenix-fonts.css").toExternalForm(),
+                    this::class.java.getResource("/css/fonts.css").toExternalForm(),
                     JFoenixResources.load("css/jfoenix-design.css").toExternalForm(),
                     this::class.java.getResource("/css/application.css").toExternalForm()
                 )
