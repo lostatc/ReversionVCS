@@ -194,7 +194,7 @@ fun Blob.readString(): String = openChannel().use {
 /**
  * Creates a [Blob] containing the given [text].
  */
-fun Blob.Companion.fromString(text: String): Blob = fromBytes(ByteBuffer.wrap(text.toByteArray()), "SHA-256")
+fun Blob.Companion.fromString(text: String): Blob = fromBytes(ByteBuffer.wrap(text.toByteArray()))
 
 /**
  * A builder for creating a file tree for testing.

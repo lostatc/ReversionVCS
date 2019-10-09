@@ -149,11 +149,11 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
                 lastModifiedTime = Files.getLastModifiedTime(absolutePath)
                 permissions = PermissionSet.fromPath(absolutePath)
                 size = Files.size(absolutePath)
-                checksum = Checksum.fromFile(absolutePath, repository.hashAlgorithm)
+                checksum = Checksum.fromFile(absolutePath)
             }
 
             // Create a list of blobs from the file.
-            val blobs = Blob.chunkFile(absolutePath, repository.hashAlgorithm, repository.blockSize)
+            val blobs = Blob.chunkFile(absolutePath, repository.blockSize)
 
             // Add the blobs to the file system. Because this is wrapped in a transaction, records in the database won't be
             // updated until all the blobs have been added. This is to prevent corruption in case the operation is

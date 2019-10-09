@@ -34,7 +34,7 @@ class BlobTest {
     fun `create blob from file`() {
         val filePath = tempPath.resolve("file")
         Files.writeString(filePath, "abc")
-        val blob = Blob.fromFile(filePath, "SHA-256")
+        val blob = Blob.fromFile(filePath)
 
         assertEquals("abc", blob.readString())
 
@@ -48,7 +48,7 @@ class BlobTest {
     fun `create blobs from file`() {
         val filePath = tempPath.resolve("file")
         Files.writeString(filePath, "abcdefg")
-        val blobs = Blob.chunkFile(filePath, "SHA-256", 2)
+        val blobs = Blob.chunkFile(filePath, 2)
 
         val expectedStrings = listOf("ab", "cd", "ef", "g")
 
@@ -72,7 +72,7 @@ class BlobTest {
             Blob.fromString("ef"),
             Blob.fromString("g")
         )
-        val combinedBlob = Blob.fromBlobs(blobs, "SHA-256")
+        val combinedBlob = Blob.fromBlobs(blobs)
 
         assertEquals(
             Checksum.fromHex("7d1a54127b222502f5b79b5fb0803061152a44f92b37e23c6527baf665d4da9a"),

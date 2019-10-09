@@ -43,7 +43,6 @@ import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
-import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.FileUtils
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
@@ -198,11 +197,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     val db: Database = DatabaseFactory.connect(databasePath)
 
     /**
-     * The hash algorithm used by this repository.
-     */
-    val hashAlgorithm: String by hashAlgorithmProperty
-
-    /**
      * The block size used by this repository.
      */
     val blockSize: Long by blockSizeProperty
@@ -258,7 +252,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      */
     private fun findBlob(file: Path, checksum: Checksum): Blob? {
         val blobs = try {
-            Blob.chunkFile(file, hashAlgorithm)
+            Blob.chunkFile(file)
         } catch (e: IOException) {
             return null
         }
@@ -376,7 +370,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     fun getBlob(checksum: Checksum): Blob? {
         val blobPath = getBlobPath(checksum)
         if (Files.notExists(blobPath)) return null
-        return Blob.fromFile(blobPath, hashAlgorithm)
+        return Blob.fromFile(blobPath)
     }
 
     /**
@@ -445,17 +439,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         private val relativeConfigPath: Path = Paths.get("config.json")
 
         /**
-         * The property which stores the hash algorithm.
-         */
-        val hashAlgorithmProperty: ConfigProperty<String> = ConfigProperty.of(
-            key = "hashFunc",
-            name = "Hash algorithm",
-            default = "SHA-256",
-            description = "The name of the algorithm used to calculate checksums.",
-            validator = { require(DigestUtils.isAvailable(it)) { "The given algorithm is not supported." } }
-        )
-
-        /**
          * The property which stores the block size.
          */
         val blockSizeProperty: ConfigProperty<Long> = ConfigProperty.of(
@@ -475,7 +458,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             .registerTypeAdapter(Config::class.java, ConfigDeserializer(getConfig().properties))
             .create()
 
-        fun getConfig(): Config = Config(hashAlgorithmProperty, blockSizeProperty)
+        fun getConfig(): Config = Config(blockSizeProperty)
 
         /**
          * Opens the repository at [path] and returns it.

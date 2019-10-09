@@ -87,11 +87,11 @@ interface Version {
     /**
      * Returns whether the given [file] has changed since this version.
      *
-     * @param [file] The path of the current version of the file represented by this version.
+     * The default implementation compares file sizes, and then compares checksums only if the file sizes are different.
      *
      * @throws [IOException] An I/O error occurred.
      */
-    fun isChanged(file: Path): Boolean
+    fun isChanged(file: Path): Boolean = Files.size(file) != size || Checksum.fromFile(file) != checksum
 
     /**
      * Checks the integrity of the data in the repository for this file.

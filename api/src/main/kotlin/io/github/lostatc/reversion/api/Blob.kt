@@ -26,16 +26,15 @@ import java.nio.file.Files
 import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.security.MessageDigest
 import java.util.Objects
 
 
 /**
  * An abstract base class for [Blob] implementations.
  */
-private abstract class AbstractBlob(private val algorithm: String) : Blob {
+private abstract class AbstractBlob : Blob {
     override val checksum: Checksum by lazy {
-        openChannel().use { Checksum.fromChannel(it, algorithm) }
+        openChannel().use { Checksum.fromChannel(it) }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -67,42 +66,36 @@ interface Blob {
         /**
          * Creates a [Blob] containing data from the file at the given [path].
          *
-         * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
-         *
          * @throws [IOException] An I/O error occurred.
          */
-        fun fromFile(path: Path, algorithm: String): Blob = object : AbstractBlob(algorithm) {
+        fun fromFile(path: Path): Blob = object : AbstractBlob() {
             override fun openChannel() = Files.newByteChannel(path)
         }
 
         /**
          * Creates a [Blob] containing the given [bytes].
-         *
-         * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
          */
-        fun fromBytes(bytes: ByteBuffer, algorithm: String): Blob = object : AbstractBlob(algorithm) {
+        fun fromBytes(bytes: ByteBuffer): Blob = object : AbstractBlob() {
             override fun openChannel(): ReadableByteChannel = BufferByteChannel(bytes.duplicate())
         }
 
         /**
          * Creates a list of [Blob] objects containing data from the file at the given [path].
          *
-         * Concatenating the contents of each blob together produces the original file. This accepts any [algorithm]
-         * accepted by [MessageDigest].
+         * Concatenating the contents of each blob together produces the original file.
          *
          * @param [path] The path of the file.
-         * @param [algorithm] The name of the algorithm to compute the checksum with.
          * @param [blockSize] The maximum number of bytes in each blob.
          *
          * @throws [IOException] An I/O error occurred.
          */
-        fun chunkFile(path: Path, algorithm: String, blockSize: Long = Long.MAX_VALUE): List<Blob> {
+        fun chunkFile(path: Path, blockSize: Long = Long.MAX_VALUE): List<Blob> {
             val fileSize = Files.size(path)
             val blobs = mutableListOf<Blob>()
 
             // Iterate over each [blockSize] byte chunk of the file.
             for (position in 0 until fileSize step blockSize) {
-                val blob = object : AbstractBlob(algorithm) {
+                val blob = object : AbstractBlob() {
                     override fun openChannel(): ReadableByteChannel = Files.newByteChannel(path).let {
                         it.position(position)
                         BoundedByteChannel(it, blockSize)
@@ -118,11 +111,9 @@ interface Blob {
         /**
          * Creates a [Blob] containing the concatenated data from all the given [blobs].
          *
-         * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
-         *
          * @throws [IOException] An I/O error occurred.
          */
-        fun fromBlobs(blobs: Iterable<Blob>, algorithm: String): Blob = object : AbstractBlob(algorithm) {
+        fun fromBlobs(blobs: Iterable<Blob>): Blob = object : AbstractBlob() {
             // Lazily evaluate the input streams to avoid having too many open at once.
             override fun openChannel(): ReadableByteChannel = blobs
                 .asSequence()
