@@ -24,45 +24,55 @@ import java.nio.file.Path
 import java.util.ServiceLoader
 
 /**
+ * An exception which is thrown when there is a problem with a [Repository].
+ *
+ * @param [action] An action which can be taken to resolve the problem, or `null` if there is none.
+ */
+open class RepositoryException(
+    override val message: String,
+    override val cause: Throwable? = null,
+    val action: RecoveryAction? = null
+) : IOException(message, cause)
+
+/**
  * An exception which is thrown when a repository cannot be opened because it's incompatible with the storage provider.
  */
-data class IncompatibleRepositoryException(
-    override val message: String,
-    override val cause: Throwable? = null
-) : IOException(message, cause)
+class IncompatibleRepositoryException(
+    message: String,
+    cause: Throwable? = null,
+    action: RecoveryAction? = null
+) : RepositoryException(message, cause, action)
 
 /**
  * An exception which is thrown when a repository cannot be opened because it is corrupt or otherwise unreadable.
  */
-data class InvalidRepositoryException(
-    override val message: String,
-    override val cause: Throwable? = null
-) : IOException(message, cause)
+class InvalidRepositoryException(
+    message: String,
+    cause: Throwable? = null,
+    action: RecoveryAction? = null
+) : RepositoryException(message, cause, action)
 
 /**
- * Options for opening a [Repository].
- *
- * All values in this enum represent optional operations which may not be supported by a [StorageProvider]
- * implementation.
+ * An action which can be taken to recover a repository.
  */
-enum class OpenOption {
+interface RecoveryAction {
     /**
-     * Attempt to open the repository destructively.
-     *
-     * Without this option, a repository that cannot be opened without data loss will throw an
-     * [InvalidRepositoryException]. This option can be used to open repositories that otherwise cannot be opened
-     * because doing so would result in data loss
+     * A message to show the user prompting them for whether they want to attempt to recover the repository.
      */
-    DESTRUCTIVE,
+    val message: String
 
     /**
-     * Attempt to convert the repository to a new format.
-     *
-     * Without this option, a repository that cannot be opened because the repository format is no longer supported will
-     * throw an [IncompatibleRepositoryException]. This option can be used to convert repositories to a newer format
-     * which can be opened.
+     * Attempt to recover the repository.
      */
-    CONVERT
+    fun recover(): Result
+
+    /**
+     * The result of a recovery operation.
+     *
+     * @param [success] Whether the recovery was successful.
+     * @param [message] The message to show the user after the attempt is complete.
+     */
+    data class Result(val success: Boolean, val message: String)
 }
 
 /**
@@ -87,20 +97,17 @@ interface StorageProvider {
     /**
      * Opens the repository at [path] and returns it.
      *
-     * @param [path] The path of the repository.
-     * @param [options] The options which determine how the repository is opened.
+     * If this method throws a [RepositoryException], the exception can include a [RecoveryAction], which may be used to
+     * recover a repository which can't be opened. The user will be prompted before a recovery attempt is made.
      *
      * @throws [IncompatibleRepositoryException] There is no compatible repository at [path].
      * @throws [InvalidRepositoryException] The repository is compatible but cannot be read.
      * @throws [IOException] An I/O error occurred.
      */
-    fun openRepository(path: Path, options: Set<OpenOption> = emptySet()): Repository
+    fun openRepository(path: Path): Repository
 
     /**
-     * Creates a repository at [path] and returns it.
-     *
-     * @param [path] The path of the repository.
-     * @param [config] The configuration for the repository.
+     * Creates a repository at [path] with the given [config] and returns it.
      *
      * @throws [FileAlreadyExistsException] There is already a file at [path].
      * @throws [IOException] An I/O error occurred.
