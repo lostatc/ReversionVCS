@@ -23,9 +23,9 @@ import com.jfoenix.controls.JFXCheckBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTextArea
 import com.jfoenix.controls.JFXTextField
-import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.controls.Card
+import io.github.lostatc.reversion.gui.format
 import io.github.lostatc.reversion.gui.models.VersionManagerModel
 import javafx.beans.InvalidationListener
 import javafx.fxml.FXML

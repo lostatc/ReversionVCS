@@ -26,6 +26,10 @@ import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.property.ReadOnlyProperty
 import javafx.collections.ObservableList
 import javafx.collections.transformation.SortedList
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.concurrent.Callable
 import kotlin.reflect.KProperty
 
@@ -72,3 +76,11 @@ fun <T> ObservableList<T>.toSortedBy(selector: (T) -> Comparable<T>): SortedList
 fun <T> Property<T>.createBinding(vararg dependencies: Observable, transform: () -> T) {
     bind(Bindings.createObjectBinding(Callable { transform() }, *dependencies))
 }
+
+/**
+ * Format an [Instant] as a string using the given [style].
+ */
+fun Instant.format(style: FormatStyle = FormatStyle.MEDIUM): String = DateTimeFormatter
+    .ofLocalizedDateTime(style)
+    .withZone(ZoneId.systemDefault())
+    .format(this)

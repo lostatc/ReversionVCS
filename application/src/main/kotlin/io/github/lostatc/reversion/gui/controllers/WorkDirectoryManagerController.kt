@@ -24,7 +24,6 @@ import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXToggleButton
 import io.github.lostatc.reversion.api.IntegrityReport
-import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MapCellFactory
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.approvalDialog
@@ -38,6 +37,7 @@ import io.github.lostatc.reversion.gui.controls.TimePolicyForm
 import io.github.lostatc.reversion.gui.controls.VersionPolicyForm
 import io.github.lostatc.reversion.gui.createBinding
 import io.github.lostatc.reversion.gui.dateTimeDialog
+import io.github.lostatc.reversion.gui.format
 import io.github.lostatc.reversion.gui.infoDialog
 import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.models.WorkDirectoryManagerModel
