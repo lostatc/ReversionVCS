@@ -24,7 +24,6 @@ import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.IncompatibleRepositoryException
 import io.github.lostatc.reversion.api.InvalidRepositoryException
-import io.github.lostatc.reversion.api.OpenOption
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.StorageProvider
@@ -390,7 +389,6 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * Opens the working directory at [path] and returns it.
          *
          * @param [path] The path of the working directory.
-         * @param [options] The options which determine how the repository is opened.
          *
          * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
          * associated with this working directory.
@@ -398,8 +396,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * with this working directory but the repository cannot be read.
          * @throws [NotAWorkDirException] The working directory has not been initialized.
          */
-        fun open(path: Path, options: Set<OpenOption> = emptySet()): WorkDirectory =
-            instanceCache.getOrPut(path) { openNew(path, options) }
+        fun open(path: Path): WorkDirectory = instanceCache.getOrPut(path) { openNew(path) }
 
         /**
          * Opens the working directory associated with the file at the given [path].
@@ -407,7 +404,6 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * The working directory associated with [path] is the working directory that [path] is a descendant of.
          *
          * @param [path] The path of the working directory.
-         * @param [options] The options which determine how the repository is opened.
          *
          * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
          * associated with this working directory.
@@ -415,7 +411,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * with this working directory but the repository cannot be read.
          * @throws [NotAWorkDirException] There is no working directory associated with the given [path].
          */
-        fun openFromDescendant(path: Path, options: Set<OpenOption> = emptySet()): WorkDirectory {
+        fun openFromDescendant(path: Path): WorkDirectory {
             var directory = path
 
             do {
@@ -423,7 +419,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
                     ?: throw NotAWorkDirException("There is no working directory associated with this path.")
             } while (!isWorkDirectory(directory))
 
-            return open(directory, options)
+            return open(directory)
         }
 
         /**
@@ -435,7 +431,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * with this working directory but the repository cannot be read.
          * @throws [NotAWorkDirException] The working directory has not been initialized.
          */
-        private fun openNew(path: Path, options: Set<OpenOption> = emptySet()): WorkDirectory {
+        private fun openNew(path: Path): WorkDirectory {
             val infoFile = path.resolve(relativeInfoPath)
             val repositoryPath = path.resolve(relativeRepoPath)
 
@@ -448,7 +444,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
             }
 
             val provider = StorageProvider.findProvider(repositoryPath)
-            val repository = provider.openRepository(repositoryPath, options)
+            val repository = provider.openRepository(repositoryPath)
             val timeline = repository.timelines[timelineID] ?: error(
                 "The timeline associated with this working directory is not in the repository."
             )

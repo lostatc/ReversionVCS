@@ -25,8 +25,7 @@ import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXTextField
 import com.jfoenix.controls.JFXToggleButton
 import io.github.lostatc.reversion.api.IntegrityReport
-import io.github.lostatc.reversion.api.InvalidRepositoryException
-import io.github.lostatc.reversion.api.OpenOption
+import io.github.lostatc.reversion.api.RepositoryException
 import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.approvalDialog
@@ -174,13 +173,17 @@ class WorkDirectoryManagerController {
         model.loadWorkDirectories {
             try {
                 WorkDirectoryModel.fromPath(it)
-            } catch (e: InvalidRepositoryException) {
-                val approved = approvalDialog("Unable to read repository", e.message).show(root)
+            } catch (e: RepositoryException) {
+                if (e.action == null) return@loadWorkDirectories null
+                val approved = approvalDialog("Unable to open repository", e.action!!.message).show(root)
+
                 if (approved) {
-                    try {
-                        WorkDirectoryModel.fromPath(it, setOf(OpenOption.DESTRUCTIVE))
-                    } catch (e: InvalidRepositoryException) {
-                        infoDialog("Backup restore failed", e.message).show(root)
+                    val result = e.action!!.recover()
+                    if (result.success) {
+                        infoDialog("Recovery attempt successful", result.message).show(root)
+                        WorkDirectoryModel.fromPath(it)
+                    } else {
+                        infoDialog("Recovery attempt failed", result.message).show(root)
                         null
                     }
                 } else {

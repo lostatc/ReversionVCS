@@ -30,7 +30,7 @@ import io.github.lostatc.reversion.api.ConfigProperty
 import io.github.lostatc.reversion.api.IncompatibleRepositoryException
 import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.api.InvalidRepositoryException
-import io.github.lostatc.reversion.api.OpenOption
+import io.github.lostatc.reversion.api.RecoveryAction
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
 import io.github.lostatc.reversion.api.Version
@@ -570,7 +570,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          * @throws [InvalidRepositoryException] The repository is compatible but cannot be read.
          * @throws [IOException] An I/O error occurred.
          */
-        fun open(path: Path, options: Set<OpenOption> = emptySet()): DatabaseRepository {
+        fun open(path: Path): DatabaseRepository {
             if (!checkRepository(path))
                 throw IncompatibleRepositoryException("The format of the repository at '$path' is not supported.")
 
@@ -586,31 +586,41 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
                 val backupTime = Files.getLastModifiedTime(path.resolve(relativeDatabaseBackupPath))
 
-                if (OpenOption.DESTRUCTIVE in options) {
-                    // Attempt to restore from a database backup.
-                    DatabaseFactory.restore(
-                        source = path.resolve(relativeDatabaseBackupPath),
-                        destination = path.resolve(relativeDatabasePath)
-                    )
+                // Generate an action which the user can perform to restore from a database backup.
+                val recoveryAction = object : RecoveryAction {
+                    override val message: String =
+                        "The database could not be read. The most recent backup was made at $backupTime. Restoring from this backup will lose all versions created after it. Do you want to restore?"
 
-                    logger.info("Restored database backup from $backupTime.")
-
-                    // Try to open the repository again.
-                    try {
-                        DatabaseRepository(path, config)
-                    } catch (e: SQLException) {
-                        throw InvalidRepositoryException(
-                            "After restoring from a backup, the database still could not be read.",
-                            e
+                    override fun recover(): RecoveryAction.Result {
+                        // Attempt to restore from a database backup.
+                        DatabaseFactory.restore(
+                            source = path.resolve(relativeDatabaseBackupPath),
+                            destination = path.resolve(relativeDatabasePath)
                         )
+
+                        logger.info("Restored database backup from $backupTime.")
+
+                        // Try to open the repository again.
+                        return try {
+                            DatabaseRepository(path, config)
+                            RecoveryAction.Result(
+                                true,
+                                "The database was successfully recovered from the backup. Versions created since $backupTime have been lost."
+                            )
+                        } catch (e: SQLException) {
+                            RecoveryAction.Result(
+                                false,
+                                "After restoring from a backup, the database still could not be read."
+                            )
+                        }
                     }
-                } else {
-                    // Don't attempt to restore from a database backup.
-                    throw InvalidRepositoryException(
-                        "The database could not be read. The most recent backup was made at $backupTime. Restoring from this backup will lose all versions created after it. Do you want to restore?",
-                        e
-                    )
                 }
+
+                throw InvalidRepositoryException(
+                    message = "The database could not be read.",
+                    cause = e,
+                    action = recoveryAction
+                )
             }
 
             logger.info("Opened repository $repository.")
