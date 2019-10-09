@@ -20,8 +20,9 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Config
+import io.github.lostatc.reversion.api.FileTreeBuilder
 import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.resolve
+import io.github.lostatc.reversion.api.resolve
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -45,7 +46,7 @@ interface WorkDirectoryTest {
     fun createFiles(@TempDir tempPath: Path) {
         workPath = tempPath.resolve("work")
 
-        FileCreateContext(workPath) {
+        FileTreeBuilder(workPath) {
             file("a", content = "apple")
             file("b", content = "banana")
             directory("c") {
@@ -86,11 +87,7 @@ interface WorkDirectoryTest {
         workDirectory.commit(paths)
         workDirectory.commit(paths, force = false)
 
-        assertEquals(2, workDirectory.timeline.snapshots.size)
-
-        val snapshot = workDirectory.timeline.latestSnapshot!!
-
-        assertTrue(snapshot.versions.isEmpty())
+        assertEquals(1, workDirectory.timeline.snapshots.size)
     }
 
     @Test

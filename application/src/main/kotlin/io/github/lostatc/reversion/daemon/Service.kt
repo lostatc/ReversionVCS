@@ -21,8 +21,8 @@ package io.github.lostatc.reversion.daemon
 
 import io.github.lostatc.reversion.HOME_DIRECTORY
 import io.github.lostatc.reversion.OperatingSystem
+import io.github.lostatc.reversion.api.resolve
 import io.github.lostatc.reversion.getResourcePath
-import io.github.lostatc.reversion.resolve
 import org.apache.commons.io.IOUtils
 import java.io.IOException
 import java.nio.charset.Charset

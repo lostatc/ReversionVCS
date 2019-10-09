@@ -21,12 +21,17 @@ package io.github.lostatc.reversion.api
 
 import org.apache.commons.codec.DecoderException
 import org.apache.commons.codec.binary.Hex
-import org.apache.commons.codec.digest.DigestUtils
 import java.io.IOException
-import java.io.InputStream
 import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
+import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+
+/**
+ * The size of the buffer to use for I/O operations.
+ */
+private const val BUFFER_SIZE: Int = 4096
 
 /**
  * A checksum of a file.
@@ -70,16 +75,26 @@ class Checksum(private val bytes: ByteArray) {
         }
 
         /**
-         * Calculates a [Checksum] of the data from the given [inputStream].
+         * Calculates a [Checksum] of the data from the given [channel].
          *
          * This accepts any [algorithm] accepted by [MessageDigest]. It is the caller's responsibility to close this
-         * stream.
+         * channel.
          *
-         * @param [inputStream] The source of the data to calculate the checksum of.
+         * @param [channel] The source of the data to calculate the checksum of.
          * @param [algorithm] The name of the hash algorithm to use.
          */
-        fun fromInputStream(inputStream: InputStream, algorithm: String): Checksum =
-            Checksum(DigestUtils(algorithm).digest(inputStream))
+        fun fromChannel(channel: ReadableByteChannel, algorithm: String): Checksum {
+            val digest = MessageDigest.getInstance(algorithm)
+            val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
+
+            while (channel.read(buffer) != -1) {
+                buffer.flip()
+                digest.update(buffer)
+                buffer.clear()
+            }
+
+            return Checksum(digest.digest())
+        }
 
         /**
          * Calculates a [Checksum] of the file at the given [path].
@@ -91,18 +106,8 @@ class Checksum(private val bytes: ByteArray) {
          *
          * @throws [IOException] An I/O error occurred.
          */
-        fun fromFile(path: Path, algorithm: String): Checksum =
-            Checksum(DigestUtils(algorithm).digest(path.toFile()))
-
-        /**
-         * Calculates a [Checksum] of the given [data].
-         *
-         * This accepts any [algorithm] accepted by [MessageDigest].
-         *
-         * @param [data] The data to calculate the checksum of.
-         * @param [algorithm] The name of the hash algorithm to use.
-         */
-        fun fromString(data: String, algorithm: String): Checksum =
-            Checksum(DigestUtils(algorithm).digest(data))
+        fun fromFile(path: Path, algorithm: String): Checksum = Files.newByteChannel(path).use {
+            fromChannel(it, algorithm)
+        }
     }
 }

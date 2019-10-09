@@ -31,6 +31,7 @@ import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.api.delete
+import io.github.lostatc.reversion.api.write
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
 import io.github.lostatc.reversion.schema.BlockEntity
@@ -58,7 +59,8 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
 import java.sql.Connection
 import java.time.Instant
 import java.util.UUID
@@ -290,11 +292,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                     val missingBlob = findBlob(absolutePath, blobEntity.checksum) ?: continue
 
                     // If the missing blob was found, use it to repair the repository and go to the next blob.
-                    report.actions.add {
-                        missingBlob
-                            .newInputStream()
-                            .use { Files.copy(it, blobPath, StandardCopyOption.REPLACE_EXISTING) }
-                    }
+                    missingBlob.write(blobPath, CREATE, TRUNCATE_EXISTING)
 
                     continue@blobs
                 }
@@ -341,7 +339,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         val blobPath = getBlobPath(blob.checksum)
         Files.createDirectories(blobPath.parent)
         if (Files.notExists(blobPath)) {
-            blob.newInputStream().use { Files.copy(it, blobPath) }
+            blob.write(blobPath, CREATE)
         }
 
         transaction(db) {
