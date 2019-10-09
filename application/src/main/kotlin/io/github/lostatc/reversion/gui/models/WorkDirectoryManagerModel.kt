@@ -136,6 +136,20 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     }
 
     /**
+     * Removes the selected working directory from the list without deleting it.
+     */
+    fun hideWorkDirectory() {
+        val selected = selected ?: return
+
+        _workDirectories.remove(selected)
+        this.selected = null
+        launch {
+            val paths = workDirectories.map { it.executeAsync { workDirectory.path }.await() }
+            saveWorkPaths(paths)
+        }
+    }
+
+    /**
      * Unmounts all snapshots and deletes their mount points.
      */
     private fun unmountAllSnapshots() {
