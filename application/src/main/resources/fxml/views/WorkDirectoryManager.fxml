@@ -77,6 +77,13 @@
                                     <Tooltip text="Delete all versions in this directory."/>
                                 </tooltip>
                             </LabeledIconButton>
+                            <LabeledIconButton icon="gmi-visibility-off" label="Hide" onAction="#hideWorkDirectory"
+                                               styleClass="icon-button-light">
+                                <tooltip>
+                                    <Tooltip
+                                        text="Remove this directory from the list without deleting any versions."/>
+                                </tooltip>
+                            </LabeledIconButton>
                             <LabeledIconButton icon="gmi-build" label="Repair" onAction="#promptVerify"
                                                styleClass="icon-button-light">
                                 <tooltip>

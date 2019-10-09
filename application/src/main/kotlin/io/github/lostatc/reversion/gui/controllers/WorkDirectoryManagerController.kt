@@ -336,6 +336,11 @@ class WorkDirectoryManagerController {
         dialog.show(root)
     }
 
+    @FXML
+    fun hideWorkDirectory() {
+        model.hideWorkDirectory()
+    }
+
     /**
      * Toggle whether changes are being tracked for the selected working directory.
      */
