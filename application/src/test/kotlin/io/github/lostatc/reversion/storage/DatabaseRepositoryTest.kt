@@ -20,7 +20,8 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Checksum
-import io.github.lostatc.reversion.resolve
+import io.github.lostatc.reversion.api.FileTreeBuilder
+import io.github.lostatc.reversion.api.resolve
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -64,7 +65,7 @@ class DatabaseRepositoryTest : RepositoryTest {
     fun createFiles(@TempDir tempPath: Path) {
         workPath = tempPath.resolve("work")
 
-        FileCreateContext(workPath) {
+        FileTreeBuilder(workPath) {
             file("a", content = "apple")
             file("b", content = "banana")
             directory("c") {

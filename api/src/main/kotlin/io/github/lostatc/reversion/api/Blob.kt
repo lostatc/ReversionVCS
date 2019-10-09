@@ -19,34 +19,23 @@
 
 package io.github.lostatc.reversion.api
 
-import org.apache.commons.io.input.BoundedInputStream
 import java.io.IOException
-import java.io.InputStream
-import java.io.SequenceInputStream
-import java.nio.channels.Channels
+import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
 import java.nio.file.Files
+import java.nio.file.OpenOption
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
-import java.util.Enumeration
 import java.util.Objects
 
-/**
- * Returns an [Enumeration] for iterating over the contents of a [Sequence].
- */
-private fun <T> Sequence<T>.asEnumeration(): Enumeration<T> = object : Enumeration<T> {
-    private val iterator: Iterator<T> = this@asEnumeration.iterator()
-
-    override fun hasMoreElements(): Boolean = iterator.hasNext()
-
-    override fun nextElement(): T = iterator.next()
-}
 
 /**
  * An abstract base class for [Blob] implementations.
  */
 private abstract class AbstractBlob(private val algorithm: String) : Blob {
     override val checksum: Checksum by lazy {
-        newInputStream().use { Checksum.fromInputStream(it, algorithm) }
+        openChannel().use { Checksum.fromChannel(it, algorithm) }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -65,9 +54,9 @@ private abstract class AbstractBlob(private val algorithm: String) : Blob {
  */
 interface Blob {
     /**
-     * Returns an input stream for reading the data in this blob.
+     * Returns a channel for reading the bytes in this blob.
      */
-    fun newInputStream(): InputStream
+    fun openChannel(): ReadableByteChannel
 
     /**
      * The checksum of the data in this blob.
@@ -83,7 +72,16 @@ interface Blob {
          * @throws [IOException] An I/O error occurred.
          */
         fun fromFile(path: Path, algorithm: String): Blob = object : AbstractBlob(algorithm) {
-            override fun newInputStream() = Files.newInputStream(path)
+            override fun openChannel() = Files.newByteChannel(path)
+        }
+
+        /**
+         * Creates a [Blob] containing the given [bytes].
+         *
+         * The [checksum] is computed using the given [algorithm], which can be any accepted by [MessageDigest].
+         */
+        fun fromBytes(bytes: ByteBuffer, algorithm: String): Blob = object : AbstractBlob(algorithm) {
+            override fun openChannel(): ReadableByteChannel = BufferByteChannel(bytes.duplicate())
         }
 
         /**
@@ -105,9 +103,9 @@ interface Blob {
             // Iterate over each [blockSize] byte chunk of the file.
             for (position in 0 until fileSize step blockSize) {
                 val blob = object : AbstractBlob(algorithm) {
-                    override fun newInputStream(): InputStream = Files.newByteChannel(path).let {
+                    override fun openChannel(): ReadableByteChannel = Files.newByteChannel(path).let {
                         it.position(position)
-                        BoundedInputStream(Channels.newInputStream(it), blockSize)
+                        BoundedByteChannel(it, blockSize)
                     }
                 }
 
@@ -126,10 +124,22 @@ interface Blob {
          */
         fun fromBlobs(blobs: Iterable<Blob>, algorithm: String): Blob = object : AbstractBlob(algorithm) {
             // Lazily evaluate the input streams to avoid having too many open at once.
-            override fun newInputStream(): InputStream = blobs
+            override fun openChannel(): ReadableByteChannel = blobs
                 .asSequence()
-                .map { it.newInputStream() }
-                .let { SequenceInputStream(it.asEnumeration()) }
+                .map { it.openChannel() }
+                .let { SequenceByteChannel(it) }
         }
+    }
+}
+
+/**
+ * Write the contents of this blob to the given [file].
+ *
+ * @param [file] The path of the file to write the data to.
+ * @param [options] The options to use to open the [file].
+ */
+fun Blob.write(file: Path, vararg options: OpenOption) {
+    Files.newByteChannel(file, *options, StandardOpenOption.WRITE).use { dest ->
+        openChannel().use { source -> copyChannel(source, dest) }
     }
 }

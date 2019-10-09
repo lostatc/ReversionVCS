@@ -22,6 +22,7 @@ package io.github.lostatc.reversion
 import ch.qos.logback.core.PropertyDefinerBase
 import ch.qos.logback.core.spi.PropertyDefiner
 import io.github.lostatc.reversion.api.StorageProvider
+import io.github.lostatc.reversion.api.resolve
 import io.github.lostatc.reversion.storage.DatabaseStorageProvider
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -31,14 +32,6 @@ import java.util.MissingResourceException
  * The path of the user's home directory.
  */
 val HOME_DIRECTORY: Path by lazy { Paths.get(System.getProperty("user.home")) }
-
-/**
- * Resolves [firstSegment] and each of the given [segments] against this path.
- *
- * @see [Path.resolve]
- */
-fun Path.resolve(firstSegment: String, vararg segments: String): Path =
-    segments.fold(resolve(firstSegment)) { path, segment -> path.resolve(segment) }
 
 /**
  * Returns the [Path] stored in the given environment [variable], or `null` if it is unset.

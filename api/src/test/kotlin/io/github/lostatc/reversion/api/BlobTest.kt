@@ -22,23 +22,8 @@ package io.github.lostatc.reversion.api
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
-
-/**
- * Returns the data in the blob as a string.
- */
-private fun Blob.readString(): String = newInputStream().reader().use { it.readText() }
-
-/**
- * Creates a [Blob] containing the given [text].
- */
-private fun Blob.Companion.fromString(text: String): Blob = object : Blob {
-    override fun newInputStream(): InputStream = text.toByteArray().inputStream()
-
-    override val checksum: Checksum = Checksum(text.toByteArray())
-}
 
 class BlobTest {
 

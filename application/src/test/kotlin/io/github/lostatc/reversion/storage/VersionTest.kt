@@ -19,8 +19,10 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.api.FileTreeBuilder
 import io.github.lostatc.reversion.api.PermissionSet
 import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.readString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -40,7 +42,7 @@ interface VersionTest {
     fun createFiles(@TempDir tempPath: Path) {
         workPath = tempPath.resolve("work")
 
-        FileCreateContext(workPath) {
+        FileTreeBuilder(workPath) {
             file("a", content = "apple")
             file("b", content = "banana")
             directory("c") {
@@ -67,7 +69,7 @@ interface VersionTest {
         val version = snapshot.versions.getValue(Paths.get("a"))
 
         assertEquals(version.checksum, version.data.checksum)
-        assertEquals("apple", version.data.newInputStream().use { it.reader().readText() })
+        assertEquals("apple", version.data.readString())
     }
 
     @Test
