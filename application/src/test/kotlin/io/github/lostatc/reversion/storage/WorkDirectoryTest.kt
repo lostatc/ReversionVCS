@@ -106,7 +106,7 @@ interface WorkDirectoryTest {
 
     @Test
     fun `ignored files are not committed`() {
-        Files.writeString(workPath.resolve(".rvignore"), workPath.resolve("b").toString())
+        workDirectory.ignoredPaths = listOf(workPath.resolve("b"))
         workDirectory.commit(listOf(workPath.resolve("a"), workPath.resolve("b")))
 
         assertEquals(1, workDirectory.timeline.snapshots.size)
@@ -118,14 +118,14 @@ interface WorkDirectoryTest {
 
     @Test
     fun `ignored files are not committed when using special file names`() {
-        Files.writeString(workPath.resolve(".rvignore"), workPath.resolve("b").toString())
+        workDirectory.ignoredPaths = listOf(workPath.resolve("b"))
         workDirectory.commit(listOf(workPath.resolve(".")))
 
         assertEquals(1, workDirectory.timeline.snapshots.size)
 
         val snapshot = workDirectory.timeline.latestSnapshot!!
 
-        assertEquals(setOf(Paths.get("a"), Paths.get("c", "a"), Paths.get(".rvignore")), snapshot.versions.keys)
+        assertEquals(setOf(Paths.get("a"), Paths.get("c", "a")), snapshot.versions.keys)
     }
 
     @Test
@@ -215,7 +215,7 @@ interface WorkDirectoryTest {
     fun `ignored files are not updated`() {
         workDirectory.commit(listOf(workPath.resolve("b")))
         Files.delete(workPath.resolve("b"))
-        Files.writeString(workPath.resolve(".rvignore"), workPath.resolve("b").toString())
+        workDirectory.ignoredPaths = listOf(workPath.resolve("b"))
         workDirectory.update(listOf(workPath.resolve("b")))
 
         assertTrue(Files.notExists(workPath.resolve("b")))

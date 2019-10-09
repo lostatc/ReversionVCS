@@ -353,7 +353,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         /**
          * The relative path of the file containing paths to ignore.
          */
-        private val relativeIgnorePath: Path = Paths.get(".rvignore")
+        private val relativeIgnorePath: Path = relativeHiddenPath.resolve("ignore")
 
         /**
          * The relative path of the file containing information about the working directory.
