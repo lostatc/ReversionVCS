@@ -67,7 +67,7 @@ class ChecksumTest {
 
         assertEquals(
             Checksum.fromHex("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
-            Files.newByteChannel(tempFile).use { Checksum.fromChannel(it, "SHA-256") }
+            Files.newByteChannel(tempFile).use { Checksum.fromChannel(it) }
         )
     }
 
@@ -79,7 +79,7 @@ class ChecksumTest {
 
         assertEquals(
             Checksum.fromHex("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
-            Checksum.fromFile(tempFile, "SHA-256")
+            Checksum.fromFile(tempFile)
         )
     }
 }

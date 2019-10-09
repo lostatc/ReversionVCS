@@ -64,6 +64,11 @@ class Checksum(private val bytes: ByteArray) {
 
     companion object {
         /**
+         * The hash algorithm to use for calculating checksums.
+         */
+        const val algorithm: String = "SHA-256"
+
+        /**
          * Creates a [Checksum] from the given hexadecimal [hash].
          *
          * @throws [IllegalArgumentException] The given string is not a valid hexadecimal string.
@@ -75,15 +80,9 @@ class Checksum(private val bytes: ByteArray) {
         }
 
         /**
-         * Calculates a [Checksum] of the data from the given [channel].
-         *
-         * This accepts any [algorithm] accepted by [MessageDigest]. It is the caller's responsibility to close this
-         * channel.
-         *
-         * @param [channel] The source of the data to calculate the checksum of.
-         * @param [algorithm] The name of the hash algorithm to use.
+         * Calculates a SHA-256 [Checksum] of the data from the given [channel].
          */
-        fun fromChannel(channel: ReadableByteChannel, algorithm: String): Checksum {
+        fun fromChannel(channel: ReadableByteChannel): Checksum {
             val digest = MessageDigest.getInstance(algorithm)
             val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
 
@@ -97,17 +96,10 @@ class Checksum(private val bytes: ByteArray) {
         }
 
         /**
-         * Calculates a [Checksum] of the file at the given [path].
-         *
-         * This accepts any [algorithm] accepted by [MessageDigest].
-         *
-         * @param [path] The path of the file to calculate the checksum of.
-         * @param [algorithm] The name of the hash algorithm to use.
+         * Calculates a SHA-256 [Checksum] of the file at the given [path].
          *
          * @throws [IOException] An I/O error occurred.
          */
-        fun fromFile(path: Path, algorithm: String): Checksum = Files.newByteChannel(path).use {
-            fromChannel(it, algorithm)
-        }
+        fun fromFile(path: Path): Checksum = Files.newByteChannel(path).use { fromChannel(it) }
     }
 }

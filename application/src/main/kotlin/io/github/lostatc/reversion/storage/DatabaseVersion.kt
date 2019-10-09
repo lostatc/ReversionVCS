@@ -28,7 +28,6 @@ import io.github.lostatc.reversion.schema.VersionEntity
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.util.Objects
@@ -62,12 +61,9 @@ class DatabaseVersion(val entity: VersionEntity, override val repository: Databa
             entity.blocks
                 .orderBy(BlockTable.index to SortOrder.ASC)
                 .mapNotNull { repository.getBlob(it.blob.checksum) }
-                .let { Blob.fromBlobs(it, repository.hashAlgorithm) }
+                .let { Blob.fromBlobs(it) }
         }
     }
-
-    override fun isChanged(file: Path): Boolean =
-        Files.size(file) != size || Checksum.fromFile(file, repository.hashAlgorithm) != checksum
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

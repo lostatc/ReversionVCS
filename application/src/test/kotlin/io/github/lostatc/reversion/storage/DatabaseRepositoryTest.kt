@@ -37,7 +37,7 @@ import java.nio.file.Paths
  * Deletes the blob storing data for the given [file].
  */
 private fun DatabaseRepository.deleteBlob(file: Path) {
-    val checksum = Checksum.fromFile(file, hashAlgorithm)
+    val checksum = Checksum.fromFile(file)
     Files.delete(getBlobPath(checksum))
 }
 
@@ -45,7 +45,7 @@ private fun DatabaseRepository.deleteBlob(file: Path) {
  * Corrupts the blob storing data for the given [file].
  */
 private fun DatabaseRepository.corruptBlob(file: Path) {
-    val checksum = Checksum.fromFile(file, hashAlgorithm)
+    val checksum = Checksum.fromFile(file)
     Files.writeString(getBlobPath(checksum), "corrupt data")
 }
 
