@@ -44,10 +44,10 @@ import io.github.lostatc.reversion.gui.controls.TimePolicyForm
 import io.github.lostatc.reversion.gui.controls.VersionPolicyForm
 import io.github.lostatc.reversion.gui.createBinding
 import io.github.lostatc.reversion.gui.dateTimeDialog
+import io.github.lostatc.reversion.gui.format
 import io.github.lostatc.reversion.gui.infoDialog
 import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.models.WorkDirectoryManagerModel
-import io.github.lostatc.reversion.gui.models.format
 import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.toDisplayProperty

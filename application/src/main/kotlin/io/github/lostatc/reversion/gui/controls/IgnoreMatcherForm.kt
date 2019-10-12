@@ -24,7 +24,7 @@ import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.gui.MappingCellFactory
 import io.github.lostatc.reversion.gui.createBinding
 import io.github.lostatc.reversion.gui.loadFxml
-import io.github.lostatc.reversion.gui.models.parseBytes
+import io.github.lostatc.reversion.gui.parseBytes
 import io.github.lostatc.reversion.storage.CategoryIgnoreMatcher
 import io.github.lostatc.reversion.storage.ExtensionIgnoreMatcher
 import io.github.lostatc.reversion.storage.GlobIgnoreMatcher

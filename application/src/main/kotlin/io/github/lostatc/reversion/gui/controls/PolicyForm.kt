@@ -23,11 +23,11 @@ import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.gui.createBinding
+import io.github.lostatc.reversion.gui.loadFxml
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML
-import javafx.fxml.FXMLLoader
 import javafx.scene.Node
 import javafx.scene.layout.HBox
 import java.time.temporal.ChronoUnit
@@ -64,12 +64,7 @@ class VersionPolicyForm : PolicyForm, HBox() {
     override val node: Node = this
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/forms/VersionPolicyForm.fxml")).apply {
-            classLoader = this@VersionPolicyForm::class.java.classLoader
-            setRoot(this@VersionPolicyForm)
-            setController(this@VersionPolicyForm)
-            load()
-        }
+        loadFxml(this, "/fxml/forms/VersionPolicyForm.fxml")
     }
 
     @FXML
@@ -102,12 +97,7 @@ class TimePolicyForm : PolicyForm, HBox() {
     override val node: Node = this
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/forms/TimePolicyForm.fxml")).apply {
-            classLoader = this@TimePolicyForm::class.java.classLoader
-            setRoot(this@TimePolicyForm)
-            setController(this@TimePolicyForm)
-            load()
-        }
+        loadFxml(this, "/fxml/forms/TimePolicyForm.fxml")
     }
 
     @FXML
@@ -144,12 +134,7 @@ class StaggeredPolicyForm : PolicyForm, HBox() {
     override val node: Node = this
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/forms/StaggeredPolicyForm.fxml")).apply {
-            classLoader = this@StaggeredPolicyForm::class.java.classLoader
-            setRoot(this@StaggeredPolicyForm)
-            setController(this@StaggeredPolicyForm)
-            load()
-        }
+        loadFxml(this, "/fxml/forms/StaggeredPolicyForm.fxml")
     }
 
     @FXML
