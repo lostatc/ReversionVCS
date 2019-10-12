@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.models
+package io.github.lostatc.reversion.gui
 
 import java.time.Instant
 import java.time.ZoneId
