@@ -35,6 +35,7 @@ import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.api.delete
+import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
 import io.github.lostatc.reversion.schema.BlockEntity
@@ -118,19 +119,39 @@ private object DatabaseFactory {
     private fun getUri(path: Path): String = "jdbc:sqlite:${path.toUri().path}"
 
     /**
+     * Checks the integrity of the database and returns whether it is valid.
+     */
+    private fun checkIntegrity(db: Database): Boolean = transaction(db) {
+        val connection = TransactionManager.current().connection as SQLiteConnection
+        val result = connection
+            .prepareStatement("PRAGMA quick_check;")
+            .executeQuery()
+            .getString(1)
+
+        result == "ok"
+    }
+
+    /**
      * Connects to the database at the given [path].
      *
-     * @throws [SQLException] The database could not be connected to.
+     * @throws [SQLException] The database could not be connected to or is corrupt.
      */
     fun connect(path: Path): Database = databases.getOrPut(path) {
-        val connection = Database.connect(
+        val db = Database.connect(
             url = getUri(path),
             driver = "org.sqlite.JDBC",
             setupConnection = { configure(it) }
         )
+
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-        logger.debug("Connecting to database at '$path'.")
-        connection
+
+        if (!checkIntegrity(db)) {
+            throw SQLException("The database is corrupt.")
+        }
+
+        logger.info("Connected to database at '$path'.")
+
+        db
     }
 
     /**
@@ -154,7 +175,7 @@ private object DatabaseFactory {
      * @param [destination] The path to restore the backup to.
      */
     fun restore(source: Path, destination: Path) {
-        Files.copy(destination, source, StandardCopyOption.REPLACE_EXISTING)
+        Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING)
     }
 }
 
@@ -584,36 +605,42 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             } catch (e: SQLException) {
                 logger.warn("The database could not be read.", e)
 
-                val backupTime = Files.getLastModifiedTime(path.resolve(relativeDatabaseBackupPath))
+                val backupPath = path.resolve(relativeDatabaseBackupPath)
 
-                // Generate an action which the user can perform to restore from a database backup.
-                val recoveryAction = object : RecoveryAction {
-                    override val message: String =
-                        "The database could not be read. The most recent backup was made at $backupTime. Restoring from this backup will lose all versions created after it. Do you want to restore?"
+                val recoveryAction = if (Files.exists(backupPath)) {
+                    // Generate an action which the user can use to restore from a database backup.
+                    val backupTime = Files.getLastModifiedTime(backupPath).toInstant()
+                    object : RecoveryAction {
+                        override val message: String =
+                            "The database could not be read. The most recent backup was made at ${backupTime.format()}. Restoring from this backup will cause all versions created after that time to be lost. Do you want to restore?"
 
-                    override fun recover(): RecoveryAction.Result {
-                        // Attempt to restore from a database backup.
-                        DatabaseFactory.restore(
-                            source = path.resolve(relativeDatabaseBackupPath),
-                            destination = path.resolve(relativeDatabasePath)
-                        )
-
-                        logger.info("Restored database backup from $backupTime.")
-
-                        // Try to open the repository again.
-                        return try {
-                            DatabaseRepository(path, config)
-                            RecoveryAction.Result(
-                                true,
-                                "The database was successfully recovered from the backup. Versions created since $backupTime have been lost."
+                        override fun recover(): RecoveryAction.Result {
+                            // Attempt to restore from a database backup.
+                            DatabaseFactory.restore(
+                                source = backupPath,
+                                destination = path.resolve(relativeDatabasePath)
                             )
-                        } catch (e: SQLException) {
-                            RecoveryAction.Result(
-                                false,
-                                "After restoring from a backup, the database still could not be read."
-                            )
+
+                            logger.info("Restored database backup from ${backupTime.format()}.")
+
+                            // Try to open the repository again.
+                            return try {
+                                DatabaseRepository(path, config)
+                                RecoveryAction.Result(
+                                    true,
+                                    "The database was successfully recovered from the backup. Versions created since ${backupTime.format()} have been lost."
+                                )
+                            } catch (e: SQLException) {
+                                RecoveryAction.Result(
+                                    false,
+                                    "After restoring from a backup, the database still could not be read."
+                                )
+                            }
                         }
                     }
+                } else {
+                    // There is no database backup to restore.
+                    null
                 }
 
                 throw InvalidRepositoryException(

@@ -26,36 +26,31 @@ import com.jfoenix.controls.JFXSpinner
 import io.github.lostatc.reversion.gui.controls.DateTimePicker
 import javafx.event.EventHandler
 import javafx.scene.control.Label
-import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import java.time.Instant
 
 /**
  * A handler used to show a dialog and return a value based on a user selection.
  */
-data class DialogHandle<T>(val dialog: JFXDialog, private val result: () -> T) {
-    fun show(pane: StackPane): T {
-        dialog.show(pane)
-        return result()
-    }
-
-    companion object {
-        /**
-         * Returns a new [DialogHandle] with a return type of [Unit].
-         */
-        fun of(dialog: JFXDialog): DialogHandle<Unit> = DialogHandle(dialog) { Unit }
-    }
-}
+data class DialogHandle<T>(val dialog: JFXDialog, val result: Deferred<T>)
 
 /**
  * Creates a new dialog that presents the user with information and prompts them to dismiss it.
  *
  * @param [title] The title of the dialog.
  * @param [text] The message body of the dialog.
+ *
+ * @return A deferred value which completes when the user dismisses the dialog.
  */
 fun infoDialog(title: String, text: String): DialogHandle<Unit> {
+    val deferred = CompletableDeferred<Unit>()
     val dialog = JFXDialog().apply {
+
+        setOnDialogClosed { deferred.complete(Unit) }
+
         content = JFXDialogLayout().apply {
             heading.add(Label(title))
             body.add(Label(text))
@@ -63,13 +58,16 @@ fun infoDialog(title: String, text: String): DialogHandle<Unit> {
                 JFXButton().apply {
                     this.text = "OK"
                     this.styleClass.addAll("button-text", "button-confirm")
-                    this.onAction = EventHandler { close() }
+                    this.onAction = EventHandler {
+                        deferred.complete(Unit)
+                        close()
+                    }
                 }
             )
         }
     }
 
-    return DialogHandle.of(dialog)
+    return DialogHandle(dialog, deferred)
 }
 
 /**
@@ -80,11 +78,10 @@ fun infoDialog(title: String, text: String): DialogHandle<Unit> {
  * @param [title] The title of the dialog.
  * @param [job] The job which this dialog is tied to.
  *
- * @return A handle which returns `true` if the job completed normally and `false` if it was cancelled.
+ * @return A deferred value which yields `true` if the job completes normally or `false` if it cancelled.
  */
 fun processingDialog(title: String, job: Job): DialogHandle<Boolean> {
-    var finished = true
-
+    val deferred = CompletableDeferred<Boolean>()
     val dialog = JFXDialog().apply {
         isOverlayClose = false
         content = JFXDialogLayout().apply {
@@ -96,17 +93,20 @@ fun processingDialog(title: String, job: Job): DialogHandle<Boolean> {
                     this.styleClass.addAll("button-text", "button-regular")
                     this.onAction = EventHandler {
                         job.cancel()
-                        finished = false
+                        deferred.complete(false)
                         close()
                     }
                 }
             )
         }
 
-        job.invokeOnCompletion { close() }
+        job.invokeOnCompletion {
+            deferred.complete(true)
+            close()
+        }
     }
 
-    return DialogHandle(dialog) { finished }
+    return DialogHandle(dialog, deferred)
 }
 
 /**
@@ -115,12 +115,14 @@ fun processingDialog(title: String, job: Job): DialogHandle<Boolean> {
  * @param [title] The title of the dialog.
  * @param [text] The message body of the dialog.
  *
- * @return A handle which returns whether the user confirmed the action.
+ * @return A deferred value which yields `true` if user confirms or `false` if they do not.
  */
 fun confirmationDialog(title: String, text: String): DialogHandle<Boolean> {
-    var confirmed = false
-
+    val deferred = CompletableDeferred<Boolean>()
     val dialog = JFXDialog().apply {
+
+        setOnDialogClosed { deferred.complete(false) }
+
         content = JFXDialogLayout().apply {
             heading.add(Label(title))
             body.add(Label(text))
@@ -129,6 +131,7 @@ fun confirmationDialog(title: String, text: String): DialogHandle<Boolean> {
                     this.text = "No"
                     this.styleClass.addAll("button-text", "button-regular")
                     this.onAction = EventHandler {
+                        deferred.complete(false)
                         close()
                     }
                 },
@@ -136,7 +139,7 @@ fun confirmationDialog(title: String, text: String): DialogHandle<Boolean> {
                     this.text = "Yes"
                     this.styleClass.addAll("button-text", "button-confirm")
                     this.onAction = EventHandler {
-                        confirmed = true
+                        deferred.complete(true)
                         close()
                     }
                 }
@@ -144,7 +147,7 @@ fun confirmationDialog(title: String, text: String): DialogHandle<Boolean> {
         }
     }
 
-    return DialogHandle(dialog) { confirmed }
+    return DialogHandle(dialog, deferred)
 }
 
 /**
@@ -153,12 +156,14 @@ fun confirmationDialog(title: String, text: String): DialogHandle<Boolean> {
  * @param [title] The title of the dialog.
  * @param [text] The message body of the dialog.
  *
- * @return A handle which returns whether the user approved the action.
+ * @return A deferred value which yields `true` if user approves or `false` if they do not.
  */
 fun approvalDialog(title: String, text: String): DialogHandle<Boolean> {
-    var approved = false
-
+    val deferred = CompletableDeferred<Boolean>()
     val dialog = JFXDialog().apply {
+
+        setOnDialogClosed { deferred.complete(false) }
+
         content = JFXDialogLayout().apply {
             heading.add(Label(title))
             body.add(Label(text))
@@ -166,13 +171,16 @@ fun approvalDialog(title: String, text: String): DialogHandle<Boolean> {
                 JFXButton().apply {
                     this.text = "No"
                     this.styleClass.addAll("button-text", "button-regular")
-                    this.onAction = EventHandler { close() }
+                    this.onAction = EventHandler {
+                        deferred.complete(false)
+                        close()
+                    }
                 },
                 JFXButton().apply {
                     this.text = "Yes"
                     this.styleClass.addAll("button-text", "button-danger")
                     this.onAction = EventHandler {
-                        approved = true
+                        deferred.complete(true)
                         close()
                     }
                 }
@@ -180,7 +188,7 @@ fun approvalDialog(title: String, text: String): DialogHandle<Boolean> {
         }
     }
 
-    return DialogHandle(dialog) { approved }
+    return DialogHandle(dialog, deferred)
 }
 
 /**
@@ -190,16 +198,18 @@ fun approvalDialog(title: String, text: String): DialogHandle<Boolean> {
  * @param [text] The message body of the dialog.
  * @param [default] The default date and time that is selected in the dialog.
  *
- * @return A handle which returns the date/time chosen by the user or `null` if none was chosen.
+ * @return A deferred value which yields the selected time or `null` if none was selected.
  */
 fun dateTimeDialog(
     title: String,
     text: String,
     default: Instant? = null
 ): DialogHandle<Instant?> {
-    var result: Instant? = null
-
+    val deferred = CompletableDeferred<Instant?>()
     val dialog = JFXDialog().apply {
+
+        setOnDialogClosed { deferred.complete(null) }
+
         content = JFXDialogLayout().apply {
             val dateTimePicker = DateTimePicker().apply {
                 instant = default
@@ -217,13 +227,16 @@ fun dateTimeDialog(
                 JFXButton().apply {
                     this.text = "Cancel"
                     this.styleClass.addAll("button-text", "button-regular")
-                    this.onAction = EventHandler { close() }
+                    this.onAction = EventHandler {
+                        deferred.complete(null)
+                        close()
+                    }
                 },
                 JFXButton().apply {
                     this.text = "OK"
                     this.styleClass.addAll("button-text", "button-confirm")
                     this.onAction = EventHandler {
-                        result = dateTimePicker.instant
+                        deferred.complete(dateTimePicker.instant)
                         close()
                     }
                 }
@@ -231,5 +244,5 @@ fun dateTimeDialog(
         }
     }
 
-    return DialogHandle(dialog) { result }
+    return DialogHandle(dialog, deferred)
 }
