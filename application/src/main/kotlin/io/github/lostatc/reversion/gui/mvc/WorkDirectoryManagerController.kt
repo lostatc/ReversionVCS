@@ -46,6 +46,7 @@ import javafx.scene.control.TabPane
 import javafx.scene.layout.StackPane
 import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
+import kotlinx.coroutines.launch
 import org.apache.commons.io.FileUtils
 import java.time.Instant
 import java.time.format.FormatStyle
@@ -175,15 +176,18 @@ class WorkDirectoryManagerController {
                 WorkDirectoryModel.fromPath(it)
             } catch (e: RepositoryException) {
                 if (e.action == null) return@loadWorkDirectories null
-                val approved = approvalDialog("Unable to open repository", e.action!!.message).show(root)
 
-                if (approved) {
+                val handle = approvalDialog("Unable to open repository", e.action!!.message)
+                handle.dialog.show(root)
+
+
+                if (handle.result.await()) {
                     val result = e.action!!.recover()
                     if (result.success) {
-                        infoDialog("Recovery attempt successful", result.message).show(root)
+                        infoDialog("Recovery attempt successful", result.message).dialog.show(root)
                         WorkDirectoryModel.fromPath(it)
                     } else {
-                        infoDialog("Recovery attempt failed", result.message).show(root)
+                        infoDialog("Recovery attempt failed", result.message).dialog.show(root)
                         null
                     }
                 } else {
@@ -329,13 +333,16 @@ class WorkDirectoryManagerController {
      */
     @FXML
     fun deleteWorkDirectory() {
-        val approved = approvalDialog(
+        val handle = approvalDialog(
             title = "Delete version history",
             text = "Are you sure you want to permanently delete all past versions in this directory? This will not affect the current versions of your files."
-        ).show(root)
+        )
+        handle.dialog.show(root)
 
-        if (approved) {
-            model.deleteWorkDirectory()
+        model.launch {
+            if (handle.result.await()) {
+                model.deleteWorkDirectory()
+            }
         }
     }
 
@@ -353,8 +360,8 @@ class WorkDirectoryManagerController {
      */
     private fun repair(report: IntegrityReport) {
         val job = storageActor.sendBlockingAsync { report.repair() }
-        val dialog = processingDialog(title = "Repairing...", job = job)
-        dialog.show(root)
+        val handle = processingDialog(title = "Repairing...", job = job)
+        handle.dialog.show(root)
     }
 
     /**
@@ -365,15 +372,18 @@ class WorkDirectoryManagerController {
             infoDialog(
                 title = "No corruption detected",
                 text = "There are no corrupt versions in this directory."
-            ).show(root)
+            ).dialog.show(root)
         } else {
-            val confirmed = confirmationDialog(
+            val handle = confirmationDialog(
                 title = "Corruption detected",
                 text = "There are ${report.corrupt.size} corrupt versions in this directory. ${report.repaired.size} of them will be repaired. ${report.deleted.size} of them cannot be repaired and will be deleted. This may take a while. Do you want to repair?"
-            ).show(root)
+            )
+            handle.dialog.show(root)
 
-            if (confirmed) {
-                repair(report)
+            model.launch {
+                if (handle.result.await()) {
+                    repair(report)
+                }
             }
         }
     }
@@ -384,8 +394,7 @@ class WorkDirectoryManagerController {
     private fun verify() {
         val selected = model.selected ?: return
         val job = selected.executeAsync { workDirectory.repository.verify(workDirectory.path) } ui { promptRepair(it) }
-        val dialog = processingDialog(title = "Checking for corruption...", job = job)
-        dialog.show(root)
+        processingDialog(title = "Checking for corruption...", job = job).dialog.show(root)
     }
 
     /**
@@ -393,13 +402,16 @@ class WorkDirectoryManagerController {
      */
     @FXML
     fun promptVerify() {
-        val confirmed = confirmationDialog(
+        val handle = confirmationDialog(
             title = "Check for corruption",
             text = "This will check the versions in this directory for corruption. If corrupt data is found, you will have the option to repair it. This may take a while. Do you want to check for corruption?"
-        ).show(root)
+        )
+        handle.dialog.show(root)
 
-        if (confirmed) {
-            verify()
+        model.launch {
+            if (handle.result.await()) {
+                verify()
+            }
         }
     }
 
@@ -408,14 +420,18 @@ class WorkDirectoryManagerController {
      */
     @FXML
     fun mountSnapshot() {
-        val instant = dateTimeDialog(
+        val handle = dateTimeDialog(
             title = "Choose a time and date",
             text = "Choose the time and date that you want to see files from.",
             default = Instant.now()
-        ).show(root)
+        )
+        handle.dialog.show(root)
 
-        if (instant != null) {
-            model.mountSnapshot(instant)
+        model.launch {
+            val instant = handle.result.await()
+            if (instant != null) {
+                model.mountSnapshot(instant)
+            }
         }
     }
 }
