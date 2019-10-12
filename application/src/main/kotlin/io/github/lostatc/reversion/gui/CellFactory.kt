@@ -26,14 +26,13 @@ import javafx.util.Callback
 /**
  * A cell factory which maps objects to string representations.
  *
- * @param [mapping] A map of objects to their corresponding string representations.
+ * @param [transform] A function that converts an object to its string representation.
  */
-class MapCellFactory<T>(val mapping: Map<T, String>) : Callback<ListView<T>, ListCell<T>> {
+class MappingCellFactory<T>(val transform: (T) -> String) : Callback<ListView<T>, ListCell<T>> {
     override fun call(param: ListView<T>?): ListCell<T> = object : ListCell<T>() {
         override fun updateItem(item: T, empty: Boolean) {
             super.updateItem(item, empty)
-            text = if (empty) "" else mapping[item] ?: ""
+            text = if (empty) "" else transform(item)
         }
     }
-
 }

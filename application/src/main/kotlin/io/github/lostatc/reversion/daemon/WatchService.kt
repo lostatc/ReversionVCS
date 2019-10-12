@@ -26,7 +26,7 @@ import io.github.lostatc.reversion.getResourcePath
  * A [Service] compatible with the current platform which executes [PersistentWatchDaemon].
  */
 val watchService: Service by lazy {
-    when (OperatingSystem.current()) {
+    when (OperatingSystem.current) {
         OperatingSystem.WINDOWS -> WindowsService(
             name = "io.github.lostatc.reversiond",
             className = "io.github.lostatc.reversion.daemon.MainKt",

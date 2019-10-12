@@ -17,33 +17,18 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.controls
+package io.github.lostatc.reversion.serialization
 
-import javafx.beans.property.ReadOnlyProperty
-import javafx.scene.Node
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.Reader
 
 /**
- * An form for user input that encapsulates multiple controls.
+ * Creates a [TypeToken] for [T].
  */
-interface Form<T : Any> {
-    /**
-     * A property for [result].
-     */
-    val resultProperty: ReadOnlyProperty<T?>
+inline fun <reified T> token(): TypeToken<T> = object : TypeToken<T>() {}
 
-    /**
-     * The node representing the form.
-     */
-    val node: Node
-
-    /**
-     * The output of the form, or `null` if the form is invalid or incomplete.
-     */
-    val result: T?
-        get() = resultProperty.value
-
-    /**
-     * Clear the fields of the form.
-     */
-    fun clear()
-}
+/**
+ * Deserializes the given [json] into an instance of type [T].
+ */
+inline fun <reified T> Gson.fromJson(json: Reader): T = fromJson(json, token<T>().type)

@@ -106,7 +106,7 @@ interface WorkDirectoryTest {
 
     @Test
     fun `ignored files are not committed`() {
-        workDirectory.ignoredPaths = listOf(workPath.resolve("b"))
+        workDirectory.writeMatchers(listOf(PrefixIgnoreMatcher(workPath.resolve("b"))))
         workDirectory.commit(listOf(workPath.resolve("a"), workPath.resolve("b")))
 
         assertEquals(1, workDirectory.timeline.snapshots.size)
@@ -118,7 +118,7 @@ interface WorkDirectoryTest {
 
     @Test
     fun `ignored files are not committed when using special file names`() {
-        workDirectory.ignoredPaths = listOf(workPath.resolve("b"))
+        workDirectory.writeMatchers(listOf(PrefixIgnoreMatcher(workPath.resolve("b"))))
         workDirectory.commit(listOf(workPath.resolve(".")))
 
         assertEquals(1, workDirectory.timeline.snapshots.size)
@@ -215,7 +215,7 @@ interface WorkDirectoryTest {
     fun `ignored files are not updated`() {
         workDirectory.commit(listOf(workPath.resolve("b")))
         Files.delete(workPath.resolve("b"))
-        workDirectory.ignoredPaths = listOf(workPath.resolve("b"))
+        workDirectory.writeMatchers(listOf(PrefixIgnoreMatcher(workPath.resolve("b"))))
         workDirectory.update(listOf(workPath.resolve("b")))
 
         assertTrue(Files.notExists(workPath.resolve("b")))

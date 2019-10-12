@@ -26,10 +26,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.property.ReadOnlyProperty
 import javafx.collections.ObservableList
 import javafx.collections.transformation.SortedList
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import javafx.fxml.FXMLLoader
 import java.util.concurrent.Callable
 import kotlin.reflect.KProperty
 
@@ -53,8 +50,11 @@ fun <T, R> ReadOnlyProperty<T>.toMappedProperty(transform: (T) -> R): ReadOnlyPr
  *
  * If the value of this property is `null`, a placeholder string is returned.
  */
-fun <T : Any> ReadOnlyProperty<T?>.toDisplayProperty(transform: (T) -> String): ReadOnlyProperty<String> =
-    toMappedProperty { if (it == null) "Loading..." else transform(it) }
+fun <T : Any> ReadOnlyProperty<T?>.toDisplayProperty(
+    placeholder: String = "Loading...",
+    transform: (T) -> String
+): ReadOnlyProperty<String> =
+    toMappedProperty { if (it == null) placeholder else transform(it) }
 
 /**
  * Returns a read-only sorted view of this list.
@@ -78,9 +78,13 @@ fun <T> Property<T>.createBinding(vararg dependencies: Observable, transform: ()
 }
 
 /**
- * Format an [Instant] as a string using the given [style].
+ * Load the FXML file identified by [resource] for a given [controller].
  */
-fun Instant.format(style: FormatStyle = FormatStyle.MEDIUM): String = DateTimeFormatter
-    .ofLocalizedDateTime(style)
-    .withZone(ZoneId.systemDefault())
-    .format(this)
+fun loadFxml(controller: Any, resource: String) {
+    FXMLLoader(controller::class.java.getResource(resource)).apply {
+        classLoader = controller::class.java.classLoader
+        setRoot(controller)
+        setController(controller)
+        load()
+    }
+}

@@ -24,35 +24,41 @@ import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXToggleButton
 import io.github.lostatc.reversion.api.IntegrityReport
-import io.github.lostatc.reversion.gui.MapCellFactory
 import io.github.lostatc.reversion.gui.MappedObservableList
+import io.github.lostatc.reversion.gui.MappingCellFactory
 import io.github.lostatc.reversion.gui.approvalDialog
 import io.github.lostatc.reversion.gui.confirmationDialog
 import io.github.lostatc.reversion.gui.controls.Card
+import io.github.lostatc.reversion.gui.controls.CategoryIgnoreMatcherForm
 import io.github.lostatc.reversion.gui.controls.Definition
+import io.github.lostatc.reversion.gui.controls.ExtensionIgnoreMatcherForm
+import io.github.lostatc.reversion.gui.controls.GlobIgnoreMatcherForm
+import io.github.lostatc.reversion.gui.controls.IgnoreMatcherForm
 import io.github.lostatc.reversion.gui.controls.ListItem
 import io.github.lostatc.reversion.gui.controls.PolicyForm
+import io.github.lostatc.reversion.gui.controls.PrefixIgnoreMatcherForm
+import io.github.lostatc.reversion.gui.controls.RegexIgnoreMatcherForm
+import io.github.lostatc.reversion.gui.controls.SizeIgnoreMatcherForm
 import io.github.lostatc.reversion.gui.controls.StaggeredPolicyForm
 import io.github.lostatc.reversion.gui.controls.TimePolicyForm
 import io.github.lostatc.reversion.gui.controls.VersionPolicyForm
 import io.github.lostatc.reversion.gui.createBinding
 import io.github.lostatc.reversion.gui.dateTimeDialog
-import io.github.lostatc.reversion.gui.format
 import io.github.lostatc.reversion.gui.infoDialog
 import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.models.WorkDirectoryManagerModel
+import io.github.lostatc.reversion.gui.models.format
 import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.toDisplayProperty
-import io.github.lostatc.reversion.gui.toSorted
 import io.github.lostatc.reversion.gui.ui
+import io.github.lostatc.reversion.storage.IgnoreMatcher
 import javafx.fxml.FXML
 import javafx.scene.Group
 import javafx.scene.control.Label
 import javafx.scene.control.TabPane
 import javafx.scene.layout.StackPane
 import javafx.stage.DirectoryChooser
-import javafx.stage.FileChooser
 import org.apache.commons.io.FileUtils
 import java.time.Instant
 import java.time.format.FormatStyle
@@ -67,13 +73,40 @@ private fun TabPane.setContentsVisible(visible: Boolean) {
 }
 
 /**
- * The combo box options for selecting a type of cleanup policy.
+ * The list of forms for creating cleanup policies.
  */
-private val policyTypes: Map<PolicyForm, String> = linkedMapOf(
-    VersionPolicyForm() to "Keep a specific number of versions",
-    TimePolicyForm() to "Delete versions which are older than",
-    StaggeredPolicyForm() to "Keep staggered versions"
+private val policyForms = listOf<PolicyForm>(
+    VersionPolicyForm(),
+    TimePolicyForm(),
+    StaggeredPolicyForm()
 )
+
+/**
+ * A cell factory for the combo box for selecting a cleanup policy type.
+ */
+private val policyCellFactory = MappingCellFactory<PolicyForm> {
+    when (it) {
+        is VersionPolicyForm -> "Keep a specific number of versions"
+        is TimePolicyForm -> "Delete versions which are older than"
+        is StaggeredPolicyForm -> "Keep staggered versions"
+        else -> ""
+    }
+}
+
+/**
+ * A cell factory for the combo box for selecting an ignore matcher type.
+ */
+private val ignoreCellFactory = MappingCellFactory<IgnoreMatcherForm> {
+    when (it) {
+        is PrefixIgnoreMatcherForm -> "Ignore a file or directory"
+        is SizeIgnoreMatcherForm -> "Ignore files over a certain size"
+        is ExtensionIgnoreMatcherForm -> "Ignore files with a certain file extension"
+        is CategoryIgnoreMatcherForm -> "Ignore a category of files"
+        is GlobIgnoreMatcherForm -> "Ignore files matching a glob pattern"
+        is RegexIgnoreMatcherForm -> "Ignore files matching a regex"
+        else -> ""
+    }
+}
 
 
 /**
@@ -121,7 +154,25 @@ class WorkDirectoryManagerController {
      * The list view that displays the files being ignored.
      */
     @FXML
-    private lateinit var ignorePathList: JFXListView<Label>
+    private lateinit var ignoreMatcherList: JFXListView<Label>
+
+    /**
+     * The combo box for selecting a type of ignore matcher.
+     */
+    @FXML
+    private lateinit var ignoreTypeComboBox: JFXComboBox<IgnoreMatcherForm>
+
+    /**
+     * A container which holds the selected ignore matcher form.
+     */
+    @FXML
+    private lateinit var ignoreFormContainer: Group
+
+    /**
+     * A label which shows a preview of the ignore matcher to be created.
+     */
+    @FXML
+    private lateinit var ignorePreviewLabel: Label
 
     /**
      * The tab pane used for managing the currently selected working directory.
@@ -174,8 +225,8 @@ class WorkDirectoryManagerController {
     @FXML
     fun initialize() {
         // Control how the cleanup policy types are displayed in the combo box.
-        policyTypeComboBox.cellFactory = MapCellFactory(policyTypes)
-        policyTypeComboBox.buttonCell = MapCellFactory(policyTypes).call(null)
+        policyTypeComboBox.cellFactory = policyCellFactory
+        policyTypeComboBox.buttonCell = policyCellFactory.call(null)
 
         // Bind the contents of a node so that it contains the selected cleanup policy form.
         policyTypeComboBox.selectionModel.selectedItemProperty().addListener { _, _, newValue ->
@@ -186,8 +237,20 @@ class WorkDirectoryManagerController {
         }
 
         // Set the items in the combo box for selecting a type of cleanup policy.
-        policyTypeComboBox.items.setAll(policyTypes.keys)
+        policyTypeComboBox.items.setAll(policyForms)
         policyTypeComboBox.selectionModel.select(0)
+
+        // Control how ignore matcher types are displayed in the combo box.
+        ignoreTypeComboBox.cellFactory = ignoreCellFactory
+        ignoreTypeComboBox.buttonCell = ignoreCellFactory.call(null)
+
+        // Bind the contents of a node so that it contains the selected ignore matcher form.
+        ignoreTypeComboBox.selectionModel.selectedItemProperty().addListener { _, _, newValue ->
+            ignoreFormContainer.children.setAll(newValue.node)
+            ignorePreviewLabel.textProperty().createBinding(newValue.resultProperty) {
+                newValue.result?.description ?: ""
+            }
+        }
 
         // Bind the selected working directory in the model to the selected working directory in the view.
         workDirectoryList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
@@ -211,14 +274,28 @@ class WorkDirectoryManagerController {
             if (newValue == null) {
                 workDirectoryTabPane.setContentsVisible(false)
             } else {
+                // The list of forms for creating ignore matchers.
+                val ignoreForms = listOf<IgnoreMatcherForm>(
+                    PrefixIgnoreMatcherForm(newValue.path),
+                    SizeIgnoreMatcherForm(),
+                    ExtensionIgnoreMatcherForm(),
+                    CategoryIgnoreMatcherForm(),
+                    GlobIgnoreMatcherForm(),
+                    RegexIgnoreMatcherForm()
+                )
+
+                // Set the items in the combo box for selecting a type of ignore matcher.
+                ignoreTypeComboBox.items.setAll(ignoreForms)
+                ignoreTypeComboBox.selectionModel.select(0)
+
                 // Bind the list of cleanup policies it the view to the model.
                 cleanupPolicyList.items = MappedObservableList(newValue.cleanupPolicies) {
                     ListItem(it.description)
                 }
 
                 // Bind the list of ignored paths in the view to the model.
-                ignorePathList.items = MappedObservableList(newValue.ignoredPaths.toSorted()) {
-                    ListItem(it.toString())
+                ignoreMatcherList.items = MappedObservableList(newValue.ignoreMatchers) {
+                    ListItem(it.description)
                 }
 
                 // Set whether this working directory is tracking changes.
@@ -284,42 +361,24 @@ class WorkDirectoryManagerController {
     }
 
     /**
-     * Add new files to be ignored.
+     * Add the selected [IgnoreMatcher] specified by the selected [IgnoreMatcherForm].
      */
     @FXML
-    fun addIgnoreFile() {
-        val newPath = FileChooser().run {
-            title = "Select files to ignore"
-            initialDirectory = model.selected?.path?.toFile()
-            showOpenMultipleDialog(workDirectoryTabPane.scene.window)?.map { it.toPath() } ?: return
-        }
-
-        model.selected?.ignoredPaths?.addAll(newPath)
+    fun addIgnoreMatcher() {
+        val ignoreForm = ignoreTypeComboBox.selectionModel.selectedItem
+        val ignoreMatcher = ignoreForm.result ?: return
+        model.selected?.ignoreMatchers?.add(ignoreMatcher) ?: return
+        ignoreForm.clear()
     }
 
     /**
-     * Add a new directory to be ignored.
+     * Remove the selected [IgnoreMatcher].
      */
     @FXML
-    fun addIgnoreDirectory() {
-        val newPath = DirectoryChooser().run {
-            title = "Select directory to ignore"
-            initialDirectory = model.selected?.path?.toFile()
-            showDialog(workDirectoryTabPane.scene.window)?.toPath() ?: return
-        }
-
-        model.selected?.ignoredPaths?.add(newPath)
-    }
-
-    /**
-     * Remove a file from the list of ignored files.
-     */
-    @FXML
-    fun removeIgnorePath() {
-        val selectedIndex = ignorePathList.selectionModel.selectedIndex
+    fun removeIgnoreMatcher() {
+        val selectedIndex = ignoreMatcherList.selectionModel.selectedIndex
         if (selectedIndex < 0) return
-
-        model.selected?.ignoredPaths?.removeAt(selectedIndex)
+        model.selected?.ignoreMatchers?.removeAt(selectedIndex)
     }
 
     /**

@@ -27,9 +27,9 @@ import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
-import io.github.lostatc.reversion.storage.PathTypeAdapter
+import io.github.lostatc.reversion.serialization.PathTypeAdapter
+import io.github.lostatc.reversion.serialization.fromJson
 import io.github.lostatc.reversion.storage.SnapshotMounter
-import io.github.lostatc.reversion.storage.fromJson
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
