@@ -28,15 +28,19 @@ import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.Timeline
 import io.github.lostatc.reversion.api.UnsupportedFormatException
 import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.serialization.RelativePathTypeAdapter
+import io.github.lostatc.reversion.serialization.RuntimeTypeAdapterFactory
+import io.github.lostatc.reversion.serialization.fromJson
 import org.apache.commons.io.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.awt.Desktop
 import java.nio.file.Files
-import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.Paths
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
 import java.util.UUID
 import kotlin.streams.toList
 
@@ -50,34 +54,6 @@ class InvalidWorkDirException(message: String) : Exception(message)
  */
 private fun Iterable<Path>.flattenPaths(): List<Path> =
     filterNot { any { other -> it != other && it.startsWith(other) } }
-
-/**
- * A [PathMatcher] that matches paths matched by any of the given [matchers].
- */
-private data class MultiPathMatcher(val matchers: Iterable<PathMatcher>) : PathMatcher {
-    override fun matches(path: Path): Boolean = matchers.any { it.matches(path) }
-}
-
-/**
- * Returns a list of lines from the file or an empty list if the file doesn't exist.
- */
-private fun readAllLinesIfExists(file: Path): List<String> = try {
-    Files.readAllLines(file)
-} catch (e: NoSuchFileException) {
-    emptyList()
-}
-
-/**
- * Returns a relative path between this path and [other] if possible or `null` otherwise.
- */
-private fun Path.relativizedOrNull(other: Path): Path? =
-    if (isAbsolute == other.isAbsolute && other.startsWith(this)) relativize(other) else null
-
-/**
- * Returns [other] resolved against this path if possible or `null` otherwise.
- */
-private fun Path.resolvedOrNull(other: Path): Path? =
-    if (!other.isAbsolute || other.startsWith(this)) resolve(other) else null
 
 /**
  * A working directory.
@@ -97,43 +73,9 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     private val ignoreFile: Path = path.resolve(relativeIgnorePath)
 
     /**
-     * The list of paths currently being ignored.
-     *
-     * This is a list that is backed by the ignore pattern file. Getting this list returns values from the file and
-     * setting the list sets the contents of the file.
-     *
-     * This list includes only the paths in the ignore pattern file and does not include paths in [defaultIgnoredPaths].
-     *
-     * This list does not include paths from the ignore pattern file which are absolute and not descendants of this
-     * working directory. All paths are converted to relative paths before being written to the ignore pattern file and
-     * converted back to absolute paths when read from it.
+     * The list of matchers for paths which are always ignored regardless of the contents of the ignore file.
      */
-    var ignoredPaths: List<Path>
-        get() = readAllLinesIfExists(ignoreFile)
-            .map { Paths.get(it) }
-            .mapNotNull { path.resolvedOrNull(it) }
-
-        set(value) {
-            val lines = value
-                .mapNotNull { path.relativizedOrNull(it) }
-                .map { it.toString() }
-            Files.write(ignoreFile, lines)
-        }
-
-    /**
-     * The list of paths which are always ignored regardless of the contents of the ignore file.
-     */
-    val defaultIgnoredPaths: List<Path> = listOf(hiddenPath)
-
-    /**
-     * The [PathMatcher] used to match paths to ignore.
-     *
-     * This ignores paths in [ignoredPaths] and [defaultIgnoredPaths].
-     */
-    private val ignoreMatcher: PathMatcher
-        get() = MultiPathMatcher(
-            (ignoredPaths + defaultIgnoredPaths).map { path -> PathMatcher { it.startsWith(path) } }
-        )
+    val defaultIgnoreMatcher: PathMatcher = PrefixIgnoreMatcher(hiddenPath).toPathMatcher(path)
 
     /**
      * The repository associated with this working directory.
@@ -142,20 +84,49 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         get() = timeline.repository
 
     /**
+     * Get the list of matchers for files that should be ignored from storage.
+     */
+    fun readMatchers(): List<IgnoreMatcher> = if (Files.exists(ignoreFile)) {
+        Files.newBufferedReader(ignoreFile).use { matcherGson.fromJson<List<IgnoreMatcher>>(it) }
+    } else {
+        writeMatchers(emptyList())
+        emptyList()
+    }
+
+    /**
+     * Write the list of matchers for files that should be ignored to storage.
+     */
+    fun writeMatchers(matchers: List<IgnoreMatcher>) {
+        Files.newBufferedWriter(ignoreFile, CREATE, TRUNCATE_EXISTING).use { matcherGson.toJson(matchers, it) }
+    }
+
+    /**
+     * Get the [PathMatcher] for matching paths to be ignored.
+     *
+     * This combines the [defaultIgnoreMatcher] and the matchers read from [readMatchers].
+     */
+    private fun getIgnoreMatcher(): PathMatcher = MultiPathMatcher(
+        readMatchers().map { it.toPathMatcher(path) }.plusElement(defaultIgnoreMatcher)
+    )
+
+    /**
      * Finds all the descendants of each of the given [paths] in the working directory.
      *
      * This returns only the paths of regular files that exist in the working directory and are not being ignored.
      *
      * @return A list of distinct paths relative to the working directory.
      */
-    private fun walkDirectory(paths: Iterable<Path>): List<Path> = paths
-        .map { it.toAbsolutePath().normalize() }
-        .flattenPaths()
-        .filter { Files.exists(it) }
-        .flatMap { Files.walk(it).toList() }
-        .filterNot { ignoreMatcher.matches(it) }
-        .filter { Files.isRegularFile(it) }
-        .map { path.relativize(it) }
+    private fun walkDirectory(paths: Iterable<Path>): List<Path> {
+        val ignoreMatcher = getIgnoreMatcher()
+        return paths
+            .map { it.toAbsolutePath().normalize() }
+            .flattenPaths()
+            .filter { Files.exists(it) }
+            .flatMap { Files.walk(it).toList() }
+            .filterNot { ignoreMatcher.matches(it) }
+            .filter { Files.isRegularFile(it) }
+            .map { path.relativize(it) }
+    }
 
     /**
      * Finds all the descendants of each of the given [paths] in the timeline.
@@ -165,13 +136,16 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      *
      * @return A list of distinct paths relative to the working directory.
      */
-    private fun walkTimeline(paths: Iterable<Path>): List<Path> = paths
-        .map { it.toAbsolutePath().normalize() }
-        .flattenPaths()
-        .flatMap { parent -> timeline.paths.filter { path.resolve(it).startsWith(parent) } }
-        .map { path.resolve(it) }
-        .filterNot { ignoreMatcher.matches(it) }
-        .map { path.relativize(it) }
+    private fun walkTimeline(paths: Iterable<Path>): List<Path> {
+        val ignoreMatcher = getIgnoreMatcher()
+        return paths
+            .map { it.toAbsolutePath().normalize() }
+            .flattenPaths()
+            .flatMap { parent -> timeline.paths.filter { path.resolve(it).startsWith(parent) } }
+            .map { path.resolve(it) }
+            .filterNot { ignoreMatcher.matches(it) }
+            .map { path.relativize(it) }
+    }
 
     /**
      * Returns only the [files] which have uncommitted changes.
@@ -353,7 +327,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         /**
          * The relative path of the file containing paths to ignore.
          */
-        private val relativeIgnorePath: Path = relativeHiddenPath.resolve("ignore")
+        private val relativeIgnorePath: Path = relativeHiddenPath.resolve("ignore.json")
 
         /**
          * The relative path of the file containing information about the working directory.
@@ -366,6 +340,13 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         private val relativeRepoPath: Path = relativeHiddenPath.resolve("repository")
 
         /**
+         * A cache of [WorkDirectory] instances.
+         *
+         * This allows previously-created [WorkDirectory] instances to be re-used.
+         */
+        private val instanceCache: MutableMap<Path, WorkDirectory> = mutableMapOf()
+
+        /**
          * An object used for serializing data as JSON.
          */
         private val gson: Gson = GsonBuilder()
@@ -373,11 +354,22 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
             .create()
 
         /**
-         * A cache of [WorkDirectory] instances.
-         *
-         * This allows previously-created [WorkDirectory] instances to be re-used.
+         * An object used for serializing [IgnoreMatcher] objects as JSON.
          */
-        private val instanceCache: MutableMap<Path, WorkDirectory> = mutableMapOf()
+        private val matcherGson: Gson = GsonBuilder()
+            .setPrettyPrinting()
+            .registerTypeHierarchyAdapter(Path::class.java, RelativePathTypeAdapter)
+            .registerTypeAdapterFactory(
+                RuntimeTypeAdapterFactory(IgnoreMatcher::class).apply {
+                    registerSubtype(PrefixIgnoreMatcher::class)
+                    registerSubtype(GlobIgnoreMatcher::class)
+                    registerSubtype(RegexIgnoreMatcher::class)
+                    registerSubtype(SizeIgnoreMatcher::class)
+                    registerSubtype(ExtensionIgnoreMatcher::class)
+                    registerSubtype(CategoryIgnoreMatcher::class)
+                }
+            )
+            .create()
 
         /**
          * Returns whether the directory at the given [path] is a working directory.

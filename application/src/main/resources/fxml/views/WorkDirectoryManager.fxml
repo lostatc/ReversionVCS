@@ -156,14 +156,14 @@
                 </Tab>
                 <Tab text="Ignored Files">
                     <HelpPane
-                        helpText="You can ignore files to keep the program from automatically creating new versions of them. You can ignore directories to ignore all the files in them. You can still manually create new versions of ignored files, and new versions won't be automatically created for any files if tracking changes is disabled for the directory."
+                        helpText="You can ignore files to keep the program from automatically creating new versions of them (if tracking changes is enabled for the directory). You can always manually create new versions of ignored files."
                         position="BOTTOM_LEFT" styleClass="icon-button-light">
                         <padding>
                             <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                         </padding>
                         <VBox xmlns:fx="http://javafx.com/fxml/1" spacing="25.0"
                               xmlns="http://javafx.com/javafx/11.0.1">
-                            <JFXListView fx:id="ignorePathList" depth="2" styleClass="card-list-view"
+                            <JFXListView fx:id="ignoreMatcherList" depth="2" styleClass="card-list-view"
                                          VBox.vgrow="ALWAYS">
                                 <placeholder>
                                     <Card styleClass="placeholder"
@@ -172,26 +172,33 @@
                                 </placeholder>
                             </JFXListView>
                             <HBox alignment="CENTER" spacing="10.0">
-                                <IconButton icon="gmi-note-add" onAction="#addIgnoreFile"
-                                            styleClass="icon-button-light">
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <VBox>
+                                    <Label styleClass="info-key" text="Rule Type">
+                                        <tooltip>
+                                            <Tooltip text="Select how you want to ignore files."/>
+                                        </tooltip>
+                                    </Label>
+                                    <JFXComboBox fx:id="ignoreTypeComboBox"/>
+                                </VBox>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Group fx:id="ignoreFormContainer"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <IconButton icon="gmi-add" onAction="#addIgnoreMatcher" styleClass="icon-button-light">
                                     <tooltip>
-                                        <Tooltip text="Select a file to ignore."/>
+                                        <Tooltip text="Add a new rule for ignoring files."/>
                                     </tooltip>
                                 </IconButton>
-                                <IconButton icon="gmi-create-new-folder" onAction="#addIgnoreDirectory"
+                                <IconButton icon="gmi-remove" onAction="#removeIgnoreMatcher"
                                             styleClass="icon-button-light">
                                     <tooltip>
-                                        <Tooltip text="Select a directory to ignore."/>
+                                        <Tooltip text="Remove the selected rule for ignoring files."/>
                                     </tooltip>
                                 </IconButton>
-                                <IconButton icon="gmi-remove" onAction="#removeIgnorePath"
-                                            styleClass="icon-button-light">
-                                    <tooltip>
-                                        <Tooltip text="Stop ignoring the selected file/directory."/>
-                                    </tooltip>
-                                </IconButton>
+                                <Region HBox.hgrow="ALWAYS"/>
                             </HBox>
-                            <Region prefHeight="40.0"/>
+                            <Label fx:id="ignorePreviewLabel" alignment="CENTER" maxWidth="1.7976931348623157E308"
+                                   prefHeight="40.0" textAlignment="CENTER" styleClass="preview-text"/>
                         </VBox>
                     </HelpPane>
                 </Tab>

@@ -17,33 +17,22 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui.controls
+package io.github.lostatc.reversion.gui
 
-import javafx.beans.property.ReadOnlyProperty
-import javafx.scene.Node
+import javafx.scene.control.ListCell
+import javafx.scene.control.ListView
+import javafx.util.Callback
 
 /**
- * An form for user input that encapsulates multiple controls.
+ * A cell factory which maps objects to string representations.
+ *
+ * @param [transform] A function that converts an object to its string representation.
  */
-interface Form<T : Any> {
-    /**
-     * A property for [result].
-     */
-    val resultProperty: ReadOnlyProperty<T?>
-
-    /**
-     * The node representing the form.
-     */
-    val node: Node
-
-    /**
-     * The output of the form, or `null` if the form is invalid or incomplete.
-     */
-    val result: T?
-        get() = resultProperty.value
-
-    /**
-     * Clear the fields of the form.
-     */
-    fun clear()
+class MappingCellFactory<T>(val transform: (T) -> String) : Callback<ListView<T>, ListCell<T>> {
+    override fun call(param: ListView<T>?): ListCell<T> = object : ListCell<T>() {
+        override fun updateItem(item: T, empty: Boolean) {
+            super.updateItem(item, empty)
+            text = if (empty) "" else transform(item)
+        }
+    }
 }

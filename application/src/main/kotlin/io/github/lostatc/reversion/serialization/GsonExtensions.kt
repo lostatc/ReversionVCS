@@ -17,23 +17,18 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui
+package io.github.lostatc.reversion.serialization
 
-import javafx.scene.control.ListCell
-import javafx.scene.control.ListView
-import javafx.util.Callback
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.Reader
 
 /**
- * A cell factory which maps objects to string representations.
- *
- * @param [mapping] A map of objects to their corresponding string representations.
+ * Creates a [TypeToken] for [T].
  */
-class MapCellFactory<T>(val mapping: Map<T, String>) : Callback<ListView<T>, ListCell<T>> {
-    override fun call(param: ListView<T>?): ListCell<T> = object : ListCell<T>() {
-        override fun updateItem(item: T, empty: Boolean) {
-            super.updateItem(item, empty)
-            text = if (empty) "" else mapping[item] ?: ""
-        }
-    }
+inline fun <reified T> token(): TypeToken<T> = object : TypeToken<T>() {}
 
-}
+/**
+ * Deserializes the given [json] into an instance of type [T].
+ */
+inline fun <reified T> Gson.fromJson(json: Reader): T = fromJson(json, token<T>().type)

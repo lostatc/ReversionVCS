@@ -43,6 +43,8 @@ import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
+import io.github.lostatc.reversion.serialization.ConfigDeserializer
+import io.github.lostatc.reversion.serialization.ConfigSerializer
 import org.apache.commons.io.FileUtils
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
@@ -455,7 +457,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         private val gson: Gson = GsonBuilder()
             .setPrettyPrinting()
             .registerTypeAdapter(Config::class.java, ConfigSerializer)
-            .registerTypeAdapter(Config::class.java, ConfigDeserializer(getConfig().properties))
+            .registerTypeAdapter(
+                Config::class.java,
+                ConfigDeserializer(getConfig().properties)
+            )
             .create()
 
         fun getConfig(): Config = Config(blockSizeProperty)

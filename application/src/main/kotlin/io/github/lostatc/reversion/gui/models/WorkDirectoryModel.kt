@@ -33,6 +33,7 @@ import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.gui.wrap
+import io.github.lostatc.reversion.storage.IgnoreMatcher
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
@@ -84,9 +85,9 @@ data class WorkDirectoryModel(
     val cleanupPolicies: ObservableList<CleanupPolicy> = FXCollections.observableArrayList()
 
     /**
-     * The ignored paths being displayed in the UI.
+     * The matchers for files to ignore being displayed in the UI.
      */
-    val ignoredPaths: ObservableList<Path> = FXCollections.observableArrayList()
+    val ignoreMatchers: ObservableList<IgnoreMatcher> = FXCollections.observableArrayList()
 
     /**
      * A property for [path].
@@ -169,7 +170,7 @@ data class WorkDirectoryModel(
         executeAsync { workDirectory.timeline.cleanupPolicies } ui { cleanupPolicies.addAll(it) }
 
         // Load the ignored path list in the UI.
-        executeAsync { workDirectory.ignoredPaths } ui { ignoredPaths.addAll(it) }
+        executeAsync { workDirectory.readMatchers() } ui { ignoreMatchers.addAll(it) }
 
         // Set whether the working directory is tracking changes.
         executeAsync { path in daemon } ui { trackingChanges = it }
@@ -193,9 +194,9 @@ data class WorkDirectoryModel(
         )
 
         // Update the working directory whenever an ignored path is added or removed.
-        ignoredPaths.addListener(
-            ListChangeListener<Path> { change ->
-                execute { workDirectory.ignoredPaths = change.list }
+        ignoreMatchers.addListener(
+            ListChangeListener<IgnoreMatcher> { change ->
+                execute { workDirectory.writeMatchers(change.list) }
             }
         )
     }
