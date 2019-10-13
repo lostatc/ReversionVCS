@@ -24,9 +24,8 @@ import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.daemon.STUB_NAME
 import io.github.lostatc.reversion.daemon.WatchDaemon
-import io.github.lostatc.reversion.daemon.addWatch
-import io.github.lostatc.reversion.daemon.contains
-import io.github.lostatc.reversion.daemon.removeWatch
+import io.github.lostatc.reversion.daemon.WatchRemote
+import io.github.lostatc.reversion.daemon.asDaemon
 import io.github.lostatc.reversion.gui.ActorEvent
 import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.getValue
@@ -164,7 +163,7 @@ data class WorkDirectoryModel(
     /**
      * The currently-running daemon instance.
      */
-    val daemon: WatchDaemon = LocateRegistry.getRegistry().lookup(STUB_NAME) as WatchDaemon
+    val daemon: WatchDaemon = (LocateRegistry.getRegistry().lookup(STUB_NAME) as WatchRemote).asDaemon()
 
     init {
         // Load the cleanup policies in the UI.
@@ -174,7 +173,7 @@ data class WorkDirectoryModel(
         executeAsync { workDirectory.ignoredPaths } ui { ignoredPaths.addAll(it) }
 
         // Set whether the working directory is tracking changes.
-        executeAsync { path in daemon } ui { trackingChanges = it }
+        executeAsync { path in daemon.tracked.value } ui { trackingChanges = it }
 
         // Load statistics about the working directory.
         updateStatistics()
@@ -247,10 +246,11 @@ data class WorkDirectoryModel(
     fun setTrackChanges(value: Boolean) {
         trackingChanges = value
 
+        // Use [plusElement] and [minusElement] because [Path] is an [Iterable].
         if (trackingChanges) {
-            daemon.addWatch(path)
+            daemon.tracked.value = daemon.tracked.value.plusElement(path)
         } else {
-            daemon.removeWatch(path)
+            daemon.tracked.value = daemon.tracked.value.minusElement(path)
         }
     }
 

@@ -19,16 +19,16 @@
 
 package io.github.lostatc.reversion.gui.mvc
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.DATA_DIR
+import io.github.lostatc.reversion.daemon.STUB_NAME
+import io.github.lostatc.reversion.daemon.WatchDaemon
+import io.github.lostatc.reversion.daemon.WatchRemote
+import io.github.lostatc.reversion.daemon.asDaemon
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
-import io.github.lostatc.reversion.storage.PathTypeAdapter
 import io.github.lostatc.reversion.storage.SnapshotMounter
-import io.github.lostatc.reversion.storage.fromJson
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
@@ -41,6 +41,7 @@ import kotlinx.coroutines.withContext
 import java.awt.Desktop
 import java.nio.file.Files
 import java.nio.file.Path
+import java.rmi.registry.LocateRegistry
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -88,6 +89,11 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     val workDirectories: ObservableList<WorkDirectoryModel> = FXCollections.unmodifiableObservableList(_workDirectories)
 
     /**
+     * The currently-running daemon instance.
+     */
+    val daemon: WatchDaemon = (LocateRegistry.getRegistry().lookup(STUB_NAME) as WatchRemote).asDaemon()
+
+    /**
      * Loads the user's [workDirectories] asynchronously.
      *
      * @param [handler] A function which is passed the path of a working directory and returns a model representing it,
@@ -96,7 +102,7 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     fun loadWorkDirectories(handler: suspend (Path) -> WorkDirectoryModel?) {
         launch {
             selected = null
-            for (path in loadWorkPaths()) {
+            for (path in daemon.registered.value) {
                 launch { handler(path)?.let { _workDirectories.add(it) } }
             }
         }
@@ -113,8 +119,9 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
                 sendNotification("This directory is already being tracked.")
             } else {
                 _workDirectories.add(model)
-                val paths = workDirectories.map { it.executeAsync { workDirectory.path }.await() }
-                saveWorkPaths(paths)
+                daemon.registered.value = workDirectories
+                    .map { it.executeAsync { workDirectory.path }.await() }
+                    .toSet()
             }
         }
     }
@@ -130,8 +137,9 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
         } ui {
             _workDirectories.remove(selected)
             this.selected = null
-            val paths = workDirectories.map { it.executeAsync { workDirectory.path }.await() }
-            saveWorkPaths(paths)
+            daemon.registered.value = workDirectories
+                .map { it.executeAsync { workDirectory.path }.await() }
+                .toSet()
         }
     }
 
@@ -171,41 +179,6 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
                 SnapshotMounter.mount(snapshot, mountpoint)
 
                 Desktop.getDesktop().open(mountpoint.toFile())
-            }
-        }
-    }
-
-    companion object {
-        /**
-         * The path of the file which stores the list of the user's working directories.
-         */
-        private val directoryListFile: Path = DATA_DIR.resolve("directories.json")
-
-        /**
-         * The object for serializing/de-serializing objects as JSON.
-         */
-        private val gson: Gson = GsonBuilder()
-            .setPrettyPrinting()
-            .registerTypeHierarchyAdapter(Path::class.java, PathTypeAdapter)
-            .create()
-
-        /**
-         * Loads the list of the user's working directories from storage.
-         */
-        private suspend fun loadWorkPaths(): List<Path> = withContext(Dispatchers.IO) {
-            if (Files.notExists(directoryListFile)) return@withContext emptyList<Path>()
-
-            Files.newBufferedReader(directoryListFile).use {
-                gson.fromJson<List<Path>>(it).toList()
-            }
-        }
-
-        /**
-         * Saves the given [paths] of the user's working directories to storage.
-         */
-        private suspend fun saveWorkPaths(paths: List<Path>) = withContext(Dispatchers.IO) {
-            Files.newBufferedWriter(directoryListFile).use {
-                gson.toJson(paths, it)
             }
         }
     }
