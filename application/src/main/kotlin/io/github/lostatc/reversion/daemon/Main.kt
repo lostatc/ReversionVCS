@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.daemon
 
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.rmi.registry.LocateRegistry
 import java.rmi.server.UnicastRemoteObject
@@ -51,7 +52,7 @@ fun main() {
     Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
 
     // Start the daemon.
-    PersistentWatchDaemon.start()
+    runBlocking { PersistentWatchDaemon.start() }
 
     // Make the daemon accessible through Java RMI.
     val daemonStub = UnicastRemoteObject.exportObject(PersistentWatchDaemon.asRemote(), 0) as WatchRemote

@@ -43,6 +43,7 @@ import javafx.collections.ObservableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.rmi.registry.LocateRegistry
@@ -173,7 +174,7 @@ data class WorkDirectoryModel(
         executeAsync { workDirectory.ignoredPaths } ui { ignoredPaths.addAll(it) }
 
         // Set whether the working directory is tracking changes.
-        executeAsync { path in daemon.tracked.value } ui { trackingChanges = it }
+        executeAsync { path in daemon.tracked.get() } ui { trackingChanges = it }
 
         // Load statistics about the working directory.
         updateStatistics()
@@ -247,10 +248,12 @@ data class WorkDirectoryModel(
         trackingChanges = value
 
         // Use [plusElement] and [minusElement] because [Path] is an [Iterable].
-        if (trackingChanges) {
-            daemon.tracked.value = daemon.tracked.value.plusElement(path)
-        } else {
-            daemon.tracked.value = daemon.tracked.value.minusElement(path)
+        launch {
+            if (trackingChanges) {
+                daemon.tracked.mutate { it.plusElement(path) }
+            } else {
+                daemon.tracked.mutate { it.minusElement(path) }
+            }
         }
     }
 
