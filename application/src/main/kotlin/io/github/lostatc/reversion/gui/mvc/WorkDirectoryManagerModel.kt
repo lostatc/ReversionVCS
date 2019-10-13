@@ -102,7 +102,7 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     fun loadWorkDirectories(handler: suspend (Path) -> WorkDirectoryModel?) {
         launch {
             selected = null
-            for (path in daemon.registered.value) {
+            for (path in daemon.registered.get()) {
                 launch { handler(path)?.let { _workDirectories.add(it) } }
             }
         }
@@ -119,9 +119,8 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
                 sendNotification("This directory is already being tracked.")
             } else {
                 _workDirectories.add(model)
-                daemon.registered.value = workDirectories
-                    .map { it.executeAsync { workDirectory.path }.await() }
-                    .toSet()
+                daemon.registered.mutate { it.plusElement(path) }
+
             }
         }
     }
@@ -137,9 +136,7 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
         } ui {
             _workDirectories.remove(selected)
             this.selected = null
-            daemon.registered.value = workDirectories
-                .map { it.executeAsync { workDirectory.path }.await() }
-                .toSet()
+            daemon.registered.mutate { it.minusElement(selected.path) }
         }
     }
 

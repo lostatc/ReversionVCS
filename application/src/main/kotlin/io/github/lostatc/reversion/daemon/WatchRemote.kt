@@ -26,12 +26,12 @@ import io.github.lostatc.reversion.api.RepositoryException
 import io.github.lostatc.reversion.storage.PathTypeAdapter
 import io.github.lostatc.reversion.storage.WorkDirectory
 import io.github.lostatc.reversion.storage.fromJson
-import javafx.beans.value.WritableValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -66,9 +66,9 @@ interface WatchRemote : Remote {
  * Convert this object to a [WatchDaemon] which deserializes the values.
  */
 fun WatchRemote.asDaemon(): WatchDaemon = object : WatchDaemon {
-    override val registered: WritableValue<Set<Path>> = getRegistered().deserialized(gson, emptySet())
+    override val registered: MutableValue<Set<Path>> = getRegistered().deserialized(gson)
 
-    override val tracked: WritableValue<Set<Path>> = getTracked().deserialized(gson, emptySet())
+    override val tracked: MutableValue<Set<Path>> = getTracked().deserialized(gson)
 
 }
 
@@ -81,24 +81,24 @@ interface WatchDaemon {
      *
      * The repository [jobs][Repository.jobs] of each working directory in this set are run asynchronously.
      */
-    val registered: WritableValue<Set<Path>>
+    val registered: MutableValue<Set<Path>>
 
     /**
      * The set of paths of working directories which have tracking changes enabled.
      *
      * Modified files in these directories are committed.
      */
-    val tracked: WritableValue<Set<Path>>
+    val tracked: MutableValue<Set<Path>>
 
     /**
      * Convert this object to a [Remote] which can be used with Java RMI.
      */
     fun asRemote(): WatchRemote = object : WatchRemote {
         @Throws(RemoteException::class)
-        override fun getRegistered(): SerializableValue<String> = registered.serialized(gson)
+        override fun getRegistered(): SerializableValue<String> = registered.synchronized().serialized(gson)
 
         @Throws(RemoteException::class)
-        override fun getTracked(): SerializableValue<String> = tracked.serialized(gson)
+        override fun getTracked(): SerializableValue<String> = tracked.synchronized().serialized(gson)
     }
 }
 
@@ -126,8 +126,8 @@ object PersistentWatchDaemon : WatchDaemon, CoroutineScope by CoroutineScope(Dis
      */
     private val watchJobs = mutableMapOf<Path, Job>()
 
-    override val registered: WritableValue<Set<Path>> = object : WritableValue<Set<Path>> {
-        override fun setValue(value: Set<Path>) {
+    override val registered: MutableValue<Set<Path>> = object : MutableValue<Set<Path>> {
+        override suspend fun set(value: Set<Path>) {
             for (newPath in value - repositoryJobs.keys) {
                 repositoryJobs[newPath] = launch { runJobs(newPath) }
             }
@@ -136,14 +136,16 @@ object PersistentWatchDaemon : WatchDaemon, CoroutineScope by CoroutineScope(Dis
                 repositoryJobs.remove(oldPath)?.cancel()
             }
 
-            Files.newBufferedWriter(registeredFile).use { gson.toJson(value, it) }
+            withContext(Dispatchers.IO) {
+                Files.newBufferedWriter(registeredFile).use { gson.toJson(value, it) }
+            }
         }
 
-        override fun getValue(): Set<Path> = repositoryJobs.keys
+        override suspend fun get(): Set<Path> = repositoryJobs.keys
     }
 
-    override val tracked: WritableValue<Set<Path>> = object : WritableValue<Set<Path>> {
-        override fun setValue(value: Set<Path>) {
+    override val tracked: MutableValue<Set<Path>> = object : MutableValue<Set<Path>> {
+        override suspend fun set(value: Set<Path>) {
             for (newPath in value - watchJobs.keys) {
                 watchJobs[newPath] = launch { watch(newPath) }
             }
@@ -152,10 +154,12 @@ object PersistentWatchDaemon : WatchDaemon, CoroutineScope by CoroutineScope(Dis
                 watchJobs.remove(oldPath)?.cancel()
             }
 
-            Files.newBufferedWriter(trackedFile).use { gson.toJson(value, it) }
+            withContext(Dispatchers.IO) {
+                Files.newBufferedWriter(trackedFile).use { gson.toJson(value, it) }
+            }
         }
 
-        override fun getValue(): Set<Path> = watchJobs.keys
+        override suspend fun get(): Set<Path> = watchJobs.keys
     }
 
     /**
@@ -166,9 +170,11 @@ object PersistentWatchDaemon : WatchDaemon, CoroutineScope by CoroutineScope(Dis
     /**
      * Read persisted values from storage and start watching directories and running jobs.
      */
-    fun start() {
-        registered.value = Files.newBufferedReader(registeredFile).use { gson.fromJson(it) }
-        tracked.value = Files.newBufferedReader(trackedFile).use { gson.fromJson(it) }
+    suspend fun start() {
+        withContext(Dispatchers.IO) {
+            registered.set(Files.newBufferedReader(registeredFile).use { gson.fromJson<Set<Path>>(it) })
+            tracked.set(Files.newBufferedReader(trackedFile).use { gson.fromJson<Set<Path>>(it) })
+        }
     }
 
     /**
