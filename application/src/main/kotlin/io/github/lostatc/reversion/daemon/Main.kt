@@ -19,9 +19,7 @@
 
 package io.github.lostatc.reversion.daemon
 
-import io.github.lostatc.reversion.DATA_DIR
 import org.slf4j.LoggerFactory
-import java.nio.file.Path
 import java.rmi.registry.LocateRegistry
 import java.rmi.server.UnicastRemoteObject
 
@@ -36,36 +34,27 @@ val loggingExceptionHandler: Thread.UncaughtExceptionHandler =
     }
 
 /**
- * The path of the file which stores the list of watched directories.
- */
-private val WATCHED_DIRECTORIES_FILE: Path = DATA_DIR.resolve("watchedDirectories.json")
-
-/**
  * The port on which the RMI registry accepts requests.
  */
 private const val REGISTRY_PORT: Int = 1099
 
 /**
- * The name to bind the [WatchDaemon] stub to in the RMI registry.
+ * The name to bind the [WatchRemote] stub to in the RMI registry.
  */
 const val STUB_NAME: String = "io.github.lostatc.reversiond"
 
 /**
- * The daemon which watches files for changes.
- */
-// This must be a file-level property to keep it from being garbage collected.
-// If it is garbage collected, the object is un-exported by the RMI server and the daemon exits.
-private val daemon: WatchDaemon by lazy { PersistentWatchDaemon(WATCHED_DIRECTORIES_FILE) }
-
-/**
  * Start the daemon.
  */
-fun main(args: Array<String>) {
+fun main() {
     // Log any uncaught exceptions and print them to stderr.
     Thread.setDefaultUncaughtExceptionHandler(loggingExceptionHandler)
 
     // Start the daemon.
-    val daemonStub = UnicastRemoteObject.exportObject(daemon, 0) as WatchDaemon
+    PersistentWatchDaemon.start()
+
+    // Make the daemon accessible through Java RMI.
+    val daemonStub = UnicastRemoteObject.exportObject(PersistentWatchDaemon.asRemote(), 0) as WatchRemote
     val registry = LocateRegistry.createRegistry(REGISTRY_PORT)
     registry.bind(STUB_NAME, daemonStub)
 }
