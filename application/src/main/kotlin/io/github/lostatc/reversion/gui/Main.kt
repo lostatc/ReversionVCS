@@ -85,7 +85,3 @@ class Reversion : Application() {
         }
     }
 }
-
-fun main(args: Array<String>) {
-    Application.launch(Reversion::class.java, *args)
-}

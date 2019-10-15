@@ -22,10 +22,7 @@ package io.github.lostatc.reversion.gui.mvc
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.daemon.STUB_NAME
 import io.github.lostatc.reversion.daemon.WatchDaemon
-import io.github.lostatc.reversion.daemon.WatchRemote
-import io.github.lostatc.reversion.daemon.asDaemon
 import io.github.lostatc.reversion.gui.ActorEvent
 import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.getValue
@@ -46,7 +43,6 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
-import java.rmi.registry.LocateRegistry
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalUnit
@@ -161,11 +157,6 @@ data class WorkDirectoryModel(
      */
     var trackingChanges: Boolean by trackingChangesProperty
 
-    /**
-     * The currently-running daemon instance.
-     */
-    val daemon: WatchDaemon = (LocateRegistry.getRegistry().lookup(STUB_NAME) as WatchRemote).asDaemon()
-
     init {
         // Load the cleanup policies in the UI.
         executeAsync { workDirectory.timeline.cleanupPolicies } ui { cleanupPolicies.addAll(it) }
@@ -174,7 +165,7 @@ data class WorkDirectoryModel(
         executeAsync { workDirectory.ignoredPaths } ui { ignoredPaths.addAll(it) }
 
         // Set whether the working directory is tracking changes.
-        executeAsync { path in daemon.tracked.get() } ui { trackingChanges = it }
+        executeAsync { WatchDaemon.tracked.contains(path) } ui { trackingChanges = it }
 
         // Load statistics about the working directory.
         updateStatistics()
@@ -247,12 +238,11 @@ data class WorkDirectoryModel(
     fun setTrackChanges(value: Boolean) {
         trackingChanges = value
 
-        // Use [plusElement] and [minusElement] because [Path] is an [Iterable].
         launch {
             if (trackingChanges) {
-                daemon.tracked.mutate { it.plusElement(path) }
+                WatchDaemon.tracked.add(path)
             } else {
-                daemon.tracked.mutate { it.minusElement(path) }
+                WatchDaemon.tracked.remove(path)
             }
         }
     }
@@ -267,15 +257,15 @@ data class WorkDirectoryModel(
          */
         suspend fun fromPath(path: Path): WorkDirectoryModel =
             withContext(Dispatchers.IO) {
-            val workDirectory = if (WorkDirectory.isWorkDirectory(path)) {
-                WorkDirectory.open(path)
-            } else {
-                WorkDirectory.init(path, DEFAULT_PROVIDER).apply {
-                    timeline.cleanupPolicies = repository.defaultPolicies
+                val workDirectory = if (WorkDirectory.isWorkDirectory(path)) {
+                    WorkDirectory.open(path)
+                } else {
+                    WorkDirectory.init(path, DEFAULT_PROVIDER).apply {
+                        timeline.cleanupPolicies = repository.defaultPolicies
+                    }
                 }
-            }
 
-            WorkDirectoryModel(workDirectory)
-        }
+                WorkDirectoryModel(workDirectory)
+            }
     }
 }

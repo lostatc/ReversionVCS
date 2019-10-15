@@ -20,10 +20,7 @@
 package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.DATA_DIR
-import io.github.lostatc.reversion.daemon.STUB_NAME
 import io.github.lostatc.reversion.daemon.WatchDaemon
-import io.github.lostatc.reversion.daemon.WatchRemote
-import io.github.lostatc.reversion.daemon.asDaemon
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
@@ -41,7 +38,6 @@ import kotlinx.coroutines.withContext
 import java.awt.Desktop
 import java.nio.file.Files
 import java.nio.file.Path
-import java.rmi.registry.LocateRegistry
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -89,11 +85,6 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     val workDirectories: ObservableList<WorkDirectoryModel> = FXCollections.unmodifiableObservableList(_workDirectories)
 
     /**
-     * The currently-running daemon instance.
-     */
-    val daemon: WatchDaemon = (LocateRegistry.getRegistry().lookup(STUB_NAME) as WatchRemote).asDaemon()
-
-    /**
      * Loads the user's [workDirectories] asynchronously.
      *
      * @param [handler] A function which is passed the path of a working directory and returns a model representing it,
@@ -102,7 +93,7 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     fun loadWorkDirectories(handler: suspend (Path) -> WorkDirectoryModel?) {
         launch {
             selected = null
-            for (path in daemon.registered.get()) {
+            for (path in WatchDaemon.registered.toSet()) {
                 launch { handler(path)?.let { _workDirectories.add(it) } }
             }
         }
@@ -119,7 +110,7 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
                 sendNotification("This directory is already being tracked.")
             } else {
                 _workDirectories.add(model)
-                daemon.registered.mutate { it.plusElement(path) }
+                WatchDaemon.registered.add(path)
 
             }
         }
@@ -136,7 +127,7 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
         } ui {
             _workDirectories.remove(selected)
             this.selected = null
-            daemon.registered.mutate { it.minusElement(selected.path) }
+            WatchDaemon.registered.remove(selected.path)
         }
     }
 
