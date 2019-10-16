@@ -53,6 +53,9 @@ application {
     mainClassName = "io.github.lostatc.reversion.MainKt"
 }
 
+tasks.withType<Jar> {
+    archiveBaseName.set("reversion")
+}
 
 javafx {
     version = "12.0.1"

@@ -23,6 +23,8 @@ import ch.qos.logback.core.PropertyDefinerBase
 import ch.qos.logback.core.spi.PropertyDefiner
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.storage.DatabaseStorageProvider
+import java.nio.file.FileSystemNotFoundException
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.MissingResourceException
@@ -56,8 +58,14 @@ data class MissingResourceException(override val message: String, val name: Stri
 /**
  * Returns the [Path] of the resource with the given [name] or `null` if it doesn't exist.
  */
-fun findResourcePath(name: String): Path? =
-    OperatingSystem::class.java.getResource(name)?.let { Paths.get(it.toURI()) }
+fun findResourcePath(name: String): Path? = OperatingSystem::class.java.getResource(name)?.toURI()?.let {
+    try {
+        Paths.get(it)
+    } catch (e: FileSystemNotFoundException) {
+        FileSystems.newFileSystem(it, emptyMap<String, Any>())
+        Paths.get(it)
+    }
+}
 
 /**
  * Returns the [Path] of the resource with the given [name].

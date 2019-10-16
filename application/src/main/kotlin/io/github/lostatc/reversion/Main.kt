@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion
 
 import io.github.lostatc.reversion.daemon.WatchDaemon
-import io.github.lostatc.reversion.daemon.watchService
 import io.github.lostatc.reversion.gui.Reversion
 import it.sauronsoftware.junique.AlreadyLockedException
 import it.sauronsoftware.junique.JUnique
@@ -36,12 +35,9 @@ private const val APP_ID: String = "io.github.lostatc.reversion"
  *
  * The program consists of a UI and a daemon which run in the same process. The daemon continues to run after the UI is
  * closed. On subsequent invocations of this method, instead of starting a new process, a message is sent to the
- * already-running process to display the UI. If the "--daemon" argument is passed, the daemon is still started but the
- * UI is not displayed.
+ * already-running process to display the UI.
  */
 fun main(args: Array<String>) {
-    val showUI = "--dameon" !in args
-
     try {
         // Check if application is already running.
         JUnique.acquireLock(APP_ID) {
@@ -52,19 +48,11 @@ fun main(args: Array<String>) {
     } catch (e: AlreadyLockedException) {
         // Application is already running. Signal the running process to open the UI.
         // The message content doesn't matter.
-        if (showUI) {
-            JUnique.sendMessage(APP_ID, "")
-        }
+        JUnique.sendMessage(APP_ID, "")
         return
     }
 
-    // Application is not currently running.
-    // Install the daemon if it's not already installed and start it.
-    watchService.install()
+    // Application is not currently running. Start the daemon and the UI.
     runBlocking { WatchDaemon.start() }
-
-    // Start the UI.
-    if (showUI) {
-        Reversion.launchOrShow()
-    }
+    Reversion.launchOrShow()
 }
