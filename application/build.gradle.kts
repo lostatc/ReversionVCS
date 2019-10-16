@@ -41,38 +41,20 @@ dependencies {
     // FUSE file system
     implementation(group = "com.github.serceman", name = "jnr-fuse", version = "0.5.3")
 
+    // Preventing multiple application instances
+    implementation(group = "de.huxhorn.lilith", name = "de.huxhorn.lilith.3rdparty.junique", version = "1.0.4")
+
     // Unit testing
     testImplementation(group = "org.junit.jupiter", name = "junit-jupiter", version = "5.4.2")
 }
 
 application {
-    applicationName = "reversion-gui"
-    mainClassName = "io.github.lostatc.reversion.gui.MainKt"
+    applicationName = "reversion"
+    mainClassName = "io.github.lostatc.reversion.MainKt"
 }
 
 
 javafx {
     version = "12.0.1"
     modules("javafx.fxml", "javafx.controls")
-}
-
-tasks {
-    val startScripts = getByName<CreateStartScripts>("startScripts")
-
-    register<CreateStartScripts>("cliScript") {
-        applicationName = "reversion"
-        mainClassName = "io.github.lostatc.reversion.cli.MainKt"
-        outputDir = startScripts.outputDir
-        classpath = startScripts.classpath
-    }
-
-    register<CreateStartScripts>("daemonScript") {
-        applicationName = "reversiond"
-        mainClassName = "io.github.lostatc.reversion.daemon.MainKt"
-        outputDir = startScripts.outputDir
-        classpath = startScripts.classpath
-    }
-
-    startScripts.dependsOn("cliScript")
-    startScripts.dependsOn("daemonScript")
 }

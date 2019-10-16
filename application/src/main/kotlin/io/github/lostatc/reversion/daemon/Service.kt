@@ -105,6 +105,7 @@ interface Service {
  * @param [name] The unique name of the service.
  * @param [className] The name of the class to execute.
  * @param [methodName] The name of the method to execute.
+ * @param [parameters] The parameters to pass to [methodName].
  * @param [displayName] The display name of the service.
  * @param [description] The description of the service.
  */
@@ -112,6 +113,7 @@ data class WindowsService(
     val name: String,
     val className: String,
     val methodName: String = "main",
+    val parameters: List<String> = emptyList(),
     val displayName: String = name,
     val description: String = ""
 ) : Service {
@@ -135,15 +137,12 @@ data class WindowsService(
             "--StartMode", "jvm",
             "--StartClass", className,
             "--StartMethod", methodName,
+            "--StartParams", parameters.joinToString(separator = ";"),
             "--StopMode", "jvm",
             "--StopClass", "io.github.lostatc.reversion.daemon.ServiceKt",
             "--StopMethod", "exitProcess"
         ).start().apply {
             onFail { throw ServiceException("The service failed to install.", it) }
-        }
-
-        ProcessBuilder(elevateCommand, serviceCommand, "start", name).start().apply {
-            onFail { throw ServiceException("The service failed to start.", it) }
         }
     }
 
@@ -194,17 +193,9 @@ data class LaunchdService(val name: String, val propertyList: Path) : Service {
                 throw ServiceException("The service failed to install.", e)
             }
         }
-
-        ProcessBuilder("launchctl", "bootstrap", "user/${getUid()}", agentPath.toString()).start().apply {
-            onFail { throw ServiceException("The service failed to start.", it) }
-        }
     }
 
     override fun uninstall() {
-        ProcessBuilder("launchctl", "bootout", "user/${getUid()}", agentPath.toString()).start().apply {
-            onFail { throw ServiceException("The service failed to stop.", it) }
-        }
-
         try {
             Files.deleteIfExists(agentPath)
         } catch (e: IOException) {
@@ -219,11 +210,6 @@ data class LaunchdService(val name: String, val propertyList: Path) : Service {
          * The path of the directory containing user agents.
          */
         private val agentDirectory: Path = HOME_DIRECTORY.resolve("Library", "LaunchAgents")
-
-        /**
-         * Returns the current user's UID as a string.
-         */
-        private fun getUid(): String = ProcessBuilder("id", "-u").start().getOutput()
     }
 }
 
@@ -263,18 +249,12 @@ data class SystemdService(val name: String, val serviceFile: Path) : Service {
             }
         }
 
-        ProcessBuilder("systemctl", "--user", "start", unitName).start().apply {
-            onFail { throw ServiceException("The service failed to start.", it) }
-        }
         ProcessBuilder("systemctl", "--user", "enable", unitName).start().apply {
             onFail { throw ServiceException("The service failed to start.", it) }
         }
     }
 
     override fun uninstall() {
-        ProcessBuilder("systemctl", "--user", "stop", unitName).start().apply {
-            onFail { throw ServiceException("The service failed to stop.", it) }
-        }
         ProcessBuilder("systemctl", "--user", "disable", unitName).start().apply {
             onFail { throw ServiceException("The service failed to stop.", it) }
         }
