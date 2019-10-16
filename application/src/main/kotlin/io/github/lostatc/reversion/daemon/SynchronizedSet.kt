@@ -25,11 +25,11 @@ package io.github.lostatc.reversion.daemon
 interface SynchronizedSet<E> {
     suspend fun add(element: E): Boolean
 
-    suspend fun addAll(elements: Collection<E>): Boolean = elements.any { add(it) }
+    suspend fun addAll(elements: Collection<E>): Boolean = elements.map { add(it) }.any()
 
     suspend fun remove(element: E): Boolean
 
-    suspend fun removeAll(elements: Collection<E>): Boolean = elements.any { remove(it) }
+    suspend fun removeAll(elements: Collection<E>): Boolean = elements.map { remove(it) }.any()
 
     suspend fun contains(element: E): Boolean
 
