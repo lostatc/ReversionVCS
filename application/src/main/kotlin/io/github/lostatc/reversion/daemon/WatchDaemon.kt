@@ -96,14 +96,18 @@ object WatchDaemon : CoroutineScope by CoroutineScope(PersistentDispatcher) {
         override suspend fun add(element: Path): Boolean = withLock {
             if (element in repositoryJobs) return@withLock false
             repositoryJobs[element] = launch { runJobs(element) }
-            Files.newBufferedWriter(registeredFile).use { gson.toJson(repositoryJobs.keys, it) }
+            withContext(Dispatchers.IO) {
+                Files.newBufferedWriter(registeredFile).use { gson.toJson(repositoryJobs.keys, it) }
+            }
             true
         }
 
         override suspend fun remove(element: Path): Boolean = withLock {
             if (element !in repositoryJobs) return@withLock false
             repositoryJobs.remove(element)?.cancel()
-            Files.newBufferedWriter(registeredFile).use { gson.toJson(repositoryJobs.keys, it) }
+            withContext(Dispatchers.IO) {
+                Files.newBufferedWriter(registeredFile).use { gson.toJson(repositoryJobs.keys, it) }
+            }
             true
         }
 
@@ -121,14 +125,18 @@ object WatchDaemon : CoroutineScope by CoroutineScope(PersistentDispatcher) {
         override suspend fun add(element: Path): Boolean = withLock {
             if (element in watchJobs) return@withLock false
             watchJobs[element] = launch { watch(element) }
-            Files.newBufferedWriter(trackedFile).use { gson.toJson(watchJobs.keys, it) }
+            withContext(Dispatchers.IO) {
+                Files.newBufferedWriter(trackedFile).use { gson.toJson(watchJobs.keys, it) }
+            }
             true
         }
 
         override suspend fun remove(element: Path): Boolean = withLock {
             if (element !in watchJobs) return@withLock false
             watchJobs.remove(element)?.cancel()
-            Files.newBufferedWriter(trackedFile).use { gson.toJson(watchJobs.keys, it) }
+            withContext(Dispatchers.IO) {
+                Files.newBufferedWriter(trackedFile).use { gson.toJson(watchJobs.keys, it) }
+            }
             true
         }
 
@@ -154,8 +162,8 @@ object WatchDaemon : CoroutineScope by CoroutineScope(PersistentDispatcher) {
     /**
      * Lock the given [action] with [lock] in a new coroutine context.
      */
-    private suspend fun <T> withLock(action: () -> T): T = withContext(Dispatchers.Default) {
-        lock.withLock(action = action)
+    private suspend fun <T> withLock(action: suspend () -> T): T = withContext(Dispatchers.Default) {
+        lock.withLock { action() }
     }
 
     /**
