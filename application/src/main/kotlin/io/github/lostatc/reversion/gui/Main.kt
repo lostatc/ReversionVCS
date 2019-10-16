@@ -21,10 +21,10 @@ package io.github.lostatc.reversion.gui
 
 import com.jfoenix.assets.JFoenixResources
 import com.jfoenix.controls.JFXSnackbar
-import io.github.lostatc.reversion.daemon.watchService
 import io.github.lostatc.reversion.gui.controls.sendNotification
 import io.github.lostatc.reversion.gui.mvc.MainSceneController
 import javafx.application.Application
+import javafx.application.Platform
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
 import javafx.scene.layout.Pane
@@ -44,9 +44,11 @@ fun sendNotification(message: String) {
     notificationBar.sendNotification(message, Duration.seconds(5.0))
 }
 
+/**
+ * The GUI application.
+ */
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
-
         // Log uncaught exceptions.
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.gui")
@@ -57,13 +59,14 @@ class Reversion : Application() {
             throwable.message?.let { sendNotification(it) }
         }
 
-        // Start the daemon if it's not already running.
-        watchService.install()
-
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/MainScene.fxml"))
         val rootNode = rootLoader.load<Pane>()
         val rootControl = rootLoader.getController<MainSceneController>()
         notificationBar.registerSnackbarContainer(rootNode)
+
+        // We want to be able to re-open the primary stage after it is closed.
+        Platform.setImplicitExit(false)
+        currentPrimaryStage = primaryStage
 
         primaryStage.apply {
             title = "Reversion"
@@ -80,8 +83,30 @@ class Reversion : Application() {
             minHeight = 300.0
             setOnCloseRequest {
                 rootControl.cleanup()
+
+                // Don't close the stage, but hide it so that it can be re-opened later.
+                it.consume()
+                hide()
             }
             show()
+        }
+    }
+
+    companion object {
+        /**
+         * The primary stage of the application, or `null` if it hasn't been started.
+         */
+        private var currentPrimaryStage: Stage? = null
+
+        /**
+         * Start the UI if it has not already been started or show the primary stage if it has.
+         */
+        fun launchOrShow() {
+            try {
+                launch(Reversion::class.java)
+            } catch (e: IllegalStateException) {
+                Platform.runLater { currentPrimaryStage?.show() }
+            }
         }
     }
 }

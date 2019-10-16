@@ -3,7 +3,7 @@ Description=Reversion File Watcher
 
 [Service]
 Type=simple
-ExecStart=reversiond
+ExecStart=reversion --daemon
 Restart=always
 StandardOutput=journal
 StandardError=journal

@@ -23,23 +23,24 @@ import io.github.lostatc.reversion.OperatingSystem
 import io.github.lostatc.reversion.getResourcePath
 
 /**
- * A [Service] compatible with the current platform which executes [PersistentWatchDaemon].
+ * A [Service] compatible with the current platform which starts the program.
  */
 val watchService: Service by lazy {
     when (OperatingSystem.current()) {
         OperatingSystem.WINDOWS -> WindowsService(
-            name = "io.github.lostatc.reversiond",
-            className = "io.github.lostatc.reversion.daemon.MainKt",
-            displayName = "Reversion File Watcher",
-            description = "Watches a directory for changes and saves new versions of files."
+            name = "io.github.lostatc.reversion",
+            className = "io.github.lostatc.reversion.MainKt",
+            parameters = listOf("--daemon"),
+            displayName = "Reversion",
+            description = "Version control program which watches for changes and saves new versions of files."
         )
         OperatingSystem.MAC -> LaunchdService(
-            name = "io.github.lostatc.reversiond",
-            propertyList = getResourcePath("/reversiond.plist")
+            name = "io.github.lostatc.reversion",
+            propertyList = getResourcePath("/reversion.plist")
         )
         OperatingSystem.LINUX -> SystemdService(
-            name = "reversiond",
-            serviceFile = getResourcePath("/reversiond.service")
+            name = "reversion",
+            serviceFile = getResourcePath("/reversion.service")
         )
     }
 }

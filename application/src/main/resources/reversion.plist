@@ -3,9 +3,14 @@
 <plist version="1.0">
     <dict>
         <key>Label</key>
-        <string>io.github.lostatc.reversiond</string>
+        <string>io.github.lostatc.reversion</string>
         <key>Program</key>
-        <string>reversiond</string>
+        <string>reversion</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>reversion</string>
+            <string>--daemon</string>
+        </array>
         <key>RunAtLoad</key>
         <true/>
     </dict>
