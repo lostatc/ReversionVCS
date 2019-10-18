@@ -19,9 +19,10 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.api.BoundedByteChannel
 import io.github.lostatc.reversion.api.Snapshot
+import io.github.lostatc.reversion.api.copyChannel
 import jnr.ffi.Pointer
-import org.apache.commons.io.input.BoundedInputStream
 import ru.serce.jnrfuse.ErrorCodes
 import ru.serce.jnrfuse.FuseFS
 import ru.serce.jnrfuse.FuseFillDir
@@ -30,11 +31,10 @@ import ru.serce.jnrfuse.struct.FileStat
 import ru.serce.jnrfuse.struct.FuseFileInfo
 import ru.serce.jnrfuse.struct.Timespec
 import java.io.Closeable
-import java.io.InputStream
-import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.SeekableByteChannel
+import java.nio.channels.WritableByteChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -49,13 +49,13 @@ val SeekableByteChannel.remaining: Long
     get() = size() - position()
 
 /**
- * A seekable source of data that wraps an [InputStream].
+ * A seekable source of data that wraps a [ReadableByteChannel].
  *
- * This class allows for efficiently accessing data which has previously been read from an [InputStream] without having
- * to re-open the stream and re-read data. It caches data which has already been read in the file system and allows for
- * seeking on that data. New data is lazily read from the given [inputStream] as it is needed.
+ * This class allows for efficiently accessing data which has previously been read from a [ReadableByteChannel] without
+ * having to re-open the stream and re-read data. It caches data which has already been read in the file system and
+ * allows for seeking on that data. New data is lazily read from the given [ReadableByteChannel] as it is needed.
  */
-private class SeekableDataSource(private val inputStream: InputStream) : Closeable {
+private class SeekableDataSource(private val inputChannel: ReadableByteChannel) : Closeable {
     /**
      * The temporary file which data is cached to.
      */
@@ -64,12 +64,12 @@ private class SeekableDataSource(private val inputStream: InputStream) : Closeab
     /**
      * The channel which is used to write input data to the cache.
      */
-    private val cacheStream: OutputStream = Files.newOutputStream(cacheFile, StandardOpenOption.APPEND)
+    private val cacheWriter: WritableByteChannel = Files.newByteChannel(cacheFile, StandardOpenOption.APPEND)
 
     /**
      * The channel which is used to read data from the cache.
      */
-    private val cacheChannel: SeekableByteChannel = Files.newByteChannel(cacheFile, StandardOpenOption.READ)
+    private val cacheReader: SeekableByteChannel = Files.newByteChannel(cacheFile, StandardOpenOption.READ)
 
     /**
      * The current position which data is read from.
@@ -77,16 +77,15 @@ private class SeekableDataSource(private val inputStream: InputStream) : Closeab
      * @see [SeekableByteChannel.position]
      */
     val position: Long
-        get() = cacheChannel.position()
+        get() = cacheReader.position()
 
     /**
      * Read [bytes] bytes of input and write it to the cache.
      *
      * @return The number of bytes read.
      */
-    private fun readInput(bytes: Long): Long {
-        return BoundedInputStream(inputStream, bytes).transferTo(cacheStream)
-    }
+    private fun readInput(bytes: Long): Long =
+        copyChannel(BoundedByteChannel(inputChannel, bytes), cacheWriter)
 
     /**
      * Sets the [position] to [newPosition].
@@ -94,7 +93,7 @@ private class SeekableDataSource(private val inputStream: InputStream) : Closeab
      * @see [SeekableByteChannel.position]
      */
     fun seek(newPosition: Long) {
-        val cacheSize = cacheChannel.size()
+        val cacheSize = cacheReader.size()
 
         // If the new position is past the end of the cache, read more data from the input stream.
         if (newPosition > cacheSize) {
@@ -102,7 +101,7 @@ private class SeekableDataSource(private val inputStream: InputStream) : Closeab
             readInput(remaining)
         }
 
-        cacheChannel.position(newPosition)
+        cacheReader.position(newPosition)
     }
 
     /**
@@ -111,13 +110,13 @@ private class SeekableDataSource(private val inputStream: InputStream) : Closeab
      * @see [ReadableByteChannel.read]
      */
     fun read(buffer: ByteBuffer) {
-        readInput(buffer.remaining() - cacheChannel.remaining)
-        cacheChannel.read(buffer)
+        readInput(buffer.remaining() - cacheReader.remaining)
+        cacheReader.read(buffer)
     }
 
     override fun close() {
-        cacheStream.close()
-        cacheChannel.close()
+        cacheWriter.close()
+        cacheReader.close()
         Files.deleteIfExists(cacheFile)
     }
 }
@@ -247,7 +246,7 @@ data class FuseFileSystem(val snapshot: Snapshot) : FuseStubFS() {
         val relativePath = getRelativePath(path)
         val version = snapshot.cumulativeVersions[relativePath] ?: return -ErrorCodes.ENOENT()
 
-        dataSources[relativePath] = SeekableDataSource(version.data.newInputStream())
+        dataSources[relativePath] = SeekableDataSource(version.data.openChannel())
 
         return 0
     }

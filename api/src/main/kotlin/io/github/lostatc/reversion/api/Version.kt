@@ -25,6 +25,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
 import java.nio.file.attribute.FileTime
 
 /**
@@ -86,11 +87,11 @@ interface Version {
     /**
      * Returns whether the given [file] has changed since this version.
      *
-     * @param [file] The path of the current version of the file represented by this version.
+     * The default implementation compares file sizes, and then compares checksums only if the file sizes are different.
      *
      * @throws [IOException] An I/O error occurred.
      */
-    fun isChanged(file: Path): Boolean
+    fun isChanged(file: Path): Boolean = Files.size(file) != size || Checksum.fromFile(file) != checksum
 
     /**
      * Checks the integrity of the data in the repository for this file.
@@ -123,7 +124,7 @@ interface Version {
 
         // Write the file contents to a temporary file.
         val tempFile = Files.createTempFile("reversion-", "")
-        data.newInputStream().use { Files.copy(it, tempFile, StandardCopyOption.REPLACE_EXISTING) }
+        data.write(tempFile, TRUNCATE_EXISTING)
 
         // Move the temporary file to the target to safely handle the case of an existing file.
         Files.createDirectories(target.parent)

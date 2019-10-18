@@ -24,6 +24,21 @@ import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalUnit
 
 /**
+ * Returns a new [Duration] truncated to the given [unit].
+ *
+ * This also reduces the duration to the longest duration which can be stored in a [Long] in terms of the given [unit].
+ */
+private fun Duration.inTermsOf(unit: TemporalUnit): Duration {
+    val quotient = try {
+        dividedBy(unit.duration)
+    } catch (e: ArithmeticException) {
+        Long.MAX_VALUE
+    }
+
+    return unit.duration.multipliedBy(quotient)
+}
+
+/**
  * A rule specifying how old versions of files are cleaned up.
  *
  * For the first [timeFrame] after a new version of a file is created, this policy will only keep [maxVersions] versions
@@ -41,119 +56,119 @@ data class CleanupPolicy(
     val timeFrame: Duration,
     val maxVersions: Int,
     val description: String
-)
-
-/**
- * A factory for creating [CleanupPolicy] objects.
- */
-interface CleanupPolicyFactory {
-    /**
-     * The lower-case name of the unit.
-     */
-    private val TemporalUnit.name: String
-        get() = toString().toLowerCase()
+) {
 
     /**
-     * Creates a [CleanupPolicy].
+     * Returns a copy of this cleanup policy which can be more easily serialized.
      *
-     * @param [minInterval] The interval of time.
-     * @param [timeFrame] The maximum amount of time to keep files for.
-     * @param [maxVersions] The maximum number of versions to keep for each interval.
-     * @param [description] A human-readable description of the policy.
+     * This truncates [minInterval] and [timeFrame] to the nearest millisecond so that they can be serialized as a
+     * number of milliseconds and remain equal when deserialized. If a [Duration] is too long to be stored in a [Long]
+     * in terms of a number of milliseconds, it is shortened to the longest duration which can.
      */
-    fun of(minInterval: Duration, timeFrame: Duration, maxVersions: Int, description: String): CleanupPolicy
-
-    /**
-     * Creates a [CleanupPolicy] based on a unit of time.
-     *
-     * The [minInterval][CleanupPolicy.minInterval] and [timeFrame][CleanupPolicy.timeFrame] of the created
-     * [CleanupPolicy] may be based on estimated durations.
-     *
-     * @param [amount] The maximum amount of time to keep files for in terms of [unit].
-     * @param [unit] The interval of time.
-     * @param [versions] The maximum number of versions to keep for each interval.
-     */
-    fun ofUnit(amount: Long, unit: TemporalUnit, versions: Int): CleanupPolicy = of(
-        minInterval = unit.duration,
-        timeFrame = unit.duration.multipliedBy(amount),
-        maxVersions = versions,
-        description = "For the first $amount ${unit.name}, keep $versions versions every 1 ${unit.name}."
+    fun truncated(): CleanupPolicy = copy(
+        minInterval = minInterval.inTermsOf(unit),
+        timeFrame = timeFrame.inTermsOf(unit)
     )
 
-    /**
-     * Creates a [CleanupPolicy] that keeps a given number of [versions] of each file.
-     */
-    fun ofVersions(versions: Int): CleanupPolicy = of(
-        minInterval = ChronoUnit.FOREVER.duration,
-        timeFrame = ChronoUnit.FOREVER.duration,
-        maxVersions = versions,
-        description = "Keep $versions versions of each file."
-    )
+    companion object {
 
-    /**
-     * Creates a [CleanupPolicy] that keeps each version for a given amount of time.
-     *
-     * The [minInterval][CleanupPolicy.minInterval] and [timeFrame][CleanupPolicy.timeFrame] of the created
-     * [CleanupPolicy] may be based on estimated durations.
-     *
-     * @param [amount] The amount of time in terms of [unit].
-     * @param [unit] The unit to measure the duration in.
-     */
-    fun ofDuration(amount: Long, unit: TemporalUnit): CleanupPolicy = of(
-        minInterval = unit.duration.multipliedBy(amount),
-        timeFrame = unit.duration.multipliedBy(amount),
-        maxVersions = Int.MAX_VALUE,
-        description = "Keep each version for $amount ${unit.name}."
-    )
+        /**
+         * The plural name of the unit.
+         */
+        private val TemporalUnit.pluralName: String
+            get() = when (this) {
+                ChronoUnit.SECONDS -> "seconds"
+                ChronoUnit.MINUTES -> "minutes"
+                ChronoUnit.HOURS -> "hours"
+                ChronoUnit.DAYS -> "days"
+                ChronoUnit.WEEKS -> "weeks"
+                ChronoUnit.MONTHS -> "months"
+                else -> toString().toLowerCase()
+            }
 
-    /**
-     * Creates a [CleanupPolicy] that keeps each version forever.
-     */
-    fun forever(): CleanupPolicy = of(
-        minInterval = ChronoUnit.FOREVER.duration,
-        timeFrame = ChronoUnit.FOREVER.duration,
-        maxVersions = Int.MAX_VALUE,
-        description = "Keep each version forever."
-    )
-}
+        /**
+         * The singular name of the unit.
+         */
+        private val TemporalUnit.singularName: String
+            get() = when (this) {
+                ChronoUnit.SECONDS -> "second"
+                ChronoUnit.MINUTES -> "minute"
+                ChronoUnit.HOURS -> "hour"
+                ChronoUnit.DAYS -> "day"
+                ChronoUnit.WEEKS -> "week"
+                ChronoUnit.MONTHS -> "month"
+                else -> toString().toLowerCase()
+            }
 
-/**
- * Returns a new [Duration] truncated to the given [unit].
- *
- * This also reduces the duration to the longest duration which can be stored in a [Long] in terms of the given [unit].
- */
-private fun Duration.inTermsOf(unit: TemporalUnit): Duration {
-    val quotient = try {
-        dividedBy(unit.duration)
-    } catch (e: ArithmeticException) {
-        Long.MAX_VALUE
-    }
+        /**
+         * The unit to serialize durations as.
+         */
+        private val unit: TemporalUnit = ChronoUnit.MILLIS
 
-    return unit.duration.multipliedBy(quotient)
-}
+        /**
+         * Creates a [CleanupPolicy] that keeps staggered versions.
+         *
+         * The [minInterval][CleanupPolicy.minInterval] and [timeFrame][CleanupPolicy.timeFrame] of the created
+         * [CleanupPolicy] may be based on estimated durations.
+         *
+         * @param [versions] The maximum number of versions to keep.
+         * @param [unit] The amount of time between versions.
+         * @param [truncate] Whether to call [truncated] on the returned instance.
+         */
+        fun ofStaggered(versions: Int, unit: TemporalUnit, truncate: Boolean = true): CleanupPolicy {
+            val policy = CleanupPolicy(
+                minInterval = unit.duration,
+                timeFrame = unit.duration.multipliedBy(versions.toLong()),
+                maxVersions = 1,
+                description = "For the last $versions ${unit.pluralName}, keep only the last version from each ${unit.singularName}."
+            )
+            return if (truncate) policy.truncated() else policy
+        }
 
+        /**
+         * Creates a [CleanupPolicy] that keeps a given number of [versions] of each file.
+         *
+         * @param [versions] The number of versions to keep.
+         * @param [truncate] Whether to call [truncated] on the returned instance.
+         */
+        fun ofVersions(versions: Int, truncate: Boolean = true): CleanupPolicy {
+            val policy = CleanupPolicy(
+                minInterval = ChronoUnit.FOREVER.duration,
+                timeFrame = ChronoUnit.FOREVER.duration,
+                maxVersions = versions,
+                description = "Keep $versions versions of each file."
+            )
+            return if (truncate) policy.truncated() else policy
+        }
 
-/**
- * A [CleanupPolicyFactory] that allows for serializing durations.
- *
- * This truncates durations in the [CleanupPolicy] to the given [unit] so that the [CleanupPolicy] is equal to
- * itself after being serialized and deserialized. If a duration is too long to be stored in a [Long] in terms of
- * [unit], it is shortened to the longest duration which can.
- *
- * @param [unit] The unit to serialize [Duration] objects as.
- */
-data class TruncatingCleanupPolicyFactory(val unit: TemporalUnit) : CleanupPolicyFactory {
-    override fun of(
-        minInterval: Duration,
-        timeFrame: Duration,
-        maxVersions: Int,
-        description: String
-    ): CleanupPolicy {
-        return CleanupPolicy(
-            minInterval = minInterval.inTermsOf(unit),
-            timeFrame = timeFrame.inTermsOf(unit),
-            maxVersions = maxVersions,
-            description = description
-        )
+        /**
+         * Creates a [CleanupPolicy] that keeps each version for a given amount of time.
+         *
+         * The [minInterval][CleanupPolicy.minInterval] and [timeFrame][CleanupPolicy.timeFrame] of the created
+         * [CleanupPolicy] may be based on estimated durations.
+         *
+         * @param [amount] The amount of time in terms of [unit].
+         * @param [unit] The unit to measure the duration in.
+         * @param [truncate] Whether to call [truncated] on the returned instance.
+         */
+        fun ofDuration(amount: Long, unit: TemporalUnit, truncate: Boolean = true): CleanupPolicy {
+            val policy = CleanupPolicy(
+                minInterval = unit.duration.multipliedBy(amount),
+                timeFrame = unit.duration.multipliedBy(amount),
+                maxVersions = Int.MAX_VALUE,
+                description = "Keep each version for $amount ${unit.pluralName}."
+            )
+            return if (truncate) policy.truncated() else policy
+        }
+
+        /**
+         * Creates a [CleanupPolicy] that keeps each version forever.
+         */
+        fun forever(): CleanupPolicy = CleanupPolicy(
+            minInterval = ChronoUnit.FOREVER.duration,
+            timeFrame = ChronoUnit.FOREVER.duration,
+            maxVersions = Int.MAX_VALUE,
+            description = "Keep each version forever."
+        ).truncated()
     }
 }

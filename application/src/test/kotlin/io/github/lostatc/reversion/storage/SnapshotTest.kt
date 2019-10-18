@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.api.FileTreeBuilder
 import io.github.lostatc.reversion.api.Timeline
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -40,7 +41,7 @@ interface SnapshotTest {
     fun createFiles(@TempDir tempPath: Path) {
         workPath = tempPath.resolve("work")
 
-        FileCreateContext(workPath) {
+        FileTreeBuilder(workPath) {
             file("a")
             file("b")
             directory("c") {

@@ -20,11 +20,11 @@
 package io.github.lostatc.reversion.gui.controls
 
 import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.loadFxml
 import io.github.lostatc.reversion.gui.setValue
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML
-import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
 import javafx.scene.layout.VBox
 import java.util.Objects
@@ -60,12 +60,7 @@ class Card : VBox() {
     var subtitle: String by subtitleProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/Card.fxml")).apply {
-            classLoader = this@Card::class.java.classLoader
-            setRoot(this@Card)
-            setController(this@Card)
-            load()
-        }
+        loadFxml(this, "/fxml/controls/Card.fxml")
     }
 
     @FXML

@@ -20,8 +20,9 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Config
+import io.github.lostatc.reversion.api.FileTreeBuilder
 import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.resolve
+import io.github.lostatc.reversion.api.resolve
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -45,7 +46,7 @@ interface WorkDirectoryTest {
     fun createFiles(@TempDir tempPath: Path) {
         workPath = tempPath.resolve("work")
 
-        FileCreateContext(workPath) {
+        FileTreeBuilder(workPath) {
             file("a", content = "apple")
             file("b", content = "banana")
             directory("c") {
@@ -86,11 +87,7 @@ interface WorkDirectoryTest {
         workDirectory.commit(paths)
         workDirectory.commit(paths, force = false)
 
-        assertEquals(2, workDirectory.timeline.snapshots.size)
-
-        val snapshot = workDirectory.timeline.latestSnapshot!!
-
-        assertTrue(snapshot.versions.isEmpty())
+        assertEquals(1, workDirectory.timeline.snapshots.size)
     }
 
     @Test
@@ -109,7 +106,7 @@ interface WorkDirectoryTest {
 
     @Test
     fun `ignored files are not committed`() {
-        Files.writeString(workPath.resolve(".rvignore"), workPath.resolve("b").toString())
+        workDirectory.writeMatchers(listOf(PrefixIgnoreMatcher(workPath.resolve("b"))))
         workDirectory.commit(listOf(workPath.resolve("a"), workPath.resolve("b")))
 
         assertEquals(1, workDirectory.timeline.snapshots.size)
@@ -121,14 +118,14 @@ interface WorkDirectoryTest {
 
     @Test
     fun `ignored files are not committed when using special file names`() {
-        Files.writeString(workPath.resolve(".rvignore"), workPath.resolve("b").toString())
+        workDirectory.writeMatchers(listOf(PrefixIgnoreMatcher(workPath.resolve("b"))))
         workDirectory.commit(listOf(workPath.resolve(".")))
 
         assertEquals(1, workDirectory.timeline.snapshots.size)
 
         val snapshot = workDirectory.timeline.latestSnapshot!!
 
-        assertEquals(setOf(Paths.get("a"), Paths.get("c", "a"), Paths.get(".rvignore")), snapshot.versions.keys)
+        assertEquals(setOf(Paths.get("a"), Paths.get("c", "a")), snapshot.versions.keys)
     }
 
     @Test
@@ -218,7 +215,7 @@ interface WorkDirectoryTest {
     fun `ignored files are not updated`() {
         workDirectory.commit(listOf(workPath.resolve("b")))
         Files.delete(workPath.resolve("b"))
-        Files.writeString(workPath.resolve(".rvignore"), workPath.resolve("b").toString())
+        workDirectory.writeMatchers(listOf(PrefixIgnoreMatcher(workPath.resolve("b"))))
         workDirectory.update(listOf(workPath.resolve("b")))
 
         assertTrue(Files.notExists(workPath.resolve("b")))

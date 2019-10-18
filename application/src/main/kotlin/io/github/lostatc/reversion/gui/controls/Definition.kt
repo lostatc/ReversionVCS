@@ -20,11 +20,11 @@
 package io.github.lostatc.reversion.gui.controls
 
 import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.loadFxml
 import io.github.lostatc.reversion.gui.setValue
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML
-import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
 import javafx.scene.control.Tooltip
 import javafx.scene.layout.HBox
@@ -101,12 +101,7 @@ class Definition : HBox() {
     var tooltip: Tooltip? by tooltipProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/Definition.fxml")).apply {
-            classLoader = this@Definition::class.java.classLoader
-            setRoot(this@Definition)
-            setController(this@Definition)
-            load()
-        }
+        loadFxml(this, "/fxml/controls/Definition.fxml")
     }
 
     @FXML

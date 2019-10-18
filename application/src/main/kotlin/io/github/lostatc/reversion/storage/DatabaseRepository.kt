@@ -24,7 +24,6 @@ import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.api.Blob
 import io.github.lostatc.reversion.api.Checksum
 import io.github.lostatc.reversion.api.CleanupPolicy
-import io.github.lostatc.reversion.api.CleanupPolicyFactory
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
 import io.github.lostatc.reversion.api.IncompatibleRepositoryException
@@ -32,11 +31,11 @@ import io.github.lostatc.reversion.api.InvalidRepositoryException
 import io.github.lostatc.reversion.api.OpenAttempt
 import io.github.lostatc.reversion.api.RepairAction
 import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
 import io.github.lostatc.reversion.api.VerifyAction
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.api.delete
-import io.github.lostatc.reversion.cli.format
+import io.github.lostatc.reversion.api.write
+import io.github.lostatc.reversion.gui.format
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
 import io.github.lostatc.reversion.schema.BlockEntity
@@ -48,7 +47,8 @@ import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
-import org.apache.commons.codec.digest.DigestUtils
+import io.github.lostatc.reversion.serialization.ConfigDeserializer
+import io.github.lostatc.reversion.serialization.ConfigSerializer
 import org.apache.commons.io.FileUtils
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
@@ -67,11 +67,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
 import java.sql.Connection
 import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.streams.asSequence
 
@@ -115,11 +116,6 @@ private object DatabaseFactory {
     }
 
     /**
-     * Returns the URI of the database at [path].
-     */
-    private fun getUri(path: Path): String = "jdbc:sqlite:${path.toUri().path}"
-
-    /**
      * Checks the integrity of the database and returns whether it is valid.
      */
     private fun checkIntegrity(db: Database): Boolean = transaction(db) {
@@ -138,21 +134,21 @@ private object DatabaseFactory {
      * @throws [SQLException] The database could not be connected to or is corrupt.
      */
     fun connect(path: Path): Database = databases.getOrPut(path) {
-        val db = Database.connect(
-            url = getUri(path),
+        val connection = Database.connect(
+            "jdbc:sqlite:${path.toUri().path}",
             driver = "org.sqlite.JDBC",
             setupConnection = { configure(it) }
         )
 
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
 
-        if (!checkIntegrity(db)) {
+        if (!checkIntegrity(connection)) {
             throw SQLException("The database is corrupt.")
         }
 
         logger.info("Connected to database at '$path'.")
 
-        db
+        connection
     }
 
     /**
@@ -180,16 +176,10 @@ private object DatabaseFactory {
     }
 }
 
-
 /**
  * An implementation of [Repository] which is backed by a relational database.
  */
 data class DatabaseRepository(override val path: Path, override val config: Config) : Repository {
-
-    /**
-     * The hash algorithm used by this repository.
-     */
-    val hashAlgorithm: String by hashAlgorithmProperty
 
     /**
      * The block size used by this repository.
@@ -204,8 +194,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     override val jobs: Set<Repository.Job> = setOf(
         Repository.Job(Duration.ofMinutes(backupInterval)) { DatabaseFactory.backup(databasePath, databaseBackupPath) }
     )
-
-    override val policyFactory: CleanupPolicyFactory = TruncatingCleanupPolicyFactory(ChronoUnit.MILLIS)
 
     override val timelines: Map<UUID, DatabaseTimeline> = object : AbstractMap<UUID, DatabaseTimeline>() {
         override val entries: Set<Map.Entry<UUID, DatabaseTimeline>>
@@ -326,7 +314,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      */
     private fun findBlob(file: Path, checksum: Checksum): Blob? {
         val blobs = try {
-            Blob.chunkFile(file, hashAlgorithm)
+            Blob.chunkFile(file)
         } catch (e: IOException) {
             return null
         }
@@ -385,11 +373,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                     val missingBlob = findBlob(absolutePath, blobEntity.checksum) ?: continue
 
                     // If the missing blob was found, use it to repair the repository and go to the next blob.
-                    actions.add {
-                        missingBlob
-                            .newInputStream()
-                            .use { Files.copy(it, blobPath, StandardCopyOption.REPLACE_EXISTING) }
-                    }
+                    actions.add { missingBlob.write(blobPath, CREATE, TRUNCATE_EXISTING) }
 
                     continue@blobs
                 }
@@ -444,7 +428,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      * Returns the storage location of the blob with the given [checksum].
      */
     fun getBlobPath(checksum: Checksum): Path =
-        blobsPath.resolve(checksum.hex.slice(0..1)).resolve(checksum.hex)
+        blobsPath.resolve(checksum.toHex().slice(0..1)).resolve(checksum.toHex())
 
     /**
      * Adds the given [blob] to this repository.
@@ -457,7 +441,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         val blobPath = getBlobPath(blob.checksum)
         Files.createDirectories(blobPath.parent)
         if (Files.notExists(blobPath)) {
-            blob.newInputStream().use { Files.copy(it, blobPath) }
+            blob.write(blobPath, CREATE)
         }
 
         transaction(db) {
@@ -494,7 +478,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     fun getBlob(checksum: Checksum): Blob? {
         val blobPath = getBlobPath(checksum)
         if (Files.notExists(blobPath)) return null
-        return Blob.fromFile(blobPath, hashAlgorithm)
+        return Blob.fromFile(blobPath)
     }
 
     /**
@@ -568,17 +552,6 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         private val relativeConfigPath: Path = Paths.get("config.json")
 
         /**
-         * The property which stores the hash algorithm.
-         */
-        val hashAlgorithmProperty: ConfigProperty<String> = ConfigProperty.of(
-            key = "hashFunc",
-            name = "Hash algorithm",
-            default = "SHA-256",
-            description = "The name of the algorithm used to calculate checksums.",
-            validator = { require(DigestUtils.isAvailable(it)) { "The given algorithm is not supported." } }
-        )
-
-        /**
          * The property which stores the block size.
          */
         val blockSizeProperty: ConfigProperty<Long> = ConfigProperty.of(
@@ -609,7 +582,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             .registerTypeAdapter(Config::class.java, ConfigDeserializer(getConfig().properties))
             .create()
 
-        fun getConfig(): Config = Config(hashAlgorithmProperty, blockSizeProperty, backupIntervalProperty)
+        fun getConfig(): Config = Config(blockSizeProperty, backupIntervalProperty)
 
         /**
          * Verify the integrity of the database of the [Repository] at [path].
@@ -746,10 +719,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             // Do this last to signify that the repository is valid.
             Files.writeString(versionPath, currentVersion.toString())
 
-            when (val attempt = open(path)) {
-                is OpenAttempt.Success<*> -> return attempt.result as DatabaseRepository
-                is OpenAttempt.Failure -> error("The newly-created repository is corrupt.")
-            }
+            return open(path).onFail { error("The newly-created repository is corrupt.") } as DatabaseRepository
         }
 
         /**

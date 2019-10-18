@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.*?>
+<?import io.github.lostatc.reversion.gui.controls.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<StackPane xmlns:fx="http://javafx.com/fxml/1" fx:id="root" minHeight="-Infinity" minWidth="-Infinity"
+           prefHeight="400.0"
+           prefWidth="640.0" styleClass="background" xmlns="http://javafx.com/javafx/11.0.1"
+           fx:controller="io.github.lostatc.reversion.gui.controllers.VersionManagerController">
+    <VBox>
+        <JFXToolbar>
+            <top>
+                <HBox alignment="CENTER" minHeight="50.0" nodeOrientation="RIGHT_TO_LEFT" BorderPane.alignment="CENTER">
+                    <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+                    </padding>
+                    <IconButton icon="gmi-folder-open" onAction="#browsePath" styleClass="icon-button-light">
+                        <tooltip>
+                            <Tooltip text="Browse for a file to manage versions of."/>
+                        </tooltip>
+                    </IconButton>
+                    <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#setPath"
+                                  promptText="Path"
+                                  HBox.hgrow="ALWAYS">
+                        <HBox.margin>
+                            <Insets left="15.0"/>
+                        </HBox.margin>
+                    </JFXTextField>
+                </HBox>
+            </top>
+        </JFXToolbar>
+        <HBox prefHeight="100.0" prefWidth="640.0" styleClass="pane-box" VBox.vgrow="ALWAYS">
+            <HelpPane position="BOTTOM_LEFT" styleClass="fab-light"
+                      helpText="Select a file to see all past versions of it. You can also create new versions of that file manually. Old versions can be restored, which reverts the file back to that version while also saving the current version. Versions can also be opened in their default application without restoring them.">
+                <StackPane alignment="BOTTOM_CENTER" minWidth="200.0" prefWidth="400.0">
+                    <JFXListView fx:id="versionList" depth="2" styleClass="card-list-view">
+                        <placeholder>
+                            <Card styleClass="placeholder" subtitle="Choose a file to show versions"
+                                  title="No versions"/>
+                        </placeholder>
+                    </JFXListView>
+                    <IconButton icon="gmi-add" maxHeight="-Infinity" maxWidth="-Infinity" onAction="#createVersion"
+                                styleClass="fab-light">
+                        <tooltip>
+                            <Tooltip text="Create a new version of this file."/>
+                        </tooltip>
+                    </IconButton>
+                </StackPane>
+            </HelpPane>
+            <StackPane minHeight="200.0" minWidth="400.0" prefWidth="600.0" styleClass="pane" HBox.hgrow="SOMETIMES">
+                <VBox fx:id="infoPane" spacing="50.0">
+                    <FlowPane hgap="50.0" vgap="25.0">
+                        <VBox>
+                            <Label styleClass="info-key" text="Keep Forever"/>
+                            <JFXCheckBox fx:id="pinnedCheckBox" styleClass="info-value" text="Pinned"/>
+                        </VBox>
+                        <VBox>
+                            <Label styleClass="info-key" text="Last Modified"/>
+                            <Label fx:id="lastModifiedLabel" styleClass="info-value"/>
+                        </VBox>
+                        <VBox>
+                            <Label styleClass="info-key" text="Size"/>
+                            <Label fx:id="sizeLabel" styleClass="info-value"/>
+                        </VBox>
+                    </FlowPane>
+                    <VBox>
+                        <Label styleClass="info-key" text="Name"/>
+                        <JFXTextField fx:id="nameField"/>
+                    </VBox>
+                    <VBox>
+                        <Label styleClass="info-key" text="Description"/>
+                        <JFXTextArea fx:id="descriptionField" maxHeight="1.7976931348623157E308" wrapText="true"/>
+                    </VBox>
+                    <FlowPane alignment="BOTTOM_LEFT" hgap="30.0" vgap="15.0" VBox.vgrow="ALWAYS">
+                        <LabeledIconButton icon="gmi-delete-forever" label="Delete" onAction="#deleteVersion"
+                                           styleClass="icon-button-light">
+                            <tooltip>
+                                <Tooltip text="Permanently delete this version."/>
+                            </tooltip>
+                        </LabeledIconButton>
+                        <LabeledIconButton icon="gmi-restore" label="Restore" onAction="#restoreVersion"
+                                           styleClass="icon-button-light">
+                            <tooltip>
+                                <Tooltip
+                                    text="Save the current version of the file and then replace it with this version."/>
+                            </tooltip>
+                        </LabeledIconButton>
+                        <LabeledIconButton icon="gmi-open-in-new" label="Open" onAction="#openVersion"
+                                           styleClass="icon-button-light">
+                            <tooltip>
+                                <Tooltip text="Open this version in an external application."/>
+                            </tooltip>
+                        </LabeledIconButton>
+                    </FlowPane>
+                    <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+                    </padding>
+                </VBox>
+            </StackPane>
+        </HBox>
+    </VBox>
+</StackPane>

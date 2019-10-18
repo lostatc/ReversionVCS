@@ -21,12 +21,12 @@ package io.github.lostatc.reversion.gui.controls
 
 import com.jfoenix.controls.JFXRippler
 import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.loadFxml
 import io.github.lostatc.reversion.gui.setValue
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.event.EventHandler
 import javafx.fxml.FXML
-import javafx.fxml.FXMLLoader
 import javafx.scene.control.Label
 import javafx.scene.control.Tooltip
 import javafx.scene.input.MouseEvent
@@ -106,12 +106,7 @@ class LabeledIconButton : JFXRippler() {
     var radius: Float by radiusProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/LabeledIconButton.fxml")).apply {
-            classLoader = this@LabeledIconButton::class.java.classLoader
-            setRoot(this@LabeledIconButton)
-            setController(this@LabeledIconButton)
-            load()
-        }
+        loadFxml(this, "/fxml/controls/LabeledIconButton.fxml")
     }
 
     @FXML

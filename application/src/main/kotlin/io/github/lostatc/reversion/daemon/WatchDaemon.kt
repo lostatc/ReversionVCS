@@ -23,9 +23,9 @@ import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.DATA_DIR
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.RepositoryException
-import io.github.lostatc.reversion.storage.PathTypeAdapter
+import io.github.lostatc.reversion.serialization.PathTypeAdapter
+import io.github.lostatc.reversion.serialization.fromJson
 import io.github.lostatc.reversion.storage.WorkDirectory
-import io.github.lostatc.reversion.storage.fromJson
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -207,7 +207,7 @@ object WatchDaemon : CoroutineScope by CoroutineScope(PersistentDispatcher) {
             workDirectory.path,
             recursive = true,
             coalesce = true,
-            includeMatcher = PathMatcher { path -> workDirectory.defaultIgnoredPaths.all { !path.startsWith(it) } }
+            includeMatcher = PathMatcher { !workDirectory.defaultIgnoreMatcher.matches(it) }
         ).use {
             for (event in it.events) {
                 if (event.type == ENTRY_CREATE || event.type == ENTRY_MODIFY) {
