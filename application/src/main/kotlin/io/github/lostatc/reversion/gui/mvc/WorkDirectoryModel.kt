@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.gui.mvc
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.CleanupPolicy
+import io.github.lostatc.reversion.api.OpenAttempt
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.daemon.WatchDaemon
 import io.github.lostatc.reversion.gui.ActorEvent
@@ -71,7 +72,7 @@ data class WorkDirectoryState(val workDirectory: WorkDirectory)
  *
  * @param [workDirectory] The working directory this model represents.
  */
-data class WorkDirectoryModel(
+class WorkDirectoryModel(
     private val workDirectory: WorkDirectory
 ) : CoroutineScope by MainScope(),
     StateWrapper<TaskType, WorkDirectoryState> by storageActor.wrap(WorkDirectoryState(workDirectory)) {
@@ -255,17 +256,15 @@ data class WorkDirectoryModel(
          *
          * @param [path] The path of the working directory.
          */
-        suspend fun fromPath(path: Path): WorkDirectoryModel =
-            withContext(Dispatchers.IO) {
-                val workDirectory = if (WorkDirectory.isWorkDirectory(path)) {
-                    WorkDirectory.open(path)
-                } else {
-                    WorkDirectory.init(path, DEFAULT_PROVIDER).apply {
-                        timeline.cleanupPolicies = repository.defaultPolicies
-                    }
+        suspend fun fromPath(path: Path): OpenAttempt<WorkDirectoryModel> = withContext(Dispatchers.IO) {
+            if (WorkDirectory.isWorkDirectory(path)) {
+                WorkDirectory.open(path).wrap { WorkDirectoryModel(it) }
+            } else {
+                WorkDirectory.init(path, DEFAULT_PROVIDER).run {
+                    timeline.cleanupPolicies = repository.defaultPolicies
+                    OpenAttempt.Success(WorkDirectoryModel(this))
                 }
-
-                WorkDirectoryModel(workDirectory)
             }
+        }
     }
 }

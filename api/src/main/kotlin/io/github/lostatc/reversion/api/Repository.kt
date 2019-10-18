@@ -26,49 +26,44 @@ import java.time.Duration
 import java.util.UUID
 
 /**
- * Information about the integrity of a repository.
- *
- * This represents the integrity of the repository at the time it was checked for corruption. After [repair] is called,
- * this report is outdated.
+ * An action which can be taken to repair a repository.
  */
-interface IntegrityReport {
+interface RepairAction {
     /**
-     * The set of corrupt versions that will be repaired by [repair].
-     *
-     * These are versions which can be repaired without losing data. This could involve replacing corrupt data with
-     * duplicate data from the working directory or elsewhere in the repository.
+     * A message to show the user prompting them for whether they want to attempt to repair the repository.
      */
-    val repaired: Set<Version>
+    val message: String
 
     /**
-     * The set of corrupt versions that will be deleted by [repair].
-     *
-     * These are versions which cannot be repaired, and must instead be deleted.
+     * Attempt to repair the repository and return the results.
      */
-    val deleted: Set<Version>
+    fun repair(): Result
 
     /**
-     * The set of versions in the repository which are corrupt.
+     * Information about an attempt to repair a repository.
+     *
+     * If the repository is no longer corrupt and can be used/accessed normally, [success] should be `true`. Even if
+     * data was lost, [success] should only be `false` if the repository is unusable after the repair attempt.
+     *
+     * @param [success] Whether the repair attempt succeeded.
+     * @param [message] A message to show the user after the attempt is complete.
      */
-    val corrupt: Set<Version>
-        get() = repaired + deleted
+    data class Result(val success: Boolean, val message: String)
+}
+
+/**
+ * An action which can be taken to verify data in a repository.
+ */
+interface VerifyAction {
+    /**
+     * A message to prompt the user with, or `null` to not prompt the user.
+     */
+    val message: String?
 
     /**
-     * Whether the repository is valid (not corrupt).
+     * Verify the integrity of the repository and return a [RepairAction] or `null` if no action needs to be taken.
      */
-    val isValid: Boolean
-        get() = corrupt.isEmpty()
-
-    /**
-     * Repairs the repository.
-     *
-     * This repairs all versions in [repaired] and deletes all versions in [deleted]. After this is called, all corrupt
-     * versions in the repository must have been repaired or deleted. Calling this method does not change the values of
-     * [repaired], [deleted], [corrupt], or [isValid].
-     *
-     * @throws [IOException] An I/O error occurred.
-     */
-    fun repair()
+    fun verify(): RepairAction?
 }
 
 /**
@@ -151,9 +146,9 @@ interface Repository : Configurable {
      *
      * @param [workDirectory] The path of the working directory containing the data.
      *
-     * @return An object which can be used to identify corrupt versions and optionally repair them.
+     * @return A list of objects which can be used for verifying the repository.
      */
-    fun verify(workDirectory: Path): IntegrityReport
+    fun verify(workDirectory: Path): List<VerifyAction>
 
     /**
      * Deletes this repository.
@@ -165,7 +160,7 @@ interface Repository : Configurable {
     /**
      * An [action] which executes in the background on a fixed [interval].
      */
-    data class Job(val interval: Duration, val action: () -> Unit) {
+    class Job(val interval: Duration, val action: suspend () -> Unit) {
         /**
          * Run this job, executing [action] every [interval].
          */

@@ -181,7 +181,7 @@ object WatchDaemon : CoroutineScope by CoroutineScope(PersistentDispatcher) {
      */
     private fun runJobs(directory: Path) {
         val workDirectory = try {
-            WorkDirectory.open(directory)
+            WorkDirectory.open(directory).onFail { throw RepositoryException("Repository failed to open with $it") }
         } catch (e: RepositoryException) {
             return
         }
@@ -196,7 +196,7 @@ object WatchDaemon : CoroutineScope by CoroutineScope(PersistentDispatcher) {
      */
     private fun watch(directory: Path) {
         val workDirectory = try {
-            WorkDirectory.open(directory)
+            WorkDirectory.open(directory).onFail { throw RepositoryException("Repository failed to open with $it") }
         } catch (e: RepositoryException) {
             return
         }

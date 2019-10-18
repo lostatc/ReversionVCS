@@ -26,6 +26,7 @@ import com.jfoenix.controls.JFXSpinner
 import io.github.lostatc.reversion.gui.controls.DateTimePicker
 import javafx.event.EventHandler
 import javafx.scene.control.Label
+import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -35,7 +36,15 @@ import java.time.Instant
 /**
  * A handler used to show a dialog and return a value based on a user selection.
  */
-data class DialogHandle<T>(val dialog: JFXDialog, val result: Deferred<T>)
+data class DialogHandle<T>(val dialog: JFXDialog, val result: Deferred<T>) {
+    /**
+     * Show the dialog and wait for the user's selection.
+     */
+    suspend fun prompt(parent: StackPane): T {
+        dialog.show(parent)
+        return result.await()
+    }
+}
 
 /**
  * Creates a new dialog that presents the user with information and prompts them to dismiss it.

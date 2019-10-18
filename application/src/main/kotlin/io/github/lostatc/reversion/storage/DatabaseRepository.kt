@@ -28,11 +28,12 @@ import io.github.lostatc.reversion.api.CleanupPolicyFactory
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
 import io.github.lostatc.reversion.api.IncompatibleRepositoryException
-import io.github.lostatc.reversion.api.IntegrityReport
 import io.github.lostatc.reversion.api.InvalidRepositoryException
-import io.github.lostatc.reversion.api.RecoveryAction
+import io.github.lostatc.reversion.api.OpenAttempt
+import io.github.lostatc.reversion.api.RepairAction
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.TruncatingCleanupPolicyFactory
+import io.github.lostatc.reversion.api.VerifyAction
 import io.github.lostatc.reversion.api.Version
 import io.github.lostatc.reversion.api.delete
 import io.github.lostatc.reversion.cli.format
@@ -179,24 +180,6 @@ private object DatabaseFactory {
     }
 }
 
-/**
- * An [IntegrityReport] that can be updated as the repository is checked for corruption.
- */
-private data class IncrementalIntegrityReport(
-    override val repaired: MutableSet<Version> = mutableSetOf(),
-    override val deleted: MutableSet<Version> = mutableSetOf()
-) : IntegrityReport {
-    /**
-     * The list of actions to take to repair the repository.
-     */
-    val actions: MutableList<() -> Unit> = mutableListOf()
-
-    override fun repair() {
-        for (action in actions) {
-            action()
-        }
-    }
-}
 
 /**
  * An implementation of [Repository] which is backed by a relational database.
@@ -352,9 +335,34 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
     }
 
-    override fun verify(workDirectory: Path): IntegrityReport {
-        val report = IncrementalIntegrityReport()
+    override fun verify(workDirectory: Path): List<VerifyAction> = listOf(
+        object : VerifyAction {
+            override val message: String? = null
+
+            override fun verify(): RepairAction? = verifyDatabase(path)
+        },
+        object : VerifyAction {
+            override val message: String? =
+                "This will check the versions in the repository for corruption. This may take a while. Do you want to continue?"
+
+            override fun verify(): RepairAction? = verifyVersions(workDirectory)
+        }
+    )
+
+    /**
+     * Verifies the integrity of the versions in this repository.
+     *
+     * @return A [RepairAction] if some versions are corrupt or `null` if no action needs to be taken.
+     */
+    private fun verifyVersions(workDirectory: Path): RepairAction? {
+        // The set of corrupt versions.
         val corruptVersions = mutableSetOf<Version>()
+
+        // The number of versions to be deleted.
+        var deletedVersions = 0
+
+        // The list of actions to take to repair the repository.
+        val actions = mutableListOf<() -> Unit>()
 
         transaction(db) {
             val corruptBlobs = getCorruptBlobs()
@@ -377,7 +385,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                     val missingBlob = findBlob(absolutePath, blobEntity.checksum) ?: continue
 
                     // If the missing blob was found, use it to repair the repository and go to the next blob.
-                    report.actions.add {
+                    actions.add {
                         missingBlob
                             .newInputStream()
                             .use { Files.copy(it, blobPath, StandardCopyOption.REPLACE_EXISTING) }
@@ -387,24 +395,45 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                 }
 
                 // The missing blob was not found in the file system. Delete all versions containing the blob.
-                report.actions.add {
+                actions.add {
                     for (version in versions) {
                         version.delete()
                     }
                 }
 
-                // Mark these versions as deleted.
-                report.deleted.addAll(versions)
+                // Get the number of deleted versions.
+                deletedVersions = versions.size
             }
         }
 
         // If a version is corrupt and was not deleted, it was repaired. We don't know whether a version will be
         // repaired until all blobs have been checked.
-        report.repaired.addAll(corruptVersions - report.deleted)
+        val repairedVersions = corruptVersions.size - deletedVersions
 
-        logger.info("Checked repository for corruption and returned report $report.")
+        logger.info("Checked repository for corrupt versions.")
 
-        return report
+        if (corruptVersions.isEmpty()) {
+            return null
+        }
+
+        return object : RepairAction {
+            override val message: String =
+                "Some versions are corrupt. There are ${corruptVersions.size} corrupt versions in this directory. $repairedVersions of them will be repaired. $deletedVersions of them cannot be repaired and will be deleted. This may take a while. Do you want to repair?"
+
+            override fun repair(): RepairAction.Result = try {
+                for (action in actions) {
+                    action()
+                }
+                logger.info("Successfully repaired corrupt versions.")
+                RepairAction.Result(true, "All corrupt versions were repaired or deleted.")
+            } catch (e: IOException) {
+                logger.warn("Repairing corrupt versions failed.", e)
+                RepairAction.Result(
+                    false,
+                    "An error occurred while repairing corrupt versions. See the logs for more information."
+                )
+            }
+        }
     }
 
     override fun delete() {
@@ -583,6 +612,68 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         fun getConfig(): Config = Config(hashAlgorithmProperty, blockSizeProperty, backupIntervalProperty)
 
         /**
+         * Verify the integrity of the database of the [Repository] at [path].
+         *
+         * This method is in the companion object because it may not be possible to instantiate a [DatabaseRepository]
+         * if the database is corrupt.
+         *
+         * @return A [RepairAction] if the database is corrupt or `null` if no action needs to be taken.
+         */
+        private fun verifyDatabase(path: Path): RepairAction? {
+            val databasePath = path.resolve(relativeDatabasePath)
+            val backupPath = path.resolve(relativeDatabaseBackupPath)
+
+            // Check the database for corruption.
+            try {
+                DatabaseFactory.connect(databasePath)
+                return null
+            } catch (e: SQLException) {
+                // Database is corrupt attempt repair.
+            }
+
+            // Check if a backup of the database exists.
+            if (Files.notExists(backupPath)) {
+                return object : RepairAction {
+                    override val message: String =
+                        "The database could not be read and there are no backups to restore. Would you like to continue?"
+
+                    override fun repair(): RepairAction.Result =
+                        RepairAction.Result(false, "The database could not be restored.")
+                }
+            }
+
+            val backupTime = Files.getLastModifiedTime(backupPath).toInstant()
+
+            return object : RepairAction {
+                override val message: String =
+                    "The database could not be read. The most recent backup was made at ${backupTime.format()}. Restoring from this backup will cause all versions created after that time to be lost. Do you want to restore?"
+
+                override fun repair(): RepairAction.Result {
+                    // Attempt to restore from a database backup.
+                    DatabaseFactory.restore(source = backupPath, destination = databasePath)
+
+                    logger.info("Restored database backup from ${backupTime.format()}.")
+
+                    // Try to open the repository again.
+                    return try {
+                        DatabaseFactory.connect(databasePath)
+                        logger.info("Successfully repaired corrupt database.")
+                        RepairAction.Result(
+                            true,
+                            "The database was successfully recovered from the backup. Versions created since ${backupTime.format()} have been lost."
+                        )
+                    } catch (e: SQLException) {
+                        logger.warn("Repairing corrupt database failed", e)
+                        RepairAction.Result(
+                            false,
+                            "After restoring from a backup, the database still could not be read."
+                        )
+                    }
+                }
+            }
+        }
+
+        /**
          * Opens the repository at [path] and returns it.
          *
          * @param [path] The path of the repository.
@@ -591,7 +682,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          * @throws [InvalidRepositoryException] The repository is compatible but cannot be read.
          * @throws [IOException] An I/O error occurred.
          */
-        fun open(path: Path): DatabaseRepository {
+        fun open(path: Path): OpenAttempt<Repository> {
             if (!checkRepository(path))
                 throw IncompatibleRepositoryException("The format of the repository at '$path' is not supported.")
 
@@ -600,59 +691,15 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                 gson.fromJson(it, Config::class.java)
             }
 
-            val repository = try {
-                DatabaseRepository(path, config)
+            return try {
+                val repository = DatabaseRepository(path, config)
+                logger.info("Opened repository $repository.")
+                OpenAttempt.Success(repository)
             } catch (e: SQLException) {
-                logger.warn("The database could not be read.", e)
-
-                val backupPath = path.resolve(relativeDatabaseBackupPath)
-
-                val recoveryAction = if (Files.exists(backupPath)) {
-                    // Generate an action which the user can use to restore from a database backup.
-                    val backupTime = Files.getLastModifiedTime(backupPath).toInstant()
-                    object : RecoveryAction {
-                        override val message: String =
-                            "The database could not be read. The most recent backup was made at ${backupTime.format()}. Restoring from this backup will cause all versions created after that time to be lost. Do you want to restore?"
-
-                        override fun recover(): RecoveryAction.Result {
-                            // Attempt to restore from a database backup.
-                            DatabaseFactory.restore(
-                                source = backupPath,
-                                destination = path.resolve(relativeDatabasePath)
-                            )
-
-                            logger.info("Restored database backup from ${backupTime.format()}.")
-
-                            // Try to open the repository again.
-                            return try {
-                                DatabaseRepository(path, config)
-                                RecoveryAction.Result(
-                                    true,
-                                    "The database was successfully recovered from the backup. Versions created since ${backupTime.format()} have been lost."
-                                )
-                            } catch (e: SQLException) {
-                                RecoveryAction.Result(
-                                    false,
-                                    "After restoring from a backup, the database still could not be read."
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    // There is no database backup to restore.
-                    null
-                }
-
-                throw InvalidRepositoryException(
-                    message = "The database could not be read.",
-                    cause = e,
-                    action = recoveryAction
-                )
+                val action = verifyDatabase(path)
+                    ?: error("The repository could not be opened but the database reported no corruption.")
+                OpenAttempt.Failure(sequenceOf(action))
             }
-
-            logger.info("Opened repository $repository.")
-
-            return repository
         }
 
         /**
@@ -699,11 +746,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             // Do this last to signify that the repository is valid.
             Files.writeString(versionPath, currentVersion.toString())
 
-            val repository = open(path)
-
-            logger.info("Created repository $repository.")
-
-            return repository
+            when (val attempt = open(path)) {
+                is OpenAttempt.Success<*> -> return attempt.result as DatabaseRepository
+                is OpenAttempt.Failure -> error("The newly-created repository is corrupt.")
+            }
         }
 
         /**

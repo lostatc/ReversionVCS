@@ -24,8 +24,7 @@ import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXTextField
 import com.jfoenix.controls.JFXToggleButton
-import io.github.lostatc.reversion.api.IntegrityReport
-import io.github.lostatc.reversion.api.RepositoryException
+import io.github.lostatc.reversion.api.RepairAction
 import io.github.lostatc.reversion.cli.format
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.approvalDialog
@@ -35,11 +34,10 @@ import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ListItem
 import io.github.lostatc.reversion.gui.dateTimeDialog
 import io.github.lostatc.reversion.gui.infoDialog
-import io.github.lostatc.reversion.gui.mvc.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.processingDialog
+import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.toDisplayProperty
 import io.github.lostatc.reversion.gui.toSorted
-import io.github.lostatc.reversion.gui.ui
 import javafx.fxml.FXML
 import javafx.scene.control.Label
 import javafx.scene.control.TabPane
@@ -48,6 +46,7 @@ import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
 import kotlinx.coroutines.launch
 import org.apache.commons.io.FileUtils
+import java.nio.file.Path
 import java.time.Instant
 import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
@@ -171,30 +170,7 @@ class WorkDirectoryManagerController {
         }
 
         // Load working directories and handle errors by prompting the user.
-        model.loadWorkDirectories {
-            try {
-                WorkDirectoryModel.fromPath(it)
-            } catch (e: RepositoryException) {
-                if (e.action == null) return@loadWorkDirectories null
-
-                val handle = approvalDialog("Unable to open repository", e.action!!.message)
-                handle.dialog.show(root)
-
-
-                if (handle.result.await()) {
-                    val result = e.action!!.recover()
-                    if (result.success) {
-                        infoDialog("Recovery attempt successful", result.message).dialog.show(root)
-                        WorkDirectoryModel.fromPath(it)
-                    } else {
-                        infoDialog("Recovery attempt failed", result.message).dialog.show(root)
-                        null
-                    }
-                } else {
-                    null
-                }
-            }
-        }
+        model.loadWorkDirectories(::workDirectoryHandler)
 
         // Make the working directory information pane initially invisible.
         workDirectoryTabPane.setContentsVisible(false)
@@ -242,6 +218,22 @@ class WorkDirectoryManagerController {
     }
 
     /**
+     * Get a [WorkDirectoryModel] for the given [path], handling any errors opening the repository.
+     */
+    private suspend fun workDirectoryHandler(path: Path): WorkDirectoryModel? =
+        WorkDirectoryModel.fromPath(path).onFail { failure ->
+            if (failure.actions.all { repair(it) }) {
+                WorkDirectoryModel.fromPath(path).onFail {
+                    sendNotification("Even though the repository was successfully repaired, it could not be opened.")
+                    return null
+                }
+            } else {
+                sendNotification("Attempts to repair the repository either failed or were cancelled.")
+                return null
+            }
+        }
+
+    /**
      * Open a file browser and add the selected directory as a new working directory.
      */
     @FXML
@@ -250,7 +242,7 @@ class WorkDirectoryManagerController {
             title = "Select directory"
             showDialog(versionsTextField.scene.window)?.toPath() ?: return
         }
-        model.addWorkDirectory(directory)
+        model.addWorkDirectory(directory, ::workDirectoryHandler)
     }
 
     /**
@@ -333,14 +325,13 @@ class WorkDirectoryManagerController {
      */
     @FXML
     fun deleteWorkDirectory() {
-        val handle = approvalDialog(
+        model.launch {
+            val deleteApproval = approvalDialog(
             title = "Delete version history",
             text = "Are you sure you want to permanently delete all past versions in this directory? This will not affect the current versions of your files."
-        )
-        handle.dialog.show(root)
+            ).prompt(root)
 
-        model.launch {
-            if (handle.result.await()) {
+            if (deleteApproval) {
                 model.deleteWorkDirectory()
             }
         }
@@ -354,47 +345,70 @@ class WorkDirectoryManagerController {
         model.selected?.setTrackChanges(trackChangesToggle.isSelected)
     }
 
-
     /**
-     * Repair the repository and show the user a dialog to indicate progress.
+     * Walk the user through running a repair action.
+     *
+     * @param [action] The repair action to execute, or `null` to inform the user that no action needs to be taken.
+     *
+     * @return `true` if the repair succeeded, `false` if it failed.
      */
-    private fun repair(report: IntegrityReport) {
-        val job = storageActor.sendBlockingAsync { report.repair() }
-        val handle = processingDialog(title = "Repairing...", job = job)
-        handle.dialog.show(root)
-    }
+    private suspend fun repair(action: RepairAction?): Boolean {
+        val selected = model.selected ?: return true
 
-    /**
-     * Prompt the user for whether they want to repair the repository.
-     */
-    private fun promptRepair(report: IntegrityReport) {
-        if (report.isValid) {
-            infoDialog(
-                title = "No corruption detected",
-                text = "There are no corrupt versions in this directory."
-            ).dialog.show(root)
-        } else {
-            val handle = confirmationDialog(
-                title = "Corruption detected",
-                text = "There are ${report.corrupt.size} corrupt versions in this directory. ${report.repaired.size} of them will be repaired. ${report.deleted.size} of them cannot be repaired and will be deleted. This may take a while. Do you want to repair?"
-            )
-            handle.dialog.show(root)
+        // If no corruption was detected, inform the user and continue to the next action.
+        if (action == null) {
+            infoDialog("No corruption detected", "This test found nothing that needs to be repaired.").prompt(root)
+            return true
+        }
 
-            model.launch {
-                if (handle.result.await()) {
-                    repair(report)
-                }
+        // If corruption was detected, prompt the user for whether to attempt the repair.
+        val repairApproved = approvalDialog("Corruption detected", action.message).prompt(root)
+
+        if (repairApproved) {
+            // Attempt the repair.
+            val repairJob = selected.executeAsync { action.repair() }
+            processingDialog("Repairing...", repairJob).dialog.show(root)
+            val repairResult = repairJob.await()
+
+            return if (repairResult.success) {
+                infoDialog("Repair successful", repairResult.message).prompt(root)
+                true
+            } else {
+                infoDialog("Repair failed", repairResult.message).prompt(root)
+                false
             }
         }
+
+        return false
     }
 
     /**
-     * Verify the repository and show the user a dialog to indicate progress.
+     * Walk the user through verifying and repairing the repository.
      */
-    private fun verify() {
+    private suspend fun verify() {
         val selected = model.selected ?: return
-        val job = selected.executeAsync { workDirectory.repository.verify(workDirectory.path) } ui { promptRepair(it) }
-        processingDialog(title = "Checking for corruption...", job = job).dialog.show(root)
+
+        val verifyActions = selected.executeAsync { workDirectory.repository.verify(workDirectory.path) }.await()
+
+        if (verifyActions.isEmpty()) {
+            infoDialog("Nothing to do", "This storage backend doesn't support repair.").prompt(root)
+        }
+
+        for (verifyAction in verifyActions) {
+            // Ask the user if they want to check for corruption.
+            val verifyConfirmation = verifyAction.message?.let {
+                confirmationDialog("Check for corruption", it).prompt(root)
+            }
+            if (verifyConfirmation == false) continue
+
+            // Check for corruption.
+            val verifyJob = selected.executeAsync { verifyAction.verify() }
+            processingDialog("Checking for corruption...", verifyJob).dialog.show(root)
+
+
+            // Repair the repository.
+            repair(verifyJob.await())
+        }
     }
 
     /**
@@ -402,17 +416,7 @@ class WorkDirectoryManagerController {
      */
     @FXML
     fun promptVerify() {
-        val handle = confirmationDialog(
-            title = "Check for corruption",
-            text = "This will check the versions in this directory for corruption. If corrupt data is found, you will have the option to repair it. This may take a while. Do you want to check for corruption?"
-        )
-        handle.dialog.show(root)
-
-        model.launch {
-            if (handle.result.await()) {
-                verify()
-            }
-        }
+        model.launch { verify() }
     }
 
     /**
@@ -420,15 +424,13 @@ class WorkDirectoryManagerController {
      */
     @FXML
     fun mountSnapshot() {
-        val handle = dateTimeDialog(
-            title = "Choose a time and date",
-            text = "Choose the time and date that you want to see files from.",
-            default = Instant.now()
-        )
-        handle.dialog.show(root)
-
         model.launch {
-            val instant = handle.result.await()
+            val instant = dateTimeDialog(
+                "Choose a time and date",
+                "Choose the time and date that you want to see files from.",
+                Instant.now()
+            ).prompt(root)
+
             if (instant != null) {
                 model.mountSnapshot(instant)
             }
