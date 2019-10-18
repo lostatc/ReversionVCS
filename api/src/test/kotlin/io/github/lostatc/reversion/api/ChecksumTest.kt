@@ -37,11 +37,11 @@ class ChecksumTest {
         val originalChecksum = Checksum("abc".toByteArray())
         val modifiedChecksum = Checksum("abc".toByteArray())
 
-        modifiedChecksum.array[0] = 0x00
+        modifiedChecksum.toArray()[0] = 0x00
 
         assertEquals(originalChecksum, modifiedChecksum)
         assertThrows<ReadOnlyBufferException> {
-            modifiedChecksum.buffer.put(0x00)
+            modifiedChecksum.toBuffer().put(0x00)
         }
     }
 
@@ -49,9 +49,9 @@ class ChecksumTest {
     fun `get bytes`() {
         val checksum = Checksum("abc".toByteArray())
 
-        assertArrayEquals("abc".toByteArray(), checksum.array)
-        assertEquals(ByteBuffer.wrap("abc".toByteArray()), checksum.buffer)
-        assertEquals("616263", checksum.hex)
+        assertArrayEquals("abc".toByteArray(), checksum.toArray())
+        assertEquals(ByteBuffer.wrap("abc".toByteArray()), checksum.toBuffer())
+        assertEquals("616263", checksum.toHex())
     }
 
     @Test
@@ -67,7 +67,7 @@ class ChecksumTest {
 
         assertEquals(
             Checksum.fromHex("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
-            Files.newInputStream(tempFile).use { Checksum.fromInputStream(it, "SHA-256") }
+            Files.newByteChannel(tempFile).use { Checksum.fromChannel(it) }
         )
     }
 
@@ -79,7 +79,7 @@ class ChecksumTest {
 
         assertEquals(
             Checksum.fromHex("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
-            Checksum.fromFile(tempFile, "SHA-256")
+            Checksum.fromFile(tempFile)
         )
     }
 }

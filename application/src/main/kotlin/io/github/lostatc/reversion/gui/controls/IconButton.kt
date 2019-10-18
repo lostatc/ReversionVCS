@@ -21,16 +21,15 @@ package io.github.lostatc.reversion.gui.controls
 
 import com.jfoenix.controls.JFXRippler
 import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.loadFxml
 import io.github.lostatc.reversion.gui.setValue
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.event.EventHandler
 import javafx.fxml.FXML
-import javafx.fxml.FXMLLoader
 import javafx.scene.control.Tooltip
 import javafx.scene.input.MouseEvent
 import javafx.scene.shape.Circle
-import javafx.scene.shape.Shape
 import org.kordamp.ikonli.javafx.FontIcon
 
 /**
@@ -97,12 +96,7 @@ class IconButton : JFXRippler() {
     var radius: Float by radiusProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/IconButton.fxml")).apply {
-            classLoader = this@IconButton::class.java.classLoader
-            setRoot(this@IconButton)
-            setController(this@IconButton)
-            load()
-        }
+        loadFxml(this, "/fxml/controls/IconButton.fxml")
     }
 
     @FXML

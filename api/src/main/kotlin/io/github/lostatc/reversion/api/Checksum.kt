@@ -21,34 +21,36 @@ package io.github.lostatc.reversion.api
 
 import org.apache.commons.codec.DecoderException
 import org.apache.commons.codec.binary.Hex
-import org.apache.commons.codec.digest.DigestUtils
 import java.io.IOException
-import java.io.InputStream
 import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
+import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+
+/**
+ * The size of the buffer to use for I/O operations.
+ */
+private const val BUFFER_SIZE: Int = 4096
 
 /**
  * A checksum of a file.
  */
 class Checksum(private val bytes: ByteArray) {
     /**
-     * A byte array containing the bytes of the checksum.
+     * Returns a byte array containing the bytes of the checksum.
      */
-    val array: ByteArray
-        get() = bytes.copyOf()
+    fun toArray(): ByteArray = bytes.copyOf()
 
     /**
-     * A read-only byte buffer containing the bytes of the checksum.
+     * Returns a read-only byte buffer containing the bytes of the checksum.
      */
-    val buffer: ByteBuffer
-        get() = ByteBuffer.wrap(array).asReadOnlyBuffer()
+    fun toBuffer(): ByteBuffer = ByteBuffer.wrap(toArray()).asReadOnlyBuffer()
 
     /**
-     * A hexadecimal string representing this checksum.
+     * Returns a hexadecimal string representing this checksum.
      */
-    val hex: String
-        get() = Hex.encodeHexString(bytes)
+    fun toHex(): String = Hex.encodeHexString(bytes)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -58,9 +60,14 @@ class Checksum(private val bytes: ByteArray) {
 
     override fun hashCode(): Int = bytes.contentHashCode()
 
-    override fun toString(): String = hex
+    override fun toString(): String = toHex()
 
     companion object {
+        /**
+         * The hash algorithm to use for calculating checksums.
+         */
+        const val algorithm: String = "SHA-256"
+
         /**
          * Creates a [Checksum] from the given hexadecimal [hash].
          *
@@ -73,39 +80,26 @@ class Checksum(private val bytes: ByteArray) {
         }
 
         /**
-         * Calculates a [Checksum] of the data from the given [inputStream].
-         *
-         * This accepts any [algorithm] accepted by [MessageDigest]. It is the caller's responsibility to close this
-         * stream.
-         *
-         * @param [inputStream] The source of the data to calculate the checksum of.
-         * @param [algorithm] The name of the hash algorithm to use.
+         * Calculates a SHA-256 [Checksum] of the data from the given [channel].
          */
-        fun fromInputStream(inputStream: InputStream, algorithm: String): Checksum =
-            Checksum(DigestUtils(algorithm).digest(inputStream))
+        fun fromChannel(channel: ReadableByteChannel): Checksum {
+            val digest = MessageDigest.getInstance(algorithm)
+            val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
+
+            while (channel.read(buffer) != -1) {
+                buffer.flip()
+                digest.update(buffer)
+                buffer.clear()
+            }
+
+            return Checksum(digest.digest())
+        }
 
         /**
-         * Calculates a [Checksum] of the file at the given [path].
-         *
-         * This accepts any [algorithm] accepted by [MessageDigest].
-         *
-         * @param [path] The path of the file to calculate the checksum of.
-         * @param [algorithm] The name of the hash algorithm to use.
+         * Calculates a SHA-256 [Checksum] of the file at the given [path].
          *
          * @throws [IOException] An I/O error occurred.
          */
-        fun fromFile(path: Path, algorithm: String): Checksum =
-            Checksum(DigestUtils(algorithm).digest(path.toFile()))
-
-        /**
-         * Calculates a [Checksum] of the given [data].
-         *
-         * This accepts any [algorithm] accepted by [MessageDigest].
-         *
-         * @param [data] The data to calculate the checksum of.
-         * @param [algorithm] The name of the hash algorithm to use.
-         */
-        fun fromString(data: String, algorithm: String): Checksum =
-            Checksum(DigestUtils(algorithm).digest(data))
+        fun fromFile(path: Path): Checksum = Files.newByteChannel(path).use { fromChannel(it) }
     }
 }

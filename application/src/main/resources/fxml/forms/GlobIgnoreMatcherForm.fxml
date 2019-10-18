@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXTextField?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.VBox?>
+<fx:root xmlns:fx="http://javafx.com/fxml/1" type="VBox" xmlns="http://javafx.com/javafx/11.0.1">
+    <Label styleClass="info-key" text="Glob Pattern">
+        <tooltip>
+            <Tooltip text="Enter a globbing pattern relative to the directory."/>
+        </tooltip>
+    </Label>
+    <JFXTextField fx:id="patternField" prefColumnCount="20"/>
+</fx:root>

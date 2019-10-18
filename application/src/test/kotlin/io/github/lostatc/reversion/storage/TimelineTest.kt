@@ -19,6 +19,8 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.api.CleanupPolicy
+import io.github.lostatc.reversion.api.FileTreeBuilder
 import io.github.lostatc.reversion.api.Repository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -40,7 +42,7 @@ interface TimelineTest {
     fun createFiles(@TempDir tempPath: Path) {
         workPath = tempPath.resolve("work")
 
-        FileCreateContext(workPath) {
+        FileTreeBuilder(workPath) {
             file("a")
             file("b")
             directory("c") {
@@ -189,8 +191,8 @@ interface TimelineTest {
     @Test
     fun `clean up versions by total number`() {
         val policies = setOf(
-            repository.policyFactory.ofVersions(1),
-            repository.policyFactory.ofVersions(2)
+            CleanupPolicy.ofVersions(1),
+            CleanupPolicy.ofVersions(2)
         )
         val timeline = repository.createTimeline(policies)
 

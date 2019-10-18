@@ -23,27 +23,25 @@ import org.junit.jupiter.api.Test
 import java.time.temporal.ChronoUnit
 
 class CleanupPolicyTest {
-    val policyFactory: CleanupPolicyFactory = TruncatingCleanupPolicyFactory(ChronoUnit.MILLIS)
-
     @Test
     fun `time-based units don't throw`() {
-        policyFactory.ofUnit(24, ChronoUnit.HOURS, 12)
+        CleanupPolicy.ofStaggered(24, ChronoUnit.HOURS)
     }
 
     @Test
     fun `date-based units don't throw`() {
-        policyFactory.ofUnit(12, ChronoUnit.MONTHS, 6)
+        CleanupPolicy.ofStaggered(12, ChronoUnit.MONTHS)
     }
 
     @Test
     fun `policy from versions doesn't throw`() {
-        policyFactory.ofVersions(Int.MAX_VALUE)
-        policyFactory.ofVersions(0)
+        CleanupPolicy.ofVersions(Int.MAX_VALUE)
+        CleanupPolicy.ofVersions(0)
     }
 
     @Test
     fun `policy from duration doesn't throw`() {
-        policyFactory.ofDuration(0, ChronoUnit.YEARS)
-        policyFactory.ofDuration(Long.MAX_VALUE, ChronoUnit.SECONDS)
+        CleanupPolicy.ofDuration(0, ChronoUnit.YEARS)
+        CleanupPolicy.ofDuration(Long.MAX_VALUE, ChronoUnit.SECONDS)
     }
 }

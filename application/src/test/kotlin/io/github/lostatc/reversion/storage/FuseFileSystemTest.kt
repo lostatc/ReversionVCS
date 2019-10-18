@@ -20,9 +20,10 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Config
+import io.github.lostatc.reversion.api.FileTreeBuilder
 import io.github.lostatc.reversion.api.PermissionSet
 import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.resolve
+import io.github.lostatc.reversion.api.resolve
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
@@ -65,7 +66,7 @@ interface FuseFileSystemTest {
         mountPath = tempPath.resolve("mnt")
 
         Files.createDirectory(mountPath)
-        FileCreateContext(workPath) {
+        FileTreeBuilder(workPath) {
             file("a", content = "apple")
             file("b", content = "banana")
             directory("c") {

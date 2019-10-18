@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXTextField?>
+<?import io.github.lostatc.reversion.gui.controls.IconButton?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<fx:root xmlns:fx="http://javafx.com/fxml/1" type="HBox" spacing="10.0" xmlns="http://javafx.com/javafx/11.0.1">
+    <VBox>
+        <Label styleClass="info-key" text="Path">
+            <tooltip>
+                <Tooltip text="Enter the path of the file to ignore."/>
+            </tooltip>
+        </Label>
+        <JFXTextField fx:id="pathField" prefColumnCount="20"/>
+    </VBox>
+    <IconButton icon="gmi-note-add" onAction="#selectFile" styleClass="icon-button-light">
+        <tooltip>
+            <Tooltip text="Select a file to ignore."/>
+        </tooltip>
+    </IconButton>
+    <IconButton icon="gmi-create-new-folder" onAction="#selectDirectory" styleClass="icon-button-light">
+        <tooltip>
+            <Tooltip text="Select a directory to ignore."/>
+        </tooltip>
+    </IconButton>
+</fx:root>
+

@@ -22,6 +22,7 @@ package io.github.lostatc.reversion
 import ch.qos.logback.core.PropertyDefinerBase
 import ch.qos.logback.core.spi.PropertyDefiner
 import io.github.lostatc.reversion.api.StorageProvider
+import io.github.lostatc.reversion.api.resolve
 import io.github.lostatc.reversion.storage.DatabaseStorageProvider
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
@@ -35,18 +36,9 @@ import java.util.MissingResourceException
 val HOME_DIRECTORY: Path by lazy { Paths.get(System.getProperty("user.home")) }
 
 /**
- * Resolves [firstSegment] and each of the given [segments] against this path.
- *
- * @see [Path.resolve]
- */
-fun Path.resolve(firstSegment: String, vararg segments: String): Path =
-    segments.fold(resolve(firstSegment)) { path, segment -> path.resolve(segment) }
-
-/**
  * Returns the [Path] stored in the given environment [variable], or `null` if it is unset.
  */
-private fun pathFromEnv(variable: String): Path? =
-    System.getenv(variable)?.let { Paths.get(it) }
+private fun pathFromEnv(variable: String): Path? = System.getenv(variable)?.let { Paths.get(it) }
 
 /**
  * An exception which signals that a resource is missing.
@@ -80,22 +72,36 @@ fun getResourcePath(name: String): Path =
  *
  * @param [dataDirectory] The directory where application data is stored.
  * @param [configDirectory] The directory where application configuration is stored.
+ * @param [cacheDirectory] The directory where cached application data is stored.
  */
-enum class OperatingSystem(val dataDirectory: Path, val configDirectory: Path = dataDirectory) {
-    WINDOWS(dataDirectory = pathFromEnv("APPDATA") ?: HOME_DIRECTORY.resolve("AppData", "Roaming")),
+enum class OperatingSystem(
+    val dataDirectory: Path,
+    val configDirectory: Path,
+    val cacheDirectory: Path
+) {
+    WINDOWS(
+        dataDirectory = pathFromEnv("APPDATA") ?: HOME_DIRECTORY.resolve("AppData", "Roaming"),
+        configDirectory = pathFromEnv("APPDATA") ?: HOME_DIRECTORY.resolve("AppData", "Roaming"),
+        cacheDirectory = pathFromEnv("LOCALAPPDATA") ?: HOME_DIRECTORY.resolve("AppData", "Local")
+    ),
 
-    MAC(dataDirectory = HOME_DIRECTORY.resolve("Library", "Application Support")),
+    MAC(
+        dataDirectory = HOME_DIRECTORY.resolve("Library", "Application Support"),
+        configDirectory = HOME_DIRECTORY.resolve("Library", "Application Support"),
+        cacheDirectory = HOME_DIRECTORY.resolve("Library", "Caches")
+    ),
 
     LINUX(
         dataDirectory = pathFromEnv("XDG_DATA_HOME") ?: HOME_DIRECTORY.resolve(".local", "share"),
-        configDirectory = pathFromEnv("XDG_CONFIG_HOME") ?: HOME_DIRECTORY.resolve(".config")
+        configDirectory = pathFromEnv("XDG_CONFIG_HOME") ?: HOME_DIRECTORY.resolve(".config"),
+        cacheDirectory = pathFromEnv("XDG_CACHE_HOME") ?: HOME_DIRECTORY.resolve(".cache")
     );
 
     /**
      * Returns whether this [OperatingSystem] is the current operating system.
      */
     val isCurrent: Boolean
-        get() = current() == this
+        get() = current == this
 
     /**
      * Get the data directory for the program with the given [name].
@@ -107,18 +113,25 @@ enum class OperatingSystem(val dataDirectory: Path, val configDirectory: Path = 
      */
     fun getConfigDirectory(name: String): Path = configDirectory.resolve(name)
 
+    /**
+     * Get the cache directory for the program with the given [name].
+     */
+    fun getCacheDirectory(name: String): Path = cacheDirectory.resolve(name)
+
     companion object {
         /**
-         * Get the current operating system.
+         * The current operating system.
          *
          * @throws [UnsupportedOperationException] The current operating system is not supported.
          */
-        fun current(): OperatingSystem {
+        val current: OperatingSystem by lazy {
             val osName = System.getProperty("os.name").toLowerCase()
-            if (osName.startsWith("windows")) return WINDOWS
-            if (osName.startsWith("mac")) return MAC
-            if (osName.startsWith("linux")) return LINUX
-            throw UnsupportedOperationException("This operating system is not supported.")
+            when {
+                osName.startsWith("windows") -> WINDOWS
+                osName.startsWith("mac") -> MAC
+                osName.startsWith("linux") -> LINUX
+                else -> throw UnsupportedOperationException("This operating system is not supported.")
+            }
         }
     }
 }
@@ -126,7 +139,7 @@ enum class OperatingSystem(val dataDirectory: Path, val configDirectory: Path = 
 /**
  * The path of the program's data directory.
  */
-val DATA_DIR: Path by lazy { OperatingSystem.current().getDataDirectory("Reversion") }
+val DATA_DIR: Path by lazy { OperatingSystem.current.getDataDirectory("Reversion") }
 
 /**
  * The default storage provider.

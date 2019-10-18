@@ -22,12 +22,12 @@ package io.github.lostatc.reversion.gui.controls
 import com.jfoenix.controls.JFXDatePicker
 import com.jfoenix.controls.JFXTimePicker
 import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.gui.loadFxml
 import io.github.lostatc.reversion.gui.setValue
 import javafx.beans.InvalidationListener
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML
-import javafx.fxml.FXMLLoader
 import javafx.scene.layout.HBox
 import java.time.Instant
 import java.time.LocalDate
@@ -57,12 +57,7 @@ class DateTimePicker : HBox() {
     var instant: Instant? by instantProperty
 
     init {
-        FXMLLoader(this::class.java.getResource("/fxml/DateTimePicker.fxml")).apply {
-            classLoader = this@DateTimePicker::class.java.classLoader
-            setRoot(this@DateTimePicker)
-            setController(this@DateTimePicker)
-            load()
-        }
+        loadFxml(this, "/fxml/controls/DateTimePicker.fxml")
     }
 
     @FXML

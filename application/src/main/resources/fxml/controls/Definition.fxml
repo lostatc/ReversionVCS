@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+<fx:root xmlns:fx="http://javafx.com/fxml/1" fx:id="root" alignment="CENTER_LEFT" spacing="15.0" styleClass="definition"
+         type="HBox"
+         xmlns="http://javafx.com/javafx/11.0.1">
+    <padding>
+        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+    </padding>
+    <FontIcon fx:id="fontIcon" styleClass="definition-icon"/>
+    <Label fx:id="nameLabel" text="Name"/>
+    <Region HBox.hgrow="ALWAYS"/>
+    <Label fx:id="valueLabel" text="Value"/>
+</fx:root>

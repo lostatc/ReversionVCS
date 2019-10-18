@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXRippler?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.shape.Circle?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+<fx:root xmlns:fx="http://javafx.com/fxml/1" type="JFXRippler" maskType="CIRCLE"
+         xmlns="http://javafx.com/javafx/11.0.1">
+    <StackPane>
+        <Circle fx:id="background" fill="TRANSPARENT" stroke="TRANSPARENT" strokeType="INSIDE"
+                styleClass="button-background"/>
+        <FontIcon fx:id="fontIcon" styleClass="button-icon"/>
+        <Circle fx:id="foreground" fill="TRANSPARENT" stroke="TRANSPARENT" strokeType="INSIDE"
+                styleClass="button-foreground"/>
+    </StackPane>
+</fx:root>

@@ -94,11 +94,6 @@ interface Repository : Configurable {
         get() = emptySet()
 
     /**
-     * A factory for creating [CleanupPolicy] instances.
-     */
-    val policyFactory: CleanupPolicyFactory
-
-    /**
      * The timelines in this repository indexed by their [ID][Timeline.id].
      */
     val timelines: Map<UUID, Timeline>

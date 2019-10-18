@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXSpinner?>
+<?import com.jfoenix.controls.JFXTabPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.*?>
+<StackPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
+           minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/11.0.1"
+           fx:controller="io.github.lostatc.reversion.gui.controllers.MainSceneController">
+    <AnchorPane>
+        <JFXTabPane layoutX="10.0" layoutY="10.0" styleClass="navigation-tab-bar" tabClosingPolicy="UNAVAILABLE"
+                    AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"
+                    AnchorPane.topAnchor="0.0">
+            <Tab text="Directories">
+                <fx:include fx:id="workDirectoryManager" source="WorkDirectoryManager.fxml"/>
+                <tooltip>
+                    <Tooltip text="Manage directories to track changes in."/>
+                </tooltip>
+            </Tab>
+            <Tab text="Versions">
+                <fx:include fx:id="versionManager" source="VersionManager.fxml"/>
+                <tooltip>
+                    <Tooltip text="Manage versions of files."/>
+                </tooltip>
+            </Tab>
+        </JFXTabPane>
+        <JFXSpinner fx:id="processingSpinner" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
+                    minWidth="-Infinity" prefHeight="25.0" prefWidth="25.0" visible="false" AnchorPane.rightAnchor="10.0"
+                    AnchorPane.topAnchor="10.0"/>
+    </AnchorPane>
+</StackPane>
