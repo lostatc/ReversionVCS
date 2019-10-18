@@ -25,13 +25,10 @@ import java.util.ServiceLoader
 
 /**
  * An exception which is thrown when there is a problem with a [Repository].
- *
- * @param [action] An action which can be taken to resolve the problem, or `null` if there is none.
  */
 open class RepositoryException(
     override val message: String,
-    override val cause: Throwable? = null,
-    val action: RecoveryAction? = null
+    override val cause: Throwable? = null
 ) : IOException(message, cause)
 
 /**
@@ -39,40 +36,47 @@ open class RepositoryException(
  */
 class IncompatibleRepositoryException(
     message: String,
-    cause: Throwable? = null,
-    action: RecoveryAction? = null
-) : RepositoryException(message, cause, action)
+    cause: Throwable? = null
+) : RepositoryException(message, cause)
 
 /**
  * An exception which is thrown when a repository cannot be opened because it is corrupt or otherwise unreadable.
  */
 class InvalidRepositoryException(
     message: String,
-    cause: Throwable? = null,
-    action: RecoveryAction? = null
-) : RepositoryException(message, cause, action)
+    cause: Throwable? = null
+) : RepositoryException(message, cause)
+
 
 /**
- * An action which can be taken to recover a repository.
+ * The result of an attempt to open something.
  */
-interface RecoveryAction {
+sealed class OpenAttempt<T> {
     /**
-     * A message to show the user prompting them for whether they want to attempt to recover the repository.
+     * The [result] which was successfully opened.
      */
-    val message: String
+    class Success<T>(val result: T) : OpenAttempt<T>()
 
     /**
-     * Attempt to recover the repository.
+     * The resource could not be opened and [actions] must be taken to repair it.
      */
-    fun recover(): Result
+    class Failure<T>(val actions: Sequence<RepairAction>) : OpenAttempt<T>()
 
     /**
-     * The result of a recovery operation.
-     *
-     * @param [success] Whether the recovery was successful.
-     * @param [message] The message to show the user after the attempt is complete.
+     * Convert the type of this [OpenAttempt] with [block] and propagate errors.
      */
-    data class Result(val success: Boolean, val message: String)
+    fun <R> wrap(block: (T) -> R): OpenAttempt<R> = when (this) {
+        is Success<T> -> Success(block(result))
+        is Failure<T> -> Failure(actions)
+    }
+
+    /**
+     * Return the [Success.result] or the result of [block] if this is a [Failure].
+     */
+    inline fun onFail(block: (Failure<T>) -> T): T = when (this) {
+        is Success -> result
+        is Failure -> block(this)
+    }
 }
 
 /**
@@ -97,14 +101,11 @@ interface StorageProvider {
     /**
      * Opens the repository at [path] and returns it.
      *
-     * If this method throws a [RepositoryException], the exception can include a [RecoveryAction], which may be used to
-     * recover a repository which can't be opened. The user will be prompted before a recovery attempt is made.
-     *
      * @throws [IncompatibleRepositoryException] There is no compatible repository at [path].
      * @throws [InvalidRepositoryException] The repository is compatible but cannot be read.
      * @throws [IOException] An I/O error occurred.
      */
-    fun openRepository(path: Path): Repository
+    fun openRepository(path: Path): OpenAttempt<Repository>
 
     /**
      * Creates a repository at [path] with the given [config] and returns it.

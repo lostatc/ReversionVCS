@@ -24,6 +24,7 @@ import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.IncompatibleRepositoryException
 import io.github.lostatc.reversion.api.InvalidRepositoryException
+import io.github.lostatc.reversion.api.OpenAttempt
 import io.github.lostatc.reversion.api.Repository
 import io.github.lostatc.reversion.api.Snapshot
 import io.github.lostatc.reversion.api.StorageProvider
@@ -396,7 +397,9 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * with this working directory but the repository cannot be read.
          * @throws [NotAWorkDirException] The working directory has not been initialized.
          */
-        fun open(path: Path): WorkDirectory = instanceCache.getOrPut(path) { openNew(path) }
+        fun open(path: Path): OpenAttempt<WorkDirectory> = OpenAttempt.Success(
+            instanceCache.getOrPut(path) { openNew(path).onFail { return@open it } }
+        )
 
         /**
          * Opens the working directory associated with the file at the given [path].
@@ -411,7 +414,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * with this working directory but the repository cannot be read.
          * @throws [NotAWorkDirException] There is no working directory associated with the given [path].
          */
-        fun openFromDescendant(path: Path): WorkDirectory {
+        fun openFromDescendant(path: Path): OpenAttempt<WorkDirectory> {
             var directory = path
 
             do {
@@ -431,7 +434,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * with this working directory but the repository cannot be read.
          * @throws [NotAWorkDirException] The working directory has not been initialized.
          */
-        private fun openNew(path: Path): WorkDirectory {
+        private fun openNew(path: Path): OpenAttempt<WorkDirectory> {
             val infoFile = path.resolve(relativeInfoPath)
             val repositoryPath = path.resolve(relativeRepoPath)
 
@@ -444,16 +447,17 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
             }
 
             val provider = StorageProvider.findProvider(repositoryPath)
-            val repository = provider.openRepository(repositoryPath)
-            val timeline = repository.timelines[timelineID] ?: error(
-                "The timeline associated with this working directory is not in the repository."
-            )
 
-            val workDirectory = WorkDirectory(path, timeline)
+            return provider.openRepository(repositoryPath).wrap {
+                val timeline = it.timelines[timelineID] ?: error(
+                    "The timeline associated with this working directory is not in the repository."
+                )
+                val workDirectory = WorkDirectory(path, timeline)
 
-            logger.debug("Opening working directory $workDirectory.")
+                logger.debug("Opening working directory $workDirectory.")
 
-            return workDirectory
+                workDirectory
+            }
         }
 
         /**
@@ -485,9 +489,9 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
                 gson.toJson(info, it)
             }
 
-            val workDirectory = open(path)
+            val workDirectory = open(path).onFail { error("The working directory could not be opened.") }
 
-            logger.info("Initializing working directory $workDirectory.")
+            logger.info("Initializing working directory '$workDirectory'.")
 
             return workDirectory
         }

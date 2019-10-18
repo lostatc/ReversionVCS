@@ -101,17 +101,19 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
 
     /**
      * Adds the work directory with the given [path] asynchronously.
+     *
+     * @param [handler] A function which is passed the path of a working directory and returns a model representing it,
+     * or `null` if that model should be skipped.
      */
-    fun addWorkDirectory(path: Path) {
+    fun addWorkDirectory(path: Path, handler: suspend (Path) -> WorkDirectoryModel?) {
         launch {
-            val model = WorkDirectoryModel.fromPath(path)
-
-            if (model in workDirectories) {
+            if (WatchDaemon.registered.contains(path)) {
                 sendNotification("This directory is already being tracked.")
             } else {
-                _workDirectories.add(model)
-                WatchDaemon.registered.add(path)
-
+                handler(path)?.let {
+                    _workDirectories.add(it)
+                    WatchDaemon.registered.add(path)
+                }
             }
         }
     }
