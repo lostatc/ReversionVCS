@@ -59,7 +59,7 @@ class Reversion : Application() {
             throwable.message?.let { sendNotification(it) }
         }
 
-        val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/MainScene.fxml"))
+        val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/views/MainScene.fxml"))
         val rootNode = rootLoader.load<Pane>()
         val rootControl = rootLoader.getController<MainSceneController>()
         notificationBar.registerSnackbarContainer(rootNode)
