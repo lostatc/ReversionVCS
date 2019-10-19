@@ -55,6 +55,9 @@ fun main(args: Array<String>) {
         return
     }
 
+    // Fix a graphical glitch (JDK-8089308).
+    System.setProperty("prism.dirtyopts", "false")
+
     // Application is not currently running. Start the daemon and the UI.
     runBlocking { WatchDaemon.start() }
     Application.launch(Reversion::class.java)
