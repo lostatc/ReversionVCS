@@ -116,9 +116,9 @@ private object DatabaseFactory {
     }
 
     /**
-     * Checks the integrity of the database and returns whether it is valid.
+     * Checks the integrity of the database [db] and returns whether it is valid.
      */
-    private fun checkIntegrity(db: Database): Boolean = transaction(db) {
+    fun checkIntegrity(db: Database): Boolean = transaction(db) {
         val connection = TransactionManager.current().connection as SQLiteConnection
         val result = connection
             .prepareStatement("PRAGMA quick_check;")
@@ -192,7 +192,9 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     val backupInterval: Long by backupIntervalProperty
 
     override val jobs: Set<Repository.Job> = setOf(
-        Repository.Job(Duration.ofMinutes(backupInterval)) { DatabaseFactory.backup(databasePath, databaseBackupPath) }
+        Repository.Job(Duration.ofMinutes(backupInterval)) {
+            DatabaseFactory.backup(databasePath, databaseBackupPath)
+        }
     )
 
     override val timelines: Map<UUID, DatabaseTimeline> = object : AbstractMap<UUID, DatabaseTimeline>() {
@@ -365,7 +367,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                 // Because this blob is corrupt, all versions containing it are corrupt.
                 corruptVersions.addAll(versions)
 
-                // Iterate over the path of each version the corrupt blob is in.
+                // IteratInte over the path of each version the corrupt blob is in.
                 for (relativePath in versionPaths) {
                     val absolutePath = workDirectory.resolve(relativePath)
 
@@ -598,10 +600,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
             // Check the database for corruption.
             try {
-                DatabaseFactory.connect(databasePath)
-                return null
+                val database = DatabaseFactory.connect(databasePath)
+                if (DatabaseFactory.checkIntegrity(database)) return null
             } catch (e: SQLException) {
-                // Database is corrupt attempt repair.
+                // Database is corrupt. Attempt repair.
             }
 
             // Check if a backup of the database exists.

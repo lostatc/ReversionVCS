@@ -109,9 +109,15 @@ fun processingDialog(title: String, job: Job): DialogHandle<Boolean> {
             )
         }
 
+        // Handle the case where the [job] completes before the dialog can be opened.
+        setOnDialogOpened {
+            if (deferred.isCompleted) close()
+        }
+
         job.invokeOnCompletion {
             deferred.complete(true)
-            close()
+            // Don't attempt to close the dialog unless it's been opened.
+            if (dialogContainer != null) close()
         }
     }
 

@@ -120,7 +120,7 @@ data class SizeIgnoreMatcher(val size: Long) : IgnoreMatcher {
 
     override fun toPathMatcher(workDirectory: Path): PathMatcher = absoluteMatcher(workDirectory) {
         // Ignore symlinks because [Files.size] may try to follow them, which we don't want.
-        if (Files.isRegularFile(it)) false else Files.size(it) > size
+        if (Files.isRegularFile(it)) Files.size(it) > size else false
     }
 }
 
