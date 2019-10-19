@@ -26,11 +26,9 @@ import io.github.lostatc.reversion.api.RepositoryException
 import io.github.lostatc.reversion.serialization.PathTypeAdapter
 import io.github.lostatc.reversion.serialization.fromJson
 import io.github.lostatc.reversion.storage.WorkDirectory
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -42,26 +40,14 @@ import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
-import java.util.concurrent.Executors
 import kotlin.text.Typography.registered
-
-/**
- * The size of the thread pool to use for [PersistentDispatcher].
- */
-private const val THREAD_POOL_SIZE: Int = 4
-
-/**
- * A [CoroutineDispatcher] which is not terminated when the main thread exits.
- */
-private val PersistentDispatcher: CoroutineDispatcher =
-    Executors.newFixedThreadPool(THREAD_POOL_SIZE).asCoroutineDispatcher()
 
 /**
  * A daemon which runs jobs for working directories in the background.
  *
  * Jobs running in this daemon keep running after the main thread exits.
  */
-object WatchDaemon : CoroutineScope by CoroutineScope(PersistentDispatcher) {
+object WatchDaemon : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     /**
      * The file for persistently storing [registered] paths.
      */
