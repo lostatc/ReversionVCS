@@ -46,6 +46,7 @@ import io.github.lostatc.reversion.gui.createBinding
 import io.github.lostatc.reversion.gui.dateTimeDialog
 import io.github.lostatc.reversion.gui.format
 import io.github.lostatc.reversion.gui.infoDialog
+import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.models.WorkDirectoryManagerModel
 import io.github.lostatc.reversion.gui.models.WorkDirectoryModel
 import io.github.lostatc.reversion.gui.processingDialog
@@ -246,9 +247,12 @@ class WorkDirectoryManagerController {
 
         // Bind the contents of a node so that it contains the selected ignore matcher form.
         ignoreTypeComboBox.selectionModel.selectedItemProperty().addListener { _, _, newValue ->
-            ignoreFormContainer.children.setAll(newValue.node)
-            ignorePreviewLabel.textProperty().createBinding(newValue.resultProperty) {
-                newValue.result?.description ?: ""
+            // This value may be `null` if a working directory has not been selected yet.
+            if (newValue != null) {
+                ignoreFormContainer.children.setAll(newValue.node)
+                ignorePreviewLabel.textProperty().createBinding(newValue.resultProperty) {
+                    newValue.result?.description ?: ""
+                }
             }
         }
 
@@ -436,8 +440,6 @@ class WorkDirectoryManagerController {
      * @return `true` if the repair succeeded, `false` if it failed.
      */
     private suspend fun repair(action: RepairAction?): Boolean {
-        val selected = model.selected ?: return true
-
         // If no corruption was detected, inform the user and continue to the next action.
         if (action == null) {
             infoDialog("No corruption detected", "This test found nothing that needs to be repaired.").prompt(root)
@@ -448,8 +450,7 @@ class WorkDirectoryManagerController {
         val repairApproved = approvalDialog("Corruption detected", action.message).prompt(root)
 
         if (repairApproved) {
-            // Attempt the repair.
-            val repairJob = selected.executeAsync { action.repair() }
+            val repairJob = storageActor.sendAsync { action.repair() }
             processingDialog("Repairing...", repairJob).dialog.show(root)
             val repairResult = repairJob.await()
 
