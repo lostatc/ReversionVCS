@@ -25,6 +25,7 @@ import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.resolve
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -66,7 +67,12 @@ interface WorkDirectoryTest {
 
     @Test
     fun `open a work directory from a descendant`() {
-        assertEquals(workDirectory, WorkDirectory.openFromDescendant(workPath.resolve("c", "a")))
+        assertEquals(
+            workDirectory,
+            WorkDirectory.openFromDescendant(workPath.resolve("c", "a")).onFail {
+                fail("Work directory could not be opened successfully.")
+            }
+        )
     }
 
     @Test

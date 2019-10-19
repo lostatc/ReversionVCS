@@ -21,6 +21,8 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Checksum
 import io.github.lostatc.reversion.api.FileTreeBuilder
+import io.github.lostatc.reversion.api.RepairAction
+import io.github.lostatc.reversion.api.VerifyAction
 import io.github.lostatc.reversion.api.resolve
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -48,6 +50,16 @@ private fun DatabaseRepository.corruptBlob(file: Path) {
     val checksum = Checksum.fromFile(file)
     Files.writeString(getBlobPath(checksum), "corrupt data")
 }
+
+/**
+ * Returns `true` if no corruption was detected, `false` otherwise.
+ */
+private fun List<VerifyAction>.isValid(): Boolean = all { it.verify() == null }
+
+/**
+ * Runs each [RepairAction] and returns `true` if all of them were successful, `false` otherwise.
+ */
+private fun List<RepairAction>.isSuccessful(): Boolean = all { it.repair().success }
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DatabaseRepositoryTest : RepositoryTest {
@@ -77,42 +89,14 @@ class DatabaseRepositoryTest : RepositoryTest {
     @Test
     fun `identify corrupt files`() {
         val timeline = repository.createTimeline()
-        val snapshot = timeline.createSnapshot(listOf(Paths.get("a"), Paths.get("b"), Paths.get("c", "a")), workPath)
+        timeline.createSnapshot(listOf(Paths.get("a"), Paths.get("b"), Paths.get("c", "a")), workPath)
 
-        assertTrue(repository.verify(workPath).isValid)
+        assertTrue(repository.verify(workPath).isValid())
 
         repository.deleteBlob(workPath.resolve("a"))
         repository.corruptBlob(workPath.resolve("c", "a"))
 
-        val corruptVersions = setOf(
-            snapshot.versions.getValue(Paths.get("a")),
-            snapshot.versions.getValue(Paths.get("c", "a"))
-        )
-        val report = repository.verify(workPath)
-
-        assertFalse(report.isValid)
-        assertEquals(corruptVersions, report.corrupt)
-    }
-
-    @Test
-    fun `distinguish files that can be repaired vs deleted`() {
-        val timeline = repository.createTimeline()
-        val snapshot = timeline.createSnapshot(listOf(Paths.get("a"), Paths.get("b"), Paths.get("c", "a")), workPath)
-
-        assertTrue(repository.verify(workPath).isValid)
-
-        repository.deleteBlob(workPath.resolve("a"))
-        repository.deleteBlob(workPath.resolve("b"))
-
-        // Delete the original file so that it cannot be repaired.
-        Files.delete(workPath.resolve("a"))
-
-        val deletedVersions = setOf(snapshot.versions.getValue(Paths.get("a")))
-        val repairedVersions = setOf(snapshot.versions.getValue(Paths.get("b")))
-        val report = repository.verify(workPath)
-
-        assertEquals(deletedVersions, report.deleted)
-        assertEquals(repairedVersions, report.repaired)
+        assertFalse(repository.verify(workPath).isValid())
     }
 
     @Test
@@ -124,9 +108,8 @@ class DatabaseRepositoryTest : RepositoryTest {
         repository.deleteBlob(workPath.resolve("a"))
         repository.corruptBlob(workPath.resolve("b"))
 
-        repository.verify(workPath).repair()
-
-        assertTrue(repository.verify(workPath).isValid)
+        assertTrue(repository.verify(workPath).mapNotNull { it.verify() }.isSuccessful())
+        assertTrue(repository.verify(workPath).isValid())
         assertEquals(paths, snapshot.versions.keys)
     }
 
@@ -143,9 +126,8 @@ class DatabaseRepositoryTest : RepositoryTest {
         Files.delete(workPath.resolve("a"))
         Files.delete(workPath.resolve("b"))
 
-        repository.verify(workPath).repair()
-
-        assertTrue(repository.verify(workPath).isValid)
+        assertTrue(repository.verify(workPath).mapNotNull { it.verify() }.isSuccessful())
+        assertTrue(repository.verify(workPath).isValid())
         assertEquals(setOf(Paths.get("c", "a")), snapshot.versions.keys)
     }
 }
