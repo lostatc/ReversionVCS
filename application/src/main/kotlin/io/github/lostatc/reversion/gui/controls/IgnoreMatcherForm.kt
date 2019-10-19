@@ -51,7 +51,7 @@ interface IgnoreMatcherForm : Form<IgnoreMatcher>
  *
  * @param [base] The base path for paths to match.
  */
-class PrefixIgnoreMatcherForm(private val base: Path) : IgnoreMatcherForm, HBox() {
+class PrefixIgnoreMatcherForm(private val base: ReadOnlyProperty<Path>) : IgnoreMatcherForm, HBox() {
 
     @FXML
     private lateinit var pathField: JFXTextField
@@ -72,12 +72,12 @@ class PrefixIgnoreMatcherForm(private val base: Path) : IgnoreMatcherForm, HBox(
 
     @FXML
     fun initialize() {
-        _resultProperty.createBinding(pathField.textProperty()) {
+        _resultProperty.createBinding(pathField.textProperty(), base) {
             // Pass a relative path so that it will work if the directory is moved/synced elsewhere.
             val path = Paths.get(pathField.text)
             when {
                 pathField.text.isBlank() -> null
-                path.startsWith(base) -> PrefixIgnoreMatcher(base.relativize(path))
+                path.startsWith(base.value) -> PrefixIgnoreMatcher(base.value.relativize(path))
                 !path.isAbsolute -> PrefixIgnoreMatcher(path)
                 else -> null
             }

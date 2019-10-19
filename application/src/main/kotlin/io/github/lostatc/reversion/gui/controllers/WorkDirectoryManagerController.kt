@@ -52,6 +52,7 @@ import io.github.lostatc.reversion.gui.models.WorkDirectoryModel
 import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.toDisplayProperty
+import io.github.lostatc.reversion.gui.toMappedProperty
 import io.github.lostatc.reversion.storage.IgnoreMatcher
 import javafx.fxml.FXML
 import javafx.scene.Group
@@ -62,6 +63,7 @@ import javafx.stage.DirectoryChooser
 import kotlinx.coroutines.launch
 import org.apache.commons.io.FileUtils
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Instant
 import java.time.format.FormatStyle
 
@@ -109,7 +111,6 @@ private val ignoreCellFactory = MappingCellFactory<IgnoreMatcherForm> {
         else -> ""
     }
 }
-
 
 /**
  * The controller for the view that is used to manage working directories.
@@ -225,6 +226,16 @@ class WorkDirectoryManagerController {
 
     @FXML
     fun initialize() {
+        // The list of forms for creating ignore matchers.
+        val ignoreForms = listOf<IgnoreMatcherForm>(
+            PrefixIgnoreMatcherForm(model.selectedProperty.toMappedProperty { it?.path ?: Paths.get("") }),
+            SizeIgnoreMatcherForm(),
+            ExtensionIgnoreMatcherForm(),
+            CategoryIgnoreMatcherForm(),
+            GlobIgnoreMatcherForm(),
+            RegexIgnoreMatcherForm()
+        )
+
         // Control how the cleanup policy types are displayed in the combo box.
         policyTypeComboBox.cellFactory = policyCellFactory
         policyTypeComboBox.buttonCell = policyCellFactory.call(null)
@@ -256,6 +267,10 @@ class WorkDirectoryManagerController {
             }
         }
 
+        // Set the items in the combo box for selecting a type of ignore matcher.
+        ignoreTypeComboBox.items.setAll(ignoreForms)
+        ignoreTypeComboBox.selectionModel.select(0)
+
         // Bind the selected working directory in the model to the selected working directory in the view.
         workDirectoryList.selectionModel.selectedIndexProperty().addListener { _, _, newValue ->
             model.selected = model.workDirectories.getOrNull(newValue.toInt())
@@ -279,20 +294,6 @@ class WorkDirectoryManagerController {
             if (newValue == null) {
                 workDirectoryTabPane.setContentsVisible(false)
             } else {
-                // The list of forms for creating ignore matchers.
-                val ignoreForms = listOf<IgnoreMatcherForm>(
-                    PrefixIgnoreMatcherForm(newValue.path),
-                    SizeIgnoreMatcherForm(),
-                    ExtensionIgnoreMatcherForm(),
-                    CategoryIgnoreMatcherForm(),
-                    GlobIgnoreMatcherForm(),
-                    RegexIgnoreMatcherForm()
-                )
-
-                // Set the items in the combo box for selecting a type of ignore matcher.
-                ignoreTypeComboBox.items.setAll(ignoreForms)
-                ignoreTypeComboBox.selectionModel.select(0)
-
                 // Bind the list of cleanup policies it the view to the model.
                 cleanupPolicyList.items = MappedObservableList(newValue.cleanupPolicies) {
                     ListItem(it.description)
