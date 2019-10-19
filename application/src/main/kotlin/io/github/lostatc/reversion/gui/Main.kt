@@ -53,10 +53,7 @@ class Reversion : Application() {
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.gui")
             logger.error(throwable.message, throwable)
-
-            System.err.println("Error: ${throwable.message}")
-
-            throwable.message?.let { sendNotification(it) }
+            System.err.println(throwable)
         }
 
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/views/MainScene.fxml"))
