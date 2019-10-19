@@ -23,6 +23,9 @@ import io.github.lostatc.reversion.daemon.WatchDaemon
 import io.github.lostatc.reversion.gui.Reversion
 import it.sauronsoftware.junique.AlreadyLockedException
 import it.sauronsoftware.junique.JUnique
+import javafx.application.Application
+import javafx.application.Platform
+import javafx.stage.Stage
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -42,7 +45,7 @@ fun main(args: Array<String>) {
         // Check if application is already running.
         JUnique.acquireLock(APP_ID) {
             // If another instance sends a message, display the UI.
-            Reversion.launchOrShow()
+            Platform.runLater { Reversion().start(Stage()) }
             null
         }
     } catch (e: AlreadyLockedException) {
@@ -54,5 +57,5 @@ fun main(args: Array<String>) {
 
     // Application is not currently running. Start the daemon and the UI.
     runBlocking { WatchDaemon.start() }
-    Reversion.launchOrShow()
+    Application.launch(Reversion::class.java)
 }

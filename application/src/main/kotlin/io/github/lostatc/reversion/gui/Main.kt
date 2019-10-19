@@ -63,7 +63,6 @@ class Reversion : Application() {
 
         // We want to be able to re-open the primary stage after it is closed.
         Platform.setImplicitExit(false)
-        currentPrimaryStage = primaryStage
 
         primaryStage.apply {
             title = "Reversion"
@@ -79,31 +78,10 @@ class Reversion : Application() {
             minWidth = 450.0
             minHeight = 300.0
             setOnCloseRequest {
+                notificationBar.unregisterSnackbarContainer(rootNode)
                 rootControl.cleanup()
-
-                // Don't close the stage, but hide it so that it can be re-opened later.
-                it.consume()
-                hide()
             }
             show()
-        }
-    }
-
-    companion object {
-        /**
-         * The primary stage of the application, or `null` if it hasn't been started.
-         */
-        private var currentPrimaryStage: Stage? = null
-
-        /**
-         * Start the UI if it has not already been started or show the primary stage if it has.
-         */
-        fun launchOrShow() {
-            try {
-                launch(Reversion::class.java)
-            } catch (e: IllegalStateException) {
-                Platform.runLater { currentPrimaryStage?.show() }
-            }
         }
     }
 }
