@@ -24,11 +24,11 @@ import ch.qos.logback.core.spi.PropertyDefiner
 import io.github.lostatc.reversion.api.StorageProvider
 import io.github.lostatc.reversion.api.resolve
 import io.github.lostatc.reversion.storage.DatabaseStorageProvider
+import java.net.URI
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.MissingResourceException
 
 /**
  * The path of the user's home directory.
@@ -41,16 +41,15 @@ val HOME_DIRECTORY: Path by lazy { Paths.get(System.getProperty("user.home")) }
 private fun pathFromEnv(variable: String): Path? = System.getenv(variable)?.let { Paths.get(it) }
 
 /**
- * An exception which signals that a resource is missing.
- *
- * @param [name] The name of the resource.
+ * Returns the [URI] of the resource with the given [name].
  */
-data class MissingResourceException(override val message: String, val name: String) : Exception(message)
+fun getResourceUri(name: String): URI = OperatingSystem::class.java.getResource(name)?.toURI()
+    ?: error("A resource named '$name' doesn't exist.")
 
 /**
- * Returns the [Path] of the resource with the given [name] or `null` if it doesn't exist.
+ * Returns the [Path] of the resource with the given [name].
  */
-fun findResourcePath(name: String): Path? = OperatingSystem::class.java.getResource(name)?.toURI()?.let {
+fun getResourcePath(name: String): Path = getResourceUri(name).let {
     try {
         Paths.get(it)
     } catch (e: FileSystemNotFoundException) {
@@ -58,14 +57,6 @@ fun findResourcePath(name: String): Path? = OperatingSystem::class.java.getResou
         Paths.get(it)
     }
 }
-
-/**
- * Returns the [Path] of the resource with the given [name].
- *
- * @throws [MissingResourceException] A resource with the given [name] doesn't exist.
- */
-fun getResourcePath(name: String): Path =
-    findResourcePath(name) ?: throw MissingResourceException("The resource '$name' doesn't exist.", name)
 
 /**
  * A supported operating system.
