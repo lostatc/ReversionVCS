@@ -66,8 +66,8 @@ data class CleanupPolicy(
      * in terms of a number of milliseconds, it is shortened to the longest duration which can.
      */
     fun truncated(): CleanupPolicy = copy(
-        minInterval = minInterval.inTermsOf(unit),
-        timeFrame = timeFrame.inTermsOf(unit)
+        minInterval = minInterval.inTermsOf(serializeUnit),
+        timeFrame = timeFrame.inTermsOf(serializeUnit)
     )
 
     companion object {
@@ -103,7 +103,7 @@ data class CleanupPolicy(
         /**
          * The unit to serialize durations as.
          */
-        private val unit: TemporalUnit = ChronoUnit.MILLIS
+        private val serializeUnit: TemporalUnit = ChronoUnit.MILLIS
 
         /**
          * Creates a [CleanupPolicy] that keeps staggered versions.

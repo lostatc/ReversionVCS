@@ -93,7 +93,7 @@ class SequenceByteChannel(private val channels: Sequence<ReadableByteChannel>) :
 }
 
 /**
- * Put the bytes in [source] into this buffer, or as possible.
+ * Put as many bytes as possible from [source] into this buffer.
  */
 private fun ByteBuffer.putSome(source: ByteBuffer): ByteBuffer {
     if (source.remaining() > remaining()) {
