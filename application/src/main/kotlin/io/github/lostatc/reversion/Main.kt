@@ -21,6 +21,7 @@ package io.github.lostatc.reversion
 
 import io.github.lostatc.reversion.daemon.WatchDaemon
 import io.github.lostatc.reversion.gui.Reversion
+import io.github.lostatc.reversion.gui.showTrayIcon
 import it.sauronsoftware.junique.AlreadyLockedException
 import it.sauronsoftware.junique.JUnique
 import javafx.application.Application
@@ -60,5 +61,6 @@ fun main(args: Array<String>) {
 
     // Application is not currently running. Start the daemon and the UI.
     runBlocking { WatchDaemon.start() }
+    showTrayIcon()
     Application.launch(Reversion::class.java)
 }
