@@ -21,6 +21,7 @@ package io.github.lostatc.reversion.gui.models
 
 import io.github.lostatc.reversion.DATA_DIR
 import io.github.lostatc.reversion.daemon.WatchDaemon
+import io.github.lostatc.reversion.gui.controllers.WorkDirectoryManagerController
 import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.gui.setValue
@@ -36,29 +37,13 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Desktop
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 /**
  * The path of the directory to mount the FUSE file system at.
  */
-private val MOUNT_DIR: Path = DATA_DIR.resolve("Directory as of")
-
-/**
- * The time separator character to use in file names where certain characters may not be allowed.
- */
-private const val TIME_SEPARATOR: String = "\ua789"
-
-/**
- * Format this instant to a string which can be used in file names.
- */
-private fun Instant.formatPathSafe(): String = DateTimeFormatter
-    .ofPattern("yyyy-MM-dd HH${TIME_SEPARATOR}mm${TIME_SEPARATOR}ss")
-    .withZone(ZoneId.systemDefault())
-    .format(this)
+private val MOUNT_DIR: Path = DATA_DIR.resolve("Mounted Directory")
 
 /**
  * The model for storing information for the [WorkDirectoryManagerController].
@@ -146,18 +131,6 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     }
 
     /**
-     * Unmounts all snapshots and deletes their mount points.
-     */
-    private fun unmountAllSnapshots() {
-        if (Files.notExists(MOUNT_DIR)) return
-
-        for (directory in Files.list(MOUNT_DIR)) {
-            SnapshotMounter.unmount(directory)
-            Files.deleteIfExists(directory)
-        }
-    }
-
-    /**
      * Mounts the latest snapshot created before [time] and opens it in the browser.
      */
     fun mountSnapshot(time: Instant) {
@@ -174,13 +147,10 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
             }
 
             withContext(Dispatchers.IO) {
-                unmountAllSnapshots()
-                val mountpoint = MOUNT_DIR.resolve(snapshot.timeCreated.formatPathSafe())
+                SnapshotMounter.unmount(MOUNT_DIR)
+                SnapshotMounter.mount(snapshot, MOUNT_DIR)
 
-                SnapshotMounter.unmount(mountpoint)
-                SnapshotMounter.mount(snapshot, mountpoint)
-
-                Desktop.getDesktop().open(mountpoint.toFile())
+                Desktop.getDesktop().open(MOUNT_DIR.toFile())
             }
         }
     }
