@@ -197,9 +197,10 @@ object WatchDaemon : CoroutineScope by CoroutineScope(Dispatchers.Default) {
         ).use {
             for (event in it.events) {
                 if (event.type == ENTRY_CREATE || event.type == ENTRY_MODIFY) {
+                    val relativePath = directory.relativize(event.path)
                     try {
                         workDirectory.commit(listOf(event.path))
-                        workDirectory.timeline.clean(listOf(event.path))
+                        workDirectory.timeline.clean(listOf(relativePath))
                     } catch (e: IOException) {
                         logger.error(e.message, e)
                     }

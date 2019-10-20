@@ -150,8 +150,8 @@ interface Timeline {
     /**
      * Removes old versions of files with the given [pathsToClean].
      *
-     * The timeline's [cleanupPolicies] govern which versions are removed. By default, old versions of all files are
-     * removed.
+     * The timeline's [cleanupPolicies] govern which versions are removed. If [cleanupPolicies] is empty, no versions
+     * are removed. If [pathsToClean] is not specified, old versions of all files in the timeline are removed.
      *
      * This also removes any snapshots which do not have any versions.
      *
@@ -160,14 +160,22 @@ interface Timeline {
      * @return The number of versions that were removed.
      */
     fun clean(pathsToClean: Iterable<Path> = paths): Int {
-        val versionsToDeletePerPolicy = mutableSetOf<Set<Version>>()
 
-        for (policy in cleanupPolicies) {
-            for (path in pathsToClean) {
-                // Get versions with this path sorted from newest to oldest. Skip versions that are pinned.
-                val sortedVersions = listVersions(path).filter { !it.snapshot.pinned }
+        // This is a precaution to prevent the user from deleting all their versions.
+        if (cleanupPolicies.isEmpty()) return 0
 
-                val latestVersionCreated = sortedVersions.firstOrNull()?.snapshot?.timeCreated ?: return 0
+        // The set of versions which should be deleted.
+        val versionsToDelete = mutableSetOf<Version>()
+
+        for (path in pathsToClean) {
+            // The set of versions each policy says should be kept.
+            val versionsToKeep = mutableSetOf<Version>()
+
+            // Get versions with this path sorted from newest to oldest. Skip versions that are pinned.
+            val sortedVersions = listVersions(path).filterNot { it.snapshot.pinned }.toSet()
+            val latestVersionCreated = sortedVersions.firstOrNull()?.snapshot?.timeCreated ?: continue
+
+            for (policy in cleanupPolicies) {
                 val intervals = Interval.step(
                     start = latestVersionCreated - policy.timeFrame,
                     end = latestVersionCreated,
@@ -177,17 +185,16 @@ interface Timeline {
                 // Iterate over each interval starting from the time the most recent version was created and going
                 // backwards.
                 for (interval in intervals.reversed()) {
+                    // Keep the newest files in this interval.
                     val versionsInThisInterval = sortedVersions.filter { it.snapshot.timeCreated in interval }
-
-                    // Drop the newest files to keep them and delete the rest.
-                    versionsToDeletePerPolicy.add(versionsInThisInterval.drop(policy.maxVersions).toSet())
+                    versionsToKeep.addAll(versionsInThisInterval.take(policy.maxVersions))
                 }
             }
+
+            versionsToDelete.addAll(sortedVersions - versionsToKeep)
         }
 
-        if (versionsToDeletePerPolicy.isEmpty()) return 0
-
-        val versionsToDelete = versionsToDeletePerPolicy.reduce { accumulator, it -> accumulator intersect it }
+        if (versionsToDelete.isEmpty()) return 0
         val totalDeleted = versionsToDelete.size
 
         // Delete versions.
