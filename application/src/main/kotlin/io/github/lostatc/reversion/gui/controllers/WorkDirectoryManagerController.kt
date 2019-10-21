@@ -477,19 +477,17 @@ class WorkDirectoryManagerController {
 
         if (verifyActions.isEmpty()) {
             infoDialog("Nothing to do", "This storage backend doesn't support repair.").prompt(root)
+            return
         }
 
         for (verifyAction in verifyActions) {
             // Ask the user if they want to check for corruption.
-            val verifyConfirmation = verifyAction.message?.let {
-                confirmationDialog("Check for corruption", it).prompt(root)
-            }
-            if (verifyConfirmation == false) continue
+            val verifyConfirmation = confirmationDialog("Check for corruption", verifyAction.message).prompt(root)
+            if (!verifyConfirmation) continue
 
             // Check for corruption.
             val verifyJob = selected.executeAsync { verifyAction.verify() }
             processingDialog("Checking for corruption...", verifyJob).dialog.show(root)
-
 
             // Repair the repository.
             repair(verifyJob.await())

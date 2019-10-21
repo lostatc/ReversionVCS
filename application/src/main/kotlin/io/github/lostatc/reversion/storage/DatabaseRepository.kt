@@ -121,7 +121,7 @@ private object DatabaseFactory {
     fun checkIntegrity(db: Database): Boolean = transaction(db) {
         val connection = TransactionManager.current().connection as SQLiteConnection
         val result = connection
-            .prepareStatement("PRAGMA quick_check;")
+            .prepareStatement("PRAGMA integrity_check;")
             .executeQuery()
             .getString(1)
 
@@ -327,13 +327,14 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
     override fun verify(workDirectory: Path): List<VerifyAction> = listOf(
         object : VerifyAction {
-            override val message: String? = null
+            override val message: String =
+                "This will verify the integrity of the database for this directory. This shouldn't take long. Do you want to continue?"
 
             override fun verify(): RepairAction? = verifyDatabase(path)
         },
         object : VerifyAction {
-            override val message: String? =
-                "This will check the versions in the repository for corruption. This may take a while. Do you want to continue?"
+            override val message: String =
+                "This will check the versions in this directory for corruption. This may take a while. Do you want to continue?"
 
             override fun verify(): RepairAction? = verifyVersions(workDirectory)
         }

@@ -30,20 +30,17 @@ import java.util.UUID
  */
 interface RepairAction {
     /**
-     * A message to show the user prompting them for whether they want to attempt to repair the repository.
+     * A message to prompt the user with, asking whether they want to attempt the repair.
      */
     val message: String
 
     /**
-     * Attempt to repair the repository and return the results.
+     * Attempt the repair and return the results.
      */
     fun repair(): Result
 
     /**
      * Information about an attempt to repair a repository.
-     *
-     * If the repository is no longer corrupt and can be used/accessed normally, [success] should be `true`. Even if
-     * data was lost, [success] should only be `false` if the repository is unusable after the repair attempt.
      *
      * @param [success] Whether the repair attempt succeeded.
      * @param [message] A message to show the user after the attempt is complete.
@@ -52,16 +49,16 @@ interface RepairAction {
 }
 
 /**
- * An action which can be taken to verify data in a repository.
+ * An action which can be taken to verify the integrity of a repository.
  */
 interface VerifyAction {
     /**
-     * A message to prompt the user with, or `null` to not prompt the user.
+     * A message to prompt the user with, asking whether they want to run the verification.
      */
-    val message: String?
+    val message: String
 
     /**
-     * Verify the integrity of the repository and return a [RepairAction] or `null` if no action needs to be taken.
+     * Run the verification and return a [RepairAction], or `null` if no action needs to be taken.
      */
     fun verify(): RepairAction?
 }
