@@ -193,7 +193,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
 
     override val jobs: Set<Repository.Job> = setOf(
         Repository.Job(Duration.ofMinutes(backupInterval)) {
-            DatabaseFactory.backup(databasePath, databaseBackupPath)
+            // Don't back up the database if it's corrupt.
+            if (DatabaseFactory.checkIntegrity(db)) {
+                DatabaseFactory.backup(databasePath, databaseBackupPath)
+            }
         }
     )
 
