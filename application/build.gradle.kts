@@ -49,7 +49,7 @@ dependencies {
 }
 
 application {
-    applicationName = "reversion"
+    applicationName = "Reversion"
     mainClassName = "io.github.lostatc.reversion.MainKt"
 }
 
