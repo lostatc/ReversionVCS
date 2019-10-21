@@ -21,12 +21,14 @@ package io.github.lostatc.reversion.gui
 
 import com.jfoenix.assets.JFoenixResources
 import com.jfoenix.controls.JFXSnackbar
+import io.github.lostatc.reversion.getResourceUri
 import io.github.lostatc.reversion.gui.controllers.MainSceneController
 import io.github.lostatc.reversion.gui.controls.sendNotification
 import javafx.application.Application
 import javafx.application.Platform
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
+import javafx.scene.image.Image
 import javafx.scene.layout.Pane
 import javafx.stage.Stage
 import javafx.util.Duration
@@ -66,6 +68,7 @@ class Reversion : Application() {
 
         primaryStage.apply {
             title = "Reversion"
+            icons.add(Image(getResourceUri("/icon.png").toString()))
             scene = Scene(rootNode).apply {
                 stylesheets.addAll(
                     this::class.java.getResource("/css/fonts.css").toExternalForm(),
