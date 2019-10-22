@@ -26,6 +26,7 @@ import io.github.lostatc.reversion.api.Checksum
 import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
+import io.github.lostatc.reversion.api.FixedSizeChunker
 import io.github.lostatc.reversion.api.IncompatibleRepositoryException
 import io.github.lostatc.reversion.api.InvalidRepositoryException
 import io.github.lostatc.reversion.api.OpenAttempt
@@ -319,7 +320,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      */
     private fun findBlob(file: Path, checksum: Checksum): Blob? {
         val blobs = try {
-            Blob.chunkFile(file)
+            Blob.chunkFile(file, FixedSizeChunker(blockSize))
         } catch (e: IOException) {
             return null
         }

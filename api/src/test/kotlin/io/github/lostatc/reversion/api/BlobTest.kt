@@ -48,7 +48,7 @@ class BlobTest {
     fun `create blobs from file`() {
         val filePath = tempPath.resolve("file")
         Files.writeString(filePath, "abcdefg")
-        val blobs = Blob.chunkFile(filePath, 2)
+        val blobs = Blob.chunkFile(filePath, FixedSizeChunker(2))
 
         val expectedStrings = listOf("ab", "cd", "ef", "g")
 
@@ -59,9 +59,9 @@ class BlobTest {
             Checksum.fromHex("cd0aa9856147b6c5b4ff2b7dfee5da20aa38253099ef1b4a64aced233c9afe29")
         )
 
-        assertEquals(expectedStrings, blobs.map { it.readString() })
+        assertEquals(expectedStrings, blobs.map { it.readString() }.toList())
 
-        assertEquals(expectedChecksums, blobs.map { it.checksum })
+        assertEquals(expectedChecksums, blobs.map { it.checksum }.toList())
     }
 
     @Test

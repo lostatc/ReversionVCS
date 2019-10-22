@@ -80,33 +80,24 @@ interface Blob {
         }
 
         /**
-         * Creates a list of [Blob] objects containing data from the file at the given [path].
+         * Returns a sequence of [Blob] objects containing data from the given [file].
          *
          * Concatenating the contents of each blob together produces the original file.
          *
-         * @param [path] The path of the file.
-         * @param [blockSize] The maximum number of bytes in each blob.
+         * @param [file] The path of the file to read data from.
+         * @param [chunker] The [Chunker] to use to chunk the file.
          *
          * @throws [IOException] An I/O error occurred.
          */
-        fun chunkFile(path: Path, blockSize: Long = Long.MAX_VALUE): List<Blob> {
-            val fileSize = Files.size(path)
-            val blobs = mutableListOf<Blob>()
-
-            // Iterate over each [blockSize] byte chunk of the file.
-            for (position in 0 until fileSize step blockSize) {
-                val blob = object : AbstractBlob() {
-                    override fun openChannel(): ReadableByteChannel = Files.newByteChannel(path).let {
-                        it.position(position)
-                        BoundedByteChannel(it, blockSize)
+        fun chunkFile(file: Path, chunker: Chunker): Sequence<Blob> =
+            chunker.chunk(Files.newByteChannel(file)).map { chunk ->
+                object : AbstractBlob() {
+                    override fun openChannel(): ReadableByteChannel = Files.newByteChannel(file).let {
+                        it.position(chunk.position)
+                        BoundedByteChannel(it, chunk.size)
                     }
                 }
-
-                blobs.add(blob)
             }
-
-            return blobs
-        }
 
         /**
          * Creates a [Blob] containing the concatenated data from all the given [blobs].
