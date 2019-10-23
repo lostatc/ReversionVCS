@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.api
 
+import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 
 /**
@@ -52,5 +53,133 @@ class FixedSizeChunker(val chunkSize: Long) : Chunker {
         (0..size step chunkSize)
             .map { Chunker.Chunk(position = it, size = minOf(chunkSize, size - it)) }
             .asSequence()
+    }
+}
+
+
+/**
+ * A [Chunker] which uses a rolling hash to find chunk boundaries.
+ *
+ * @param [state] An object which determines when a chunk boundary has been reached.
+ * @param [bufferSize] The size of the internal buffer to use when reading data from the channel.
+ */
+class RollingHashChunker(private val state: HashState, private val bufferSize: Int = BUFFER_SIZE) : Chunker {
+    interface HashState {
+        /**
+         * Search for a chunk boundary within the given buffer.
+         *
+         * The hash will be repeatedly updated with bytes from the buffer, starting at its current position. When a
+         * boundary is found or the end of the buffer is reached, this method will return.
+         *
+         * @param [data] The buffer to search, starting from the current position.
+         *
+         * @return `true` if the current position of the buffer is a boundary, `false` otherwise
+         */
+        fun findBoundary(data: ByteBuffer): Boolean
+
+        /**
+         * Reset this state so it can be used to find another chunk boundary.
+         */
+        fun reset()
+    }
+
+    override fun chunk(source: SeekableByteChannel): Sequence<Chunker.Chunk> = sequence {
+        val buffer = ByteBuffer.allocateDirect(bufferSize)
+        var lastPosition = 0L
+        var size = 0L
+
+        state.reset()
+
+        while (true) {
+            val bytesRead = source.read(buffer)
+            if (bytesRead == -1) break
+            size += bytesRead
+
+            buffer.flip()
+
+            if (state.findBoundary(buffer)) {
+                yield(Chunker.Chunk(position = lastPosition, size = size))
+                lastPosition += size
+                size = 0
+                state.reset()
+            }
+
+            buffer.compact()
+        }
+
+        // The data between the last chunk boundary and the end of the channel is the final chunk.
+        yield(Chunker.Chunk(position = lastPosition, size = size))
+    }
+
+    companion object {
+        private const val BUFFER_SIZE: Int = 4 * 1024 * 1024
+    }
+}
+
+/**
+ * A [RollingHashChunker.HashState] implementing the ZPAQ algorithm for content-defined chunking.
+ *
+ * @param [bits] The number of bits that define a chunk boundary, such that an average chunk is 2^[bits] bytes long.
+ *
+ * @author Dominic Marcuse (https://github.com/dmarcuse)
+ */
+@UseExperimental(ExperimentalUnsignedTypes::class)
+class ZpaqState(bits: Int) : RollingHashChunker.HashState {
+
+    init {
+        require(bits <= 32) { "The number of bits must be <= 32." }
+    }
+
+    private val bits = 32 - bits
+
+    /**
+     * The previous byte.
+     */
+    private var c1: UByte = 0u
+
+    /**
+     * The hash state.
+     */
+    private var o1 = UByteArray(256)
+
+    /**
+     * The hash value.
+     */
+    private var h = HM
+
+    /**
+     * Update the hash with the given byte and return whether it matches a boundary.
+     */
+    private fun update(byte: UByte): Boolean {
+        h = if (byte == o1[c1.toInt()]) {
+            h * HM + byte + 1u
+        } else {
+            h * HM * 2u + byte + 1u
+        }
+
+        o1[c1.toInt()] = byte
+        c1 = byte
+
+        return h < (1u shl bits)
+    }
+
+    override fun findBoundary(data: ByteBuffer): Boolean {
+        while (data.hasRemaining()) {
+            if (update(data.get().toUByte())) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    override fun reset() {
+        c1 = 0u
+        h = HM
+        o1.fill(0u)
+    }
+
+    companion object {
+        private const val HM = 123456791u
     }
 }
