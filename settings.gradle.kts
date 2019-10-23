@@ -1,3 +1,2 @@
-rootProject.name = "reversion"
-include("application", "api")
+rootProject.name = "Reversion"
 
