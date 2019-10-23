@@ -22,9 +22,10 @@ package io.github.lostatc.reversion.gui.controls
 import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXTextField
 import io.github.lostatc.reversion.api.Form
+import io.github.lostatc.reversion.api.FormResult
+import io.github.lostatc.reversion.api.createBinding
+import io.github.lostatc.reversion.api.loadFxml
 import io.github.lostatc.reversion.gui.MappingCellFactory
-import io.github.lostatc.reversion.gui.createBinding
-import io.github.lostatc.reversion.gui.loadFxml
 import io.github.lostatc.reversion.gui.parseBytes
 import io.github.lostatc.reversion.storage.CategoryIgnoreMatcher
 import io.github.lostatc.reversion.storage.ExtensionIgnoreMatcher
@@ -45,6 +46,16 @@ import javafx.stage.FileChooser
 import java.nio.file.Path
 import java.nio.file.Paths
 
+/**
+ * A description of the result of an [IgnoreMatcherForm] to show to the user.
+ */
+val FormResult<IgnoreMatcher>.description: String
+    get() = when (this) {
+        is FormResult.Valid -> value.description
+        is FormResult.Invalid -> message
+        is FormResult.Empty -> ""
+    }
+
 interface IgnoreMatcherForm : Form<IgnoreMatcher>
 
 /**
@@ -57,9 +68,9 @@ class PrefixIgnoreMatcherForm(private val base: ReadOnlyProperty<Path>) : Ignore
     @FXML
     private lateinit var pathField: JFXTextField
 
-    private val _resultProperty = SimpleObjectProperty<IgnoreMatcher?>()
+    private val _resultProperty = SimpleObjectProperty<FormResult<IgnoreMatcher>>()
 
-    override val resultProperty: ReadOnlyProperty<IgnoreMatcher?> = _resultProperty
+    override val resultProperty: ReadOnlyProperty<FormResult<IgnoreMatcher>> = _resultProperty
 
     override val node: Node = this
 
@@ -77,10 +88,10 @@ class PrefixIgnoreMatcherForm(private val base: ReadOnlyProperty<Path>) : Ignore
             // Pass a relative path so that it will work if the directory is moved/synced elsewhere.
             val path = Paths.get(pathField.text)
             when {
-                pathField.text.isBlank() -> null
-                path.startsWith(base.value) -> PrefixIgnoreMatcher(base.value.relativize(path))
-                !path.isAbsolute -> PrefixIgnoreMatcher(path)
-                else -> null
+                pathField.text.isBlank() -> FormResult.Empty()
+                path.startsWith(base.value) -> FormResult.Valid(PrefixIgnoreMatcher(base.value.relativize(path)))
+                !path.isAbsolute -> FormResult.Valid(PrefixIgnoreMatcher(path))
+                else -> FormResult.Invalid("You can only ignore paths in this directory.")
             }
         }
     }
@@ -117,9 +128,9 @@ class GlobIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     @FXML
     private lateinit var patternField: JFXTextField
 
-    private val _resultProperty = SimpleObjectProperty<IgnoreMatcher?>()
+    private val _resultProperty = SimpleObjectProperty<FormResult<IgnoreMatcher>>()
 
-    override val resultProperty: ReadOnlyProperty<IgnoreMatcher?> = _resultProperty
+    override val resultProperty: ReadOnlyProperty<FormResult<IgnoreMatcher>> = _resultProperty
 
     override val node: Node = this
 
@@ -134,7 +145,11 @@ class GlobIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     @FXML
     fun initialize() {
         _resultProperty.createBinding(patternField.textProperty()) {
-            if (patternField.text.isBlank()) null else GlobIgnoreMatcher(patternField.text)
+            if (patternField.text.isBlank()) {
+                FormResult.Empty()
+            } else {
+                FormResult.Valid(GlobIgnoreMatcher(patternField.text))
+            }
         }
 
     }
@@ -148,9 +163,9 @@ class RegexIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     @FXML
     private lateinit var patternField: JFXTextField
 
-    private val _resultProperty = SimpleObjectProperty<IgnoreMatcher?>()
+    private val _resultProperty = SimpleObjectProperty<FormResult<IgnoreMatcher>>()
 
-    override val resultProperty: ReadOnlyProperty<IgnoreMatcher?> = _resultProperty
+    override val resultProperty: ReadOnlyProperty<FormResult<IgnoreMatcher>> = _resultProperty
 
     override val node: Node = this
 
@@ -165,7 +180,11 @@ class RegexIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     @FXML
     fun initialize() {
         _resultProperty.createBinding(patternField.textProperty()) {
-            if (patternField.text.isBlank()) null else RegexIgnoreMatcher(patternField.text)
+            if (patternField.text.isBlank()) {
+                FormResult.Empty()
+            } else {
+                FormResult.Valid(RegexIgnoreMatcher(patternField.text))
+            }
         }
 
     }
@@ -179,9 +198,9 @@ class SizeIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     @FXML
     private lateinit var sizeField: JFXTextField
 
-    private val _resultProperty = SimpleObjectProperty<IgnoreMatcher?>()
+    private val _resultProperty = SimpleObjectProperty<FormResult<IgnoreMatcher>>()
 
-    override val resultProperty: ReadOnlyProperty<IgnoreMatcher?> = _resultProperty
+    override val resultProperty: ReadOnlyProperty<FormResult<IgnoreMatcher>> = _resultProperty
 
     override val node: Node = this
 
@@ -196,7 +215,12 @@ class SizeIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     @FXML
     fun initialize() {
         _resultProperty.createBinding(sizeField.textProperty()) {
-            parseBytes(sizeField.text)?.let { SizeIgnoreMatcher(it) }
+            val parsed = parseBytes(sizeField.text)
+            when {
+                sizeField.text.isBlank() -> FormResult.Empty()
+                parsed == null -> FormResult.Invalid("Enter a valid file size.")
+                else -> FormResult.Valid(SizeIgnoreMatcher(parsed))
+            }
         }
     }
 }
@@ -209,9 +233,9 @@ class ExtensionIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     @FXML
     private lateinit var extensionField: JFXTextField
 
-    private val _resultProperty = SimpleObjectProperty<IgnoreMatcher?>()
+    private val _resultProperty = SimpleObjectProperty<FormResult<IgnoreMatcher>>()
 
-    override val resultProperty: ReadOnlyProperty<IgnoreMatcher?> = _resultProperty
+    override val resultProperty: ReadOnlyProperty<FormResult<IgnoreMatcher>> = _resultProperty
 
     override val node: Node = this
 
@@ -226,7 +250,11 @@ class ExtensionIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     @FXML
     fun initialize() {
         _resultProperty.createBinding(extensionField.textProperty()) {
-            if (extensionField.text.isBlank()) null else ExtensionIgnoreMatcher(extensionField.text)
+            if (extensionField.text.isBlank()) {
+                FormResult.Empty()
+            } else {
+                FormResult.Valid(ExtensionIgnoreMatcher(extensionField.text))
+            }
         }
     }
 }
@@ -244,9 +272,9 @@ class CategoryIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     @FXML
     private lateinit var categoryComboBox: JFXComboBox<IgnoreCategory>
 
-    private val _resultProperty = SimpleObjectProperty<IgnoreMatcher?>()
+    private val _resultProperty = SimpleObjectProperty<FormResult<IgnoreMatcher>>()
 
-    override val resultProperty: ReadOnlyProperty<IgnoreMatcher?> = _resultProperty
+    override val resultProperty: ReadOnlyProperty<FormResult<IgnoreMatcher>> = _resultProperty
 
     override val node: Node = this
 
@@ -264,7 +292,7 @@ class CategoryIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
         categoryComboBox.buttonCell = categoryCellFactory.call(null)
 
         categoryComboBox.selectionModel.selectedItemProperty().addListener { _, _, newValue ->
-            _resultProperty.value = CategoryIgnoreMatcher(newValue)
+            _resultProperty.value = FormResult.Valid(CategoryIgnoreMatcher(newValue))
         }
 
         categoryComboBox.items.setAll(*IgnoreCategory.values())

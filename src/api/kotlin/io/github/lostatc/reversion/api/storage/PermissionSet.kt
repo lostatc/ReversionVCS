@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.api
+package io.github.lostatc.reversion.api.storage
 
 import java.nio.file.Files
 import java.nio.file.Path

@@ -19,10 +19,11 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Config
-import io.github.lostatc.reversion.api.OpenAttempt
-import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.api.StorageProvider
+import io.github.lostatc.reversion.api.Configurator
+import io.github.lostatc.reversion.api.Form
+import io.github.lostatc.reversion.api.storage.OpenAttempt
+import io.github.lostatc.reversion.api.storage.Repository
+import io.github.lostatc.reversion.api.storage.StorageProvider
 import java.nio.file.Path
 
 /**
@@ -36,14 +37,15 @@ class DatabaseStorageProvider : StorageProvider {
         without this program.
     """.trimIndent()
 
-    override fun getConfig(): Config =
-        DatabaseRepository.getConfig()
+    override fun configure(): Form<Configurator> {
+        TODO("not implemented")
+    }
 
     override fun openRepository(path: Path): OpenAttempt<Repository> =
         DatabaseRepository.open(path)
 
-    override fun createRepository(path: Path, config: Config): DatabaseRepository =
-        DatabaseRepository.create(path, config)
+    override fun createRepository(path: Path, configurator: Configurator): DatabaseRepository =
+        DatabaseRepository.create(path, configurator)
 
     override fun checkRepository(path: Path): Boolean =
         DatabaseRepository.checkRepository(path)

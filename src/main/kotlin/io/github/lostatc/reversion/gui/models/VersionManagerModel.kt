@@ -19,14 +19,14 @@
 
 package io.github.lostatc.reversion.gui.models
 
-import io.github.lostatc.reversion.api.delete
-import io.github.lostatc.reversion.api.deleteIfEmpty
+import io.github.lostatc.reversion.api.getValue
+import io.github.lostatc.reversion.api.setValue
+import io.github.lostatc.reversion.api.storage.delete
+import io.github.lostatc.reversion.api.storage.deleteIfEmpty
 import io.github.lostatc.reversion.gui.MutableStateWrapper
 import io.github.lostatc.reversion.gui.controllers.VersionManagerController
-import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.sendNotification
-import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.gui.wrap
 import io.github.lostatc.reversion.storage.WorkDirectory

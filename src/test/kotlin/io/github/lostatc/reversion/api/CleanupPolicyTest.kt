@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.api
 
+import io.github.lostatc.reversion.api.storage.CleanupPolicy
 import org.junit.jupiter.api.Test
 import java.time.temporal.ChronoUnit
 

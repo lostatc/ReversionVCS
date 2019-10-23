@@ -20,14 +20,14 @@
 package io.github.lostatc.reversion.gui.models
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
-import io.github.lostatc.reversion.api.CleanupPolicy
-import io.github.lostatc.reversion.api.OpenAttempt
+import io.github.lostatc.reversion.api.getValue
+import io.github.lostatc.reversion.api.setValue
+import io.github.lostatc.reversion.api.storage.CleanupPolicy
+import io.github.lostatc.reversion.api.storage.OpenAttempt
 import io.github.lostatc.reversion.daemon.WatchDaemon
 import io.github.lostatc.reversion.gui.ActorEvent
 import io.github.lostatc.reversion.gui.StateWrapper
-import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
-import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.gui.wrap
 import io.github.lostatc.reversion.storage.IgnoreMatcher

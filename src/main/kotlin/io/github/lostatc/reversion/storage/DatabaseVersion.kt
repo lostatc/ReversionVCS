@@ -19,10 +19,10 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Blob
-import io.github.lostatc.reversion.api.Checksum
-import io.github.lostatc.reversion.api.PermissionSet
-import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.api.io.Blob
+import io.github.lostatc.reversion.api.io.Checksum
+import io.github.lostatc.reversion.api.storage.PermissionSet
+import io.github.lostatc.reversion.api.storage.Version
 import io.github.lostatc.reversion.schema.BlockTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import org.jetbrains.exposed.sql.Database

@@ -19,6 +19,11 @@
 
 package io.github.lostatc.reversion.api
 
+import io.github.lostatc.reversion.api.io.BoundedByteChannel
+import io.github.lostatc.reversion.api.io.BufferByteChannel
+import io.github.lostatc.reversion.api.io.SequenceByteChannel
+import io.github.lostatc.reversion.api.io.readBytes
+import io.github.lostatc.reversion.api.io.readString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -26,7 +31,8 @@ import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 
 class BoundedByteChannelTest {
-    fun createChannel(): ReadableByteChannel = BufferByteChannel(ByteBuffer.wrap("abcdefghijk".toByteArray()))
+    fun createChannel(): ReadableByteChannel =
+        BufferByteChannel(ByteBuffer.wrap("abcdefghijk".toByteArray()))
 
     @Test
     fun `channel does not read past limit`() {
@@ -48,7 +54,8 @@ class BoundedByteChannelTest {
 }
 
 class SequenceByteChannelTest {
-    fun createChannel(): ReadableByteChannel = BufferByteChannel(ByteBuffer.wrap("abcd".toByteArray()))
+    fun createChannel(): ReadableByteChannel =
+        BufferByteChannel(ByteBuffer.wrap("abcd".toByteArray()))
 
     @Test
     fun `bytes from multiple channels are read`() {

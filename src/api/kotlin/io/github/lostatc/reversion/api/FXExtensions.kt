@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.gui
+package io.github.lostatc.reversion.api
 
 import javafx.beans.Observable
 import javafx.beans.binding.Bindings

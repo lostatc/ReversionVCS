@@ -19,10 +19,10 @@
 
 package io.github.lostatc.reversion.gui.controls
 
-import io.github.lostatc.reversion.gui.getValue
+import io.github.lostatc.reversion.api.getValue
+import io.github.lostatc.reversion.api.loadFxml
+import io.github.lostatc.reversion.api.setValue
 import io.github.lostatc.reversion.gui.infoDialog
-import io.github.lostatc.reversion.gui.loadFxml
-import io.github.lostatc.reversion.gui.setValue
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
 import javafx.fxml.FXML

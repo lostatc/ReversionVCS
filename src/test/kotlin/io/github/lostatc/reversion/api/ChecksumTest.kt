@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.api
 
+import io.github.lostatc.reversion.api.io.Checksum
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

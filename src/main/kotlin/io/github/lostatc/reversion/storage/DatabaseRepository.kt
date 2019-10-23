@@ -21,21 +21,23 @@ package io.github.lostatc.reversion.storage
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import io.github.lostatc.reversion.api.Blob
-import io.github.lostatc.reversion.api.Checksum
-import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Config
 import io.github.lostatc.reversion.api.ConfigProperty
-import io.github.lostatc.reversion.api.FixedSizeChunker
-import io.github.lostatc.reversion.api.IncompatibleRepositoryException
-import io.github.lostatc.reversion.api.InvalidRepositoryException
-import io.github.lostatc.reversion.api.OpenAttempt
-import io.github.lostatc.reversion.api.RepairAction
-import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.api.VerifyAction
-import io.github.lostatc.reversion.api.Version
-import io.github.lostatc.reversion.api.delete
-import io.github.lostatc.reversion.api.write
+import io.github.lostatc.reversion.api.Configurator
+import io.github.lostatc.reversion.api.JsonConfig
+import io.github.lostatc.reversion.api.io.Blob
+import io.github.lostatc.reversion.api.io.Checksum
+import io.github.lostatc.reversion.api.io.FixedSizeChunker
+import io.github.lostatc.reversion.api.io.write
+import io.github.lostatc.reversion.api.storage.CleanupPolicy
+import io.github.lostatc.reversion.api.storage.IncompatibleRepositoryException
+import io.github.lostatc.reversion.api.storage.InvalidRepositoryException
+import io.github.lostatc.reversion.api.storage.OpenAttempt
+import io.github.lostatc.reversion.api.storage.RepairAction
+import io.github.lostatc.reversion.api.storage.Repository
+import io.github.lostatc.reversion.api.storage.VerifyAction
+import io.github.lostatc.reversion.api.storage.Version
+import io.github.lostatc.reversion.api.storage.delete
 import io.github.lostatc.reversion.gui.format
 import io.github.lostatc.reversion.schema.BlobEntity
 import io.github.lostatc.reversion.schema.BlobTable
@@ -48,8 +50,6 @@ import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
-import io.github.lostatc.reversion.serialization.ConfigDeserializer
-import io.github.lostatc.reversion.serialization.ConfigSerializer
 import org.apache.commons.io.FileUtils
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
@@ -190,10 +190,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
     /**
      * The number of minutes to wait between database backups.
      */
-    val backupInterval: Long by backupIntervalProperty
+    val backupInterval: Int by backupIntervalProperty
 
     override val jobs: Set<Repository.Job> = setOf(
-        Repository.Job(Duration.ofMinutes(backupInterval)) {
+        Repository.Job(Duration.ofMinutes(backupInterval.toLong())) {
             // Don't back up the database if it's corrupt.
             if (DatabaseFactory.checkIntegrity(db)) {
                 DatabaseFactory.backup(databasePath, databaseBackupPath)
@@ -561,35 +561,19 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         /**
          * The property which stores the block size.
          */
-        val blockSizeProperty: ConfigProperty<Long> = ConfigProperty.of(
-            key = "blockSize",
-            name = "Block size",
-            default = Long.MAX_VALUE,
-            description = "The maximum size of the blocks that files stored in the repository are split into.",
-            validator = { require(it > 0) { "The given value must be greater than 0." } }
-        )
+        val blockSizeProperty: ConfigProperty<Long> = ConfigProperty.of("blockSize", Long.MAX_VALUE)
 
         /**
          * The property which stores the backup interval.
          */
-        val backupIntervalProperty: ConfigProperty<Long> = ConfigProperty.of(
-            key = "backupInterval",
-            name = "Backup interval",
-            default = 15L,
-            description = "The number of minutes to wait between database backups.",
-            validator = { require(it > 0) { "The given value must be greater than 0." } }
-        )
+        val backupIntervalProperty: ConfigProperty<Int> = ConfigProperty.of("backupInterval", 15)
 
         /**
          * An object used for serializing data as JSON.
          */
         private val gson: Gson = GsonBuilder()
             .setPrettyPrinting()
-            .registerTypeAdapter(Config::class.java, ConfigSerializer)
-            .registerTypeAdapter(Config::class.java, ConfigDeserializer(getConfig().properties))
             .create()
-
-        fun getConfig(): Config = Config(blockSizeProperty, backupIntervalProperty)
 
         /**
          * Verify the integrity of the database of the [Repository] at [path].
@@ -663,13 +647,13 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          * @throws [IOException] An I/O error occurred.
          */
         fun open(path: Path): OpenAttempt<Repository> {
-            if (!checkRepository(path))
+            if (!checkRepository(path)) {
                 throw IncompatibleRepositoryException("The format of the repository at '$path' is not supported.")
+            }
 
             val configPath = path.resolve(relativeConfigPath)
-            val config = Files.newBufferedReader(configPath).use {
-                gson.fromJson(it, Config::class.java)
-            }
+            val config = JsonConfig(configPath, gson)
+            config.read()
 
             return try {
                 val repository = DatabaseRepository(path, config)
@@ -686,12 +670,12 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          * Creates a repository at [path] and returns it.
          *
          * @param [path] The path of the repository.
-         * @param [config] The configuration for the repository.
+         * @param [configurator] An object which configures the repository.
          *
          * @throws [FileAlreadyExistsException] There is already a file at [path].
          * @throws [IOException] An I/O error occurred.
          */
-        fun create(path: Path, config: Config): DatabaseRepository {
+        fun create(path: Path, configurator: Configurator = Configurator.Default): DatabaseRepository {
             if (Files.exists(path)) throw FileAlreadyExistsException(path.toFile())
 
             val databasePath = path.resolve(relativeDatabasePath)
@@ -719,9 +703,9 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
             }
 
             // Serialize the config.
-            Files.newBufferedWriter(configPath).use {
-                gson.toJson(config, it)
-            }
+            val config = JsonConfig(configPath, gson)
+            configurator.configure(config)
+            config.write()
 
             // Do this last to signify that the repository is valid.
             Files.writeString(versionPath, currentVersion.toString())

@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.api
+package io.github.lostatc.reversion.api.io
 
 import org.apache.commons.codec.DecoderException
 import org.apache.commons.codec.binary.Hex
@@ -100,6 +100,10 @@ class Checksum(private val bytes: ByteArray) {
          *
          * @throws [IOException] An I/O error occurred.
          */
-        fun fromFile(path: Path): Checksum = Files.newByteChannel(path).use { fromChannel(it) }
+        fun fromFile(path: Path): Checksum = Files.newByteChannel(path).use {
+            fromChannel(
+                it
+            )
+        }
     }
 }

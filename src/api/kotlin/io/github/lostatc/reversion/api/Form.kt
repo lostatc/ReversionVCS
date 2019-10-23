@@ -23,13 +23,33 @@ import javafx.beans.property.ReadOnlyProperty
 import javafx.scene.Node
 
 /**
+ * The output of a [Form].
+ */
+sealed class FormResult<T> {
+    /**
+     * The form is valid and produced the given [value].
+     */
+    data class Valid<T>(val value: T) : FormResult<T>()
+
+    /**
+     * The form is invalid or incomplete and produced the given error [message].
+     */
+    data class Invalid<T>(val message: String) : FormResult<T>()
+
+    /**
+     * The form has no input.
+     */
+    class Empty<T> : FormResult<T>()
+}
+
+/**
  * An form for user input that encapsulates multiple controls.
  */
-interface Form<T : Any> {
+interface Form<T> {
     /**
      * A property for [result].
      */
-    val resultProperty: ReadOnlyProperty<T?>
+    val resultProperty: ReadOnlyProperty<FormResult<T>>
 
     /**
      * The node representing the form.
@@ -37,9 +57,9 @@ interface Form<T : Any> {
     val node: Node
 
     /**
-     * The output of the form, or `null` if the form is invalid or incomplete.
+     * The output of the form.
      */
-    val result: T?
+    val result: FormResult<T>
         get() = resultProperty.value
 
     /**

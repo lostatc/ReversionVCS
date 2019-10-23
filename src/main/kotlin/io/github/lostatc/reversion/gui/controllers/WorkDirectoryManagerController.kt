@@ -23,7 +23,11 @@ import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXToggleButton
-import io.github.lostatc.reversion.api.RepairAction
+import io.github.lostatc.reversion.api.FormResult
+import io.github.lostatc.reversion.api.createBinding
+import io.github.lostatc.reversion.api.storage.RepairAction
+import io.github.lostatc.reversion.api.toDisplayProperty
+import io.github.lostatc.reversion.api.toMappedProperty
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.MappingCellFactory
 import io.github.lostatc.reversion.gui.approvalDialog
@@ -42,7 +46,7 @@ import io.github.lostatc.reversion.gui.controls.SizeIgnoreMatcherForm
 import io.github.lostatc.reversion.gui.controls.StaggeredPolicyForm
 import io.github.lostatc.reversion.gui.controls.TimePolicyForm
 import io.github.lostatc.reversion.gui.controls.VersionPolicyForm
-import io.github.lostatc.reversion.gui.createBinding
+import io.github.lostatc.reversion.gui.controls.description
 import io.github.lostatc.reversion.gui.dateTimeDialog
 import io.github.lostatc.reversion.gui.format
 import io.github.lostatc.reversion.gui.infoDialog
@@ -51,8 +55,6 @@ import io.github.lostatc.reversion.gui.models.WorkDirectoryManagerModel
 import io.github.lostatc.reversion.gui.models.WorkDirectoryModel
 import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.sendNotification
-import io.github.lostatc.reversion.gui.toDisplayProperty
-import io.github.lostatc.reversion.gui.toMappedProperty
 import io.github.lostatc.reversion.storage.IgnoreMatcher
 import javafx.fxml.FXML
 import javafx.scene.Group
@@ -243,9 +245,7 @@ class WorkDirectoryManagerController {
         // Bind the contents of a node so that it contains the selected cleanup policy form.
         policyTypeComboBox.selectionModel.selectedItemProperty().addListener { _, _, newValue ->
             policyFormContainer.children.setAll(newValue.node)
-            policyPreviewLabel.textProperty().createBinding(newValue.resultProperty) {
-                newValue.result?.description ?: ""
-            }
+            policyPreviewLabel.textProperty().createBinding(newValue.resultProperty) { newValue.result.description }
         }
 
         // Set the items in the combo box for selecting a type of cleanup policy.
@@ -261,9 +261,7 @@ class WorkDirectoryManagerController {
             // This value may be `null` if a working directory has not been selected yet.
             if (newValue != null) {
                 ignoreFormContainer.children.setAll(newValue.node)
-                ignorePreviewLabel.textProperty().createBinding(newValue.resultProperty) {
-                    newValue.result?.description ?: ""
-                }
+                ignorePreviewLabel.textProperty().createBinding(newValue.resultProperty) { newValue.result.description }
             }
         }
 
@@ -366,7 +364,11 @@ class WorkDirectoryManagerController {
     @FXML
     fun addCleanupPolicy() {
         val policyForm = policyTypeComboBox.selectionModel.selectedItem
-        val policy = policyForm.result ?: return
+        val policy = when (val result = policyForm.result) {
+            is FormResult.Valid -> result.value
+            is FormResult.Invalid -> return
+            is FormResult.Empty -> return
+        }
         model.selected?.cleanupPolicies?.add(policy) ?: return
         policyForm.clear()
     }
@@ -388,7 +390,11 @@ class WorkDirectoryManagerController {
     @FXML
     fun addIgnoreMatcher() {
         val ignoreForm = ignoreTypeComboBox.selectionModel.selectedItem
-        val ignoreMatcher = ignoreForm.result ?: return
+        val ignoreMatcher = when (val result = ignoreForm.result) {
+            is FormResult.Valid -> result.value
+            is FormResult.Invalid -> return
+            is FormResult.Empty -> return
+        }
         model.selected?.ignoreMatchers?.add(ignoreMatcher) ?: return
         ignoreForm.clear()
     }

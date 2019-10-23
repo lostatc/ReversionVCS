@@ -46,7 +46,7 @@ dependencies {
     implementation(group = "org.xerial", name = "sqlite-jdbc", version = "3.28.0")
 
     // Serialization
-    implementation(group = "com.google.code.gson", name = "gson", version = "2.8.5")
+    api(group = "com.google.code.gson", name = "gson", version = "2.8.5")
 
     // Miscellaneous I/O
     implementation(group = "commons-codec", name = "commons-codec", version = "1.12")
@@ -88,6 +88,7 @@ tasks.withType<Test> {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
 }
 
 tasks.withType<Jar> {

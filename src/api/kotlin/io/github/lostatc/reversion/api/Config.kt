@@ -19,39 +19,16 @@
 
 package io.github.lostatc.reversion.api
 
-import java.util.Objects
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import java.lang.reflect.Type
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
 import kotlin.reflect.KProperty
-
-/**
- * An exception that is thrown when a config value cannot be converted.
- *
- * @param [property] The config property that the value is being assigned to.
- * @param [value] The value being converted.
- */
-data class ValueConvertException(
-    override val message: String,
-    val property: ConfigProperty<*>,
-    val value: String
-) : Exception()
-
-/**
- * A receiver for value converters.
- */
-data class ConvertContext(val property: ConfigProperty<*>, val value: String) {
-    /**
-     * Throws an exception indicating that the value could not be converted.
-     */
-    fun fail(message: String = "Invalid value '$value'."): Nothing {
-        throw ValueConvertException(message, property, value)
-    }
-
-    /**
-     * Calls [fail] with the output of [lazyMessage] if [value] is `false`.
-     */
-    fun require(value: Boolean, lazyMessage: () -> String = { "Invalid value '$value'." }) {
-        if (!value) fail(lazyMessage())
-    }
-}
 
 /**
  * An property used for configuration.
@@ -60,219 +37,120 @@ data class ConvertContext(val property: ConfigProperty<*>, val value: String) {
  *
  * @param [key] The unique identifier of the property.
  * @param [default] The default value of the property.
- * @param [converter] A function that converts a string to a valid value for this property.
- * @param [name] The human-readable name of the property.
- * @param [description] The human-readable description of the property.
+ * @param [type] The [Type] of the value this property holds.
  */
-data class ConfigProperty<T>(
-    val key: String,
-    val default: String,
-    val converter: ConvertContext.(String) -> T,
-    val name: String = key,
-    val description: String = ""
-) {
-    /**
-     * Convert a string to a valid value for this property.
-     */
-    fun convert(value: String): T = ConvertContext(this, value).converter(value)
-
+data class ConfigProperty<T>(val key: String, val default: T, val type: Type) {
     /**
      * Gets the value associated with this property from the [config][Configurable.config].
      */
     operator fun getValue(thisRef: Configurable, property: KProperty<*>): T = thisRef.config[this]
 
+    /**
+     * Sets the value associated with this property in the [config][Configurable.config].
+     */
+    operator fun setValue(thisRef: Configurable, property: KProperty<*>, value: T) {
+        thisRef.config[this] = value
+    }
+
     companion object {
         /**
-         * Constructs a [ConfigProperty] for a [String] value.
+         * Create a new [ConfigProperty] with an inferred [type].
          */
-        fun of(
-            key: String,
-            default: String,
-            validator: ConvertContext.(String) -> Unit = { },
-            name: String = key,
-            description: String = ""
-        ): ConfigProperty<String> =
-            ConfigProperty(
-                key = key,
-                default = default,
-                converter = {
-                    this.validator(it)
-                    it
-                },
-                name = name,
-                description = description
-            )
-
-        /**
-         * Constructs a [ConfigProperty] for an [Int] value.
-         */
-        fun of(
-            key: String,
-            default: Int,
-            validator: ConvertContext.(Int) -> Unit = { },
-            name: String = key,
-            description: String = ""
-        ): ConfigProperty<Int> =
-            ConfigProperty(
-                key = key,
-                default = default.toString(),
-                converter = {
-                    val value = it.toIntOrNull() ?: fail("The value '$it' must be an integer.")
-                    this.validator(value)
-                    value
-                },
-                name = name,
-                description = description
-            )
-
-        /**
-         * Constructs a [ConfigProperty] for a [Long] value.
-         */
-        fun of(
-            key: String,
-            default: Long,
-            validator: ConvertContext.(Long) -> Unit = { },
-            name: String = key,
-            description: String = ""
-        ): ConfigProperty<Long> =
-            ConfigProperty(
-                key = key,
-                default = default.toString(),
-                converter = {
-                    val value = it.toLongOrNull() ?: fail("The value '$it' must be an integer.")
-                    this.validator(value)
-                    value
-                },
-                name = name,
-                description = description
-            )
-
-        /**
-         * Constructs a [ConfigProperty] for a [Float] value.
-         */
-        fun of(
-            key: String,
-            default: Float,
-            validator: ConvertContext.(Float) -> Unit = { },
-            name: String = key,
-            description: String = ""
-        ): ConfigProperty<Float> =
-            ConfigProperty(
-                key = key,
-                default = default.toString(),
-                converter = {
-                    val value = it.toFloatOrNull() ?: fail("The value '$it' must be a decimal.")
-                    this.validator(value)
-                    value
-                },
-                name = name,
-                description = description
-            )
-
-        /**
-         * Constructs a [ConfigProperty] for a [Double] value.
-         */
-        fun of(
-            key: String,
-            default: Double,
-            validator: ConvertContext.(Double) -> Unit = { },
-            name: String = key,
-            description: String = ""
-        ): ConfigProperty<Double> =
-            ConfigProperty(
-                key = key,
-                default = default.toString(),
-                converter = {
-                    val value = it.toDoubleOrNull() ?: fail("The value '$it' must be a decimal.")
-                    this.validator(value)
-                    value
-                },
-                name = name,
-                description = description
-            )
-
-        /**
-         * Constructs a [ConfigProperty] for a [Boolean] value.
-         */
-        fun of(
-            key: String,
-            default: Boolean,
-            validator: ConvertContext.(Boolean) -> Unit = { },
-            name: String = key,
-            description: String = ""
-        ): ConfigProperty<Boolean> =
-            ConfigProperty(
-                key = key,
-                default = default.toString(),
-                converter = {
-                    val value = when (it.toLowerCase()) {
-                        "y", "yes", "t", "true" -> true
-                        "n", "no", "f", "false" -> false
-                        else -> fail("The value '$it' must be boolean.")
-                    }
-                    this.validator(value)
-                    value
-                },
-                name = name,
-                description = description
-            )
+        inline fun <reified T> of(key: String, default: T): ConfigProperty<T> =
+            ConfigProperty(key, default, token<T>().type)
     }
 }
 
 /**
- * A configuration that maps [config properties][ConfigProperty] to values.
- *
- * @param [properties] Properties to initialize the config with which are mapped to their default values.
+ * A configuration that maps [ConfigProperty] objects to values.
  */
-class Config(properties: Set<ConfigProperty<*>>) {
+interface Config {
     /**
-     * A map of properties to their values.
+     * Return the value of the given [property] in this config.
+     *
+     * @return The value in the config or [ConfigProperty.default] if it is not present in the config.
      */
-    private val valueByProperty: MutableMap<ConfigProperty<*>, String> =
-        properties.associateWith { it.default }.toMutableMap()
-
-    /**
-     * The set of properties contained in this config.
-     */
-    val properties: Set<ConfigProperty<*>> = valueByProperty.keys
-
-    constructor(vararg properties: ConfigProperty<*>) : this(properties.toSet())
+    operator fun <T> get(property: ConfigProperty<T>): T
 
     /**
      * Sets the [value] of the given [property] in this config.
-     *
-     * @throws [ValueConvertException] The given [value] could not be converted to the type of the property.
      */
-    operator fun set(property: ConfigProperty<*>, value: String) {
-        property.convert(value)
-        valueByProperty[property] = value
-    }
+    operator fun <T> set(property: ConfigProperty<T>, value: T)
 
     /**
-     * Returns the converted value of the given [property] in this config.
-     *
-     * @return The value in the config or the [default][ConfigProperty.default] value of the property if it is not
-     * present in the config.
+     * Write the values in this [Config] to persistent storage.
      */
-    operator fun <T> get(property: ConfigProperty<T>): T = property.convert(getRaw(property))
+    fun write()
 
     /**
-     * Returns the raw value of the given [property] in this config.
-     *
-     * @return The value in the config or the [default][ConfigProperty.default] value of the property if it is not
-     * present in the config.
+     * Populate this [Config] with values from persistent storage.
      */
-    fun getRaw(property: ConfigProperty<*>): String = valueByProperty[property] ?: property.default
+    fun read()
+}
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is Config) return false
-        return other.valueByProperty == valueByProperty
+/**
+ * An object which updates values in a [Config].
+ */
+interface Configurator {
+    /**
+     * Update the values in the given [config].
+     */
+    fun configure(config: Config)
+
+    /**
+     * A [Configurator] which does nothing.
+     */
+    object Default : Configurator {
+        override fun configure(config: Config) = Unit
+    }
+}
+
+/**
+ * Create a [Configurator] from the given function.
+ */
+fun Configurator(func: (Config) -> Unit): Configurator = object : Configurator {
+    override fun configure(config: Config) {
+        func(config)
+    }
+}
+
+/**
+ * A [Config] that stores values as JSON.
+ *
+ * @param [file] The file to persistently storage values in.
+ * @param [gson] The object used to serialize values as JSON.
+ */
+class JsonConfig(private val file: Path, private val gson: Gson) : Config {
+    /**
+     * A map of properties to their serialized values.
+     */
+    private val elements: MutableMap<String, JsonElement> = mutableMapOf()
+
+    override fun <T> get(property: ConfigProperty<T>): T =
+        elements[property.key]?.let { gson.fromJson<T>(it, property.type) } ?: property.default
+
+    override fun <T> set(property: ConfigProperty<T>, value: T) {
+        elements[property.key] = gson.toJsonTree(value, property.type)
     }
 
-    override fun hashCode(): Int = Objects.hash(valueByProperty)
+    override fun write() {
+        Files.newBufferedWriter(file, CREATE, TRUNCATE_EXISTING).use {
+            val jsonObject = JsonObject().apply {
+                for ((key, element) in elements) {
+                    add(key, element)
+                }
+            }
+            gson.toJson(jsonObject, it)
+        }
+    }
 
-    override fun toString(): String = valueByProperty.mapKeys { it.key.name }.toString()
+    override fun read() {
+        val newElements = Files.newBufferedReader(file).use { reader ->
+            JsonParser().parse(reader).asJsonObject.entrySet().associate { it.key to it.value }
+        }
+
+        elements.putAll(newElements)
+    }
 }
 
 /**
@@ -280,7 +158,7 @@ class Config(properties: Set<ConfigProperty<*>>) {
  */
 interface Configurable {
     /**
-     * A configuration.
+     * The configuration for this object.
      */
     val config: Config
 }

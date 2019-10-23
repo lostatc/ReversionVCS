@@ -19,6 +19,11 @@
 
 package io.github.lostatc.reversion.api
 
+import io.github.lostatc.reversion.api.io.Blob
+import io.github.lostatc.reversion.api.io.Checksum
+import io.github.lostatc.reversion.api.io.FixedSizeChunker
+import io.github.lostatc.reversion.api.io.fromString
+import io.github.lostatc.reversion.api.io.readString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -48,7 +53,10 @@ class BlobTest {
     fun `create blobs from file`() {
         val filePath = tempPath.resolve("file")
         Files.writeString(filePath, "abcdefg")
-        val blobs = Blob.chunkFile(filePath, FixedSizeChunker(2))
+        val blobs = Blob.chunkFile(
+            filePath,
+            FixedSizeChunker(2)
+        )
 
         val expectedStrings = listOf("ab", "cd", "ef", "g")
 

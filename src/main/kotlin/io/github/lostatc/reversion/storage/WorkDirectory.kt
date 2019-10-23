@@ -21,18 +21,18 @@ package io.github.lostatc.reversion.storage
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import io.github.lostatc.reversion.api.Config
-import io.github.lostatc.reversion.api.IncompatibleRepositoryException
-import io.github.lostatc.reversion.api.InvalidRepositoryException
-import io.github.lostatc.reversion.api.OpenAttempt
-import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.api.Snapshot
-import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.api.Timeline
-import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.api.Configurator
+import io.github.lostatc.reversion.api.fromJson
+import io.github.lostatc.reversion.api.storage.IncompatibleRepositoryException
+import io.github.lostatc.reversion.api.storage.InvalidRepositoryException
+import io.github.lostatc.reversion.api.storage.OpenAttempt
+import io.github.lostatc.reversion.api.storage.Repository
+import io.github.lostatc.reversion.api.storage.Snapshot
+import io.github.lostatc.reversion.api.storage.StorageProvider
+import io.github.lostatc.reversion.api.storage.Timeline
+import io.github.lostatc.reversion.api.storage.Version
 import io.github.lostatc.reversion.serialization.RelativePathTypeAdapter
 import io.github.lostatc.reversion.serialization.RuntimeTypeAdapterFactory
-import io.github.lostatc.reversion.serialization.fromJson
 import org.apache.commons.io.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -459,11 +459,15 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          *
          * @param [path] The path of the working directory.
          * @param [provider] The storage provider to create the repository with.
-         * @param [config] The configuration for the repository.
+         * @param [configurator] An object for configuring the repository.
          *
          * @throws [NotAWorkDirException] This directory has already been initialized.
          */
-        fun init(path: Path, provider: StorageProvider, config: Config = provider.getConfig()): WorkDirectory {
+        fun init(
+            path: Path,
+            provider: StorageProvider,
+            configurator: Configurator = Configurator.Default
+        ): WorkDirectory {
             val hiddenDirectory = path.resolve(relativeHiddenPath)
             val infoFile = path.resolve(relativeInfoPath)
             val repositoryPath = path.resolve(relativeRepoPath)
@@ -473,7 +477,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
             )
             Files.createDirectories(hiddenDirectory)
 
-            val repository = provider.createRepository(repositoryPath, config)
+            val repository = provider.createRepository(repositoryPath, configurator)
             val timeline = repository.createTimeline()
 
             val info = Info(timeline.id)

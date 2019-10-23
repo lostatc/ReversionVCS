@@ -17,8 +17,10 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.api
+package io.github.lostatc.reversion.api.storage
 
+import io.github.lostatc.reversion.api.Configurator
+import io.github.lostatc.reversion.api.Form
 import java.io.IOException
 import java.nio.file.Path
 import java.util.ServiceLoader
@@ -94,9 +96,9 @@ interface StorageProvider {
     val description: String
 
     /**
-     * Returns the default configuration used by this storage provider.
+     * Returns a [Form] for configuring the repository.
      */
-    fun getConfig(): Config
+    fun configure(): Form<Configurator>
 
     /**
      * Opens the repository at [path] and returns it.
@@ -108,12 +110,12 @@ interface StorageProvider {
     fun openRepository(path: Path): OpenAttempt<Repository>
 
     /**
-     * Creates a repository at [path] with the given [config] and returns it.
+     * Creates a repository at [path], configures it with [configurator], and returns it.
      *
      * @throws [FileAlreadyExistsException] There is already a file at [path].
      * @throws [IOException] An I/O error occurred.
      */
-    fun createRepository(path: Path, config: Config = getConfig()): Repository
+    fun createRepository(path: Path, configurator: Configurator = Configurator.Default): Repository
 
     /**
      * Returns whether there is a repository at [path] which is compatible with this storage provider.

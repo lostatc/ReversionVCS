@@ -19,10 +19,10 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Config
-import io.github.lostatc.reversion.api.FileTreeBuilder
-import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.api.resolve
+import io.github.lostatc.reversion.api.Configurator
+import io.github.lostatc.reversion.api.io.FileTreeBuilder
+import io.github.lostatc.reversion.api.io.resolve
+import io.github.lostatc.reversion.api.storage.StorageProvider
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.fail
@@ -37,7 +37,7 @@ import java.nio.file.Paths
 interface WorkDirectoryTest {
     val provider: StorageProvider
 
-    val config: Config
+    val configurator: Configurator
 
     var workPath: Path
 
@@ -55,7 +55,7 @@ interface WorkDirectoryTest {
             }
         }
 
-        workDirectory = WorkDirectory.init(workPath, provider, config)
+        workDirectory = WorkDirectory.init(workPath, provider, configurator)
     }
 
     @Test

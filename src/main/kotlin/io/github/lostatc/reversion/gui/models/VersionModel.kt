@@ -19,12 +19,12 @@
 
 package io.github.lostatc.reversion.gui.models
 
-import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.api.getValue
+import io.github.lostatc.reversion.api.setValue
+import io.github.lostatc.reversion.api.storage.Version
+import io.github.lostatc.reversion.api.toMappedProperty
 import io.github.lostatc.reversion.gui.StateWrapper
-import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
-import io.github.lostatc.reversion.gui.setValue
-import io.github.lostatc.reversion.gui.toMappedProperty
 import io.github.lostatc.reversion.gui.wrap
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
