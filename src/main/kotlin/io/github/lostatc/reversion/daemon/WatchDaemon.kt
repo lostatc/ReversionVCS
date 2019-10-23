@@ -21,10 +21,10 @@ package io.github.lostatc.reversion.daemon
 
 import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.DATA_DIR
-import io.github.lostatc.reversion.api.Repository
-import io.github.lostatc.reversion.api.RepositoryException
+import io.github.lostatc.reversion.api.fromJson
+import io.github.lostatc.reversion.api.storage.Repository
+import io.github.lostatc.reversion.api.storage.RepositoryException
 import io.github.lostatc.reversion.serialization.PathTypeAdapter
-import io.github.lostatc.reversion.serialization.fromJson
 import io.github.lostatc.reversion.storage.WorkDirectory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

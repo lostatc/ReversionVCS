@@ -17,8 +17,10 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.api
+package io.github.lostatc.reversion.api.storage
 
+import io.github.lostatc.reversion.api.Config
+import io.github.lostatc.reversion.api.Configurable
 import kotlinx.coroutines.delay
 import java.io.IOException
 import java.nio.file.Path

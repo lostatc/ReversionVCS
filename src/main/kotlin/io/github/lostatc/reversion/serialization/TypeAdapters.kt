@@ -19,49 +19,13 @@
 
 package io.github.lostatc.reversion.serialization
 
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
-import com.google.gson.JsonSerializationContext
-import com.google.gson.JsonSerializer
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
 import com.google.gson.stream.JsonWriter
-import io.github.lostatc.reversion.api.Config
-import io.github.lostatc.reversion.api.ConfigProperty
-import java.lang.reflect.Type
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
-
-/**
- * A [JsonSerializer] for serializing [Config] objects as JSON.
- */
-object ConfigSerializer : JsonSerializer<Config> {
-    override fun serialize(src: Config?, typeOfSrc: Type, context: JsonSerializationContext): JsonElement =
-        context.serialize(src?.properties?.associate { it.key to src.getRaw(it) })
-}
-
-/**
- * A [JsonDeserializer] for de-serializing [Config] objects from JSON.
- *
- * @param [properties] The properties that were serialized.
- */
-data class ConfigDeserializer(private val properties: Collection<ConfigProperty<*>>) :
-    JsonDeserializer<Config> {
-    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Config {
-        val jsonObject = json.asJsonObject
-        val config = Config()
-
-        for ((key, element) in jsonObject.entrySet()) {
-            val property = properties.find { it.key == key } ?: continue
-            config[property] = context.deserialize(element, String::class.java)
-        }
-
-        return config
-    }
-}
 
 /**
  * A type adapter for serializing [Path] objects

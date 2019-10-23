@@ -19,7 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Config
+import io.github.lostatc.reversion.api.Configurator
 import org.junit.jupiter.api.TestInstance
 import java.nio.file.Path
 
@@ -27,7 +27,7 @@ import java.nio.file.Path
 class DatabaseWorkDirectoryTest : WorkDirectoryTest {
     override val provider = DatabaseStorageProvider()
 
-    override val config: Config = DatabaseStorageProvider().getConfig()
+    override val configurator: Configurator = Configurator.Default
 
     override lateinit var workPath: Path
 
@@ -38,10 +38,8 @@ class DatabaseWorkDirectoryTest : WorkDirectoryTest {
 class BlockDeduplicatedDatabaseWorkDirectoryTest : WorkDirectoryTest {
     override val provider = DatabaseStorageProvider()
 
-    override val config: Config = DatabaseStorageProvider().run {
-        val config = getConfig()
-        config[DatabaseRepository.blockSizeProperty] = "2"
-        config
+    override val configurator: Configurator = Configurator {
+        it[DatabaseRepository.blockSizeProperty] = 2
     }
 
     override lateinit var workPath: Path

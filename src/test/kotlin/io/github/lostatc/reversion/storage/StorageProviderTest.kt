@@ -19,8 +19,8 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.IncompatibleRepositoryException
-import io.github.lostatc.reversion.api.StorageProvider
+import io.github.lostatc.reversion.api.storage.IncompatibleRepositoryException
+import io.github.lostatc.reversion.api.storage.StorageProvider
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

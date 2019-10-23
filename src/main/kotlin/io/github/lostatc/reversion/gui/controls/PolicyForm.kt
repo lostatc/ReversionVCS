@@ -21,10 +21,11 @@ package io.github.lostatc.reversion.gui.controls
 
 import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXTextField
-import io.github.lostatc.reversion.api.CleanupPolicy
 import io.github.lostatc.reversion.api.Form
-import io.github.lostatc.reversion.gui.createBinding
-import io.github.lostatc.reversion.gui.loadFxml
+import io.github.lostatc.reversion.api.FormResult
+import io.github.lostatc.reversion.api.createBinding
+import io.github.lostatc.reversion.api.loadFxml
+import io.github.lostatc.reversion.api.storage.CleanupPolicy
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -47,6 +48,16 @@ private val timeUnits: Map<String, TemporalUnit> = linkedMapOf(
 )
 
 /**
+ * A description of the result of a [PolicyForm] to show to the user.
+ */
+val FormResult<CleanupPolicy>.description: String
+    get() = when (this) {
+        is FormResult.Valid -> value.description
+        is FormResult.Invalid -> message
+        is FormResult.Empty -> ""
+    }
+
+/**
  * A [Form] which is a form used to create a [CleanupPolicy].
  */
 interface PolicyForm : Form<CleanupPolicy>
@@ -58,9 +69,9 @@ class VersionPolicyForm : PolicyForm, HBox() {
     @FXML
     private lateinit var versionsField: JFXTextField
 
-    private val _resultProperty: Property<CleanupPolicy?> = SimpleObjectProperty()
+    private val _resultProperty: Property<FormResult<CleanupPolicy>> = SimpleObjectProperty()
 
-    override val resultProperty: ReadOnlyProperty<CleanupPolicy?> = _resultProperty
+    override val resultProperty: ReadOnlyProperty<FormResult<CleanupPolicy>> = _resultProperty
 
     override val node: Node = this
 
@@ -71,8 +82,12 @@ class VersionPolicyForm : PolicyForm, HBox() {
     @FXML
     fun initialize() {
         _resultProperty.createBinding(versionsField.textProperty()) {
-            val versions = versionsField.text.toIntOrNull() ?: return@createBinding null
-            CleanupPolicy.ofVersions(versions)
+            val versions = versionsField.text.toIntOrNull()
+            when {
+                versionsField.text.isBlank() -> FormResult.Empty()
+                versions == null -> FormResult.Invalid("The input must be a number.")
+                else -> FormResult.Valid(CleanupPolicy.ofVersions(versions))
+            }
         }
     }
 
@@ -91,9 +106,9 @@ class TimePolicyForm : PolicyForm, HBox() {
     @FXML
     private lateinit var timeComboBox: JFXComboBox<String>
 
-    private val _resultProperty: Property<CleanupPolicy?> = SimpleObjectProperty()
+    private val _resultProperty: Property<FormResult<CleanupPolicy>> = SimpleObjectProperty()
 
-    override val resultProperty: ReadOnlyProperty<CleanupPolicy?> = _resultProperty
+    override val resultProperty: ReadOnlyProperty<FormResult<CleanupPolicy>> = _resultProperty
 
     override val node: Node = this
 
@@ -106,9 +121,15 @@ class TimePolicyForm : PolicyForm, HBox() {
         timeComboBox.items.setAll(timeUnits.keys)
 
         _resultProperty.createBinding(timeField.textProperty(), timeComboBox.selectionModel.selectedItemProperty()) {
-            val amount = timeField.text.toLongOrNull() ?: return@createBinding null
-            val unit = timeUnits[timeComboBox.selectionModel.selectedItem] ?: return@createBinding null
-            CleanupPolicy.ofDuration(amount, unit)
+            val amount = timeField.text.toLongOrNull()
+            val unit = timeUnits[timeComboBox.selectionModel.selectedItem]
+
+            when {
+                timeField.text.isBlank() -> FormResult.Empty()
+                amount == null -> FormResult.Invalid("The input must be a number.")
+                unit == null -> FormResult.Invalid("You must select a valid unit.")
+                else -> FormResult.Valid(CleanupPolicy.ofDuration(amount, unit))
+            }
         }
     }
 
@@ -128,9 +149,9 @@ class StaggeredPolicyForm : PolicyForm, HBox() {
     @FXML
     private lateinit var timeComboBox: JFXComboBox<String>
 
-    private val _resultProperty: Property<CleanupPolicy?> = SimpleObjectProperty()
+    private val _resultProperty: Property<FormResult<CleanupPolicy>> = SimpleObjectProperty()
 
-    override val resultProperty: ReadOnlyProperty<CleanupPolicy?> = _resultProperty
+    override val resultProperty: ReadOnlyProperty<FormResult<CleanupPolicy>> = _resultProperty
 
     override val node: Node = this
 
@@ -146,9 +167,15 @@ class StaggeredPolicyForm : PolicyForm, HBox() {
             versionsField.textProperty(),
             timeComboBox.selectionModel.selectedItemProperty()
         ) {
-            val versions = versionsField.text.toIntOrNull() ?: return@createBinding null
-            val unit = timeUnits[timeComboBox.selectionModel.selectedItem] ?: return@createBinding null
-            CleanupPolicy.ofStaggered(versions, unit)
+            val versions = versionsField.text.toIntOrNull()
+            val unit = timeUnits[timeComboBox.selectionModel.selectedItem]
+
+            when {
+                versionsField.text.isBlank() -> FormResult.Empty()
+                versions == null -> FormResult.Invalid("The input must be a number.")
+                unit == null -> FormResult.Invalid("You must select a valid unit.")
+                else -> FormResult.Valid(CleanupPolicy.ofStaggered(versions, unit))
+            }
         }
     }
 

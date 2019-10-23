@@ -19,7 +19,8 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Timeline
+import io.github.lostatc.reversion.api.Configurator
+import io.github.lostatc.reversion.api.storage.Timeline
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
@@ -49,9 +50,10 @@ class BlockDeduplicatedDatabaseVersionTest : VersionTest {
     fun createTimeline(@TempDir tempPath: Path) {
         val repoPath = tempPath.resolve("repository")
         val repository = DatabaseStorageProvider().run {
-            val config = getConfig()
-            config[DatabaseRepository.blockSizeProperty] = "2"
-            createRepository(repoPath, config)
+            val configurator = Configurator {
+                it[DatabaseRepository.blockSizeProperty] = 2
+            }
+            createRepository(repoPath, configurator)
         }
 
         timeline = repository.createTimeline()

@@ -19,9 +19,9 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.CleanupPolicy
-import io.github.lostatc.reversion.api.FileTreeBuilder
-import io.github.lostatc.reversion.api.Repository
+import io.github.lostatc.reversion.api.io.FileTreeBuilder
+import io.github.lostatc.reversion.api.storage.CleanupPolicy
+import io.github.lostatc.reversion.api.storage.Repository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull

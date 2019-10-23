@@ -19,9 +19,9 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.BoundedByteChannel
-import io.github.lostatc.reversion.api.Snapshot
-import io.github.lostatc.reversion.api.copyChannel
+import io.github.lostatc.reversion.api.io.BoundedByteChannel
+import io.github.lostatc.reversion.api.io.copyChannel
+import io.github.lostatc.reversion.api.storage.Snapshot
 import jnr.ffi.Pointer
 import ru.serce.jnrfuse.ErrorCodes
 import ru.serce.jnrfuse.FuseFS
@@ -84,8 +84,7 @@ private class SeekableDataSource(private val inputChannel: ReadableByteChannel) 
      *
      * @return The number of bytes read.
      */
-    private fun readInput(bytes: Long): Long =
-        copyChannel(BoundedByteChannel(inputChannel, bytes), cacheWriter)
+    private fun readInput(bytes: Long): Long = copyChannel(BoundedByteChannel(inputChannel, bytes), cacheWriter)
 
     /**
      * Sets the [position] to [newPosition].

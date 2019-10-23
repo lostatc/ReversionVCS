@@ -17,8 +17,11 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.api
+package io.github.lostatc.reversion.api.storage
 
+import io.github.lostatc.reversion.api.io.Blob
+import io.github.lostatc.reversion.api.io.Checksum
+import io.github.lostatc.reversion.api.io.write
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException

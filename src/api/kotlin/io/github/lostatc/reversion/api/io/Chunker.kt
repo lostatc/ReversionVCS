@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.api
+package io.github.lostatc.reversion.api.io
 
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel

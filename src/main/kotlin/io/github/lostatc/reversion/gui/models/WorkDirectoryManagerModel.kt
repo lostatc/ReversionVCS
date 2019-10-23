@@ -20,11 +20,11 @@
 package io.github.lostatc.reversion.gui.models
 
 import io.github.lostatc.reversion.DATA_DIR
+import io.github.lostatc.reversion.api.getValue
+import io.github.lostatc.reversion.api.setValue
 import io.github.lostatc.reversion.daemon.WatchDaemon
 import io.github.lostatc.reversion.gui.controllers.WorkDirectoryManagerController
-import io.github.lostatc.reversion.gui.getValue
 import io.github.lostatc.reversion.gui.sendNotification
-import io.github.lostatc.reversion.gui.setValue
 import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.storage.SnapshotMounter
 import javafx.beans.property.Property

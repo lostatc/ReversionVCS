@@ -19,10 +19,10 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.CleanupPolicy
-import io.github.lostatc.reversion.api.Snapshot
-import io.github.lostatc.reversion.api.Timeline
-import io.github.lostatc.reversion.api.Version
+import io.github.lostatc.reversion.api.storage.CleanupPolicy
+import io.github.lostatc.reversion.api.storage.Snapshot
+import io.github.lostatc.reversion.api.storage.Timeline
+import io.github.lostatc.reversion.api.storage.Version
 import io.github.lostatc.reversion.schema.CleanupPolicyEntity
 import io.github.lostatc.reversion.schema.SnapshotEntity
 import io.github.lostatc.reversion.schema.SnapshotTable

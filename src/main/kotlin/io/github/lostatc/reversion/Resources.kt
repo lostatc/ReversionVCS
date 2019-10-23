@@ -21,8 +21,8 @@ package io.github.lostatc.reversion
 
 import ch.qos.logback.core.PropertyDefinerBase
 import ch.qos.logback.core.spi.PropertyDefiner
-import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.api.resolve
+import io.github.lostatc.reversion.api.io.resolve
+import io.github.lostatc.reversion.api.storage.StorageProvider
 import io.github.lostatc.reversion.storage.DatabaseStorageProvider
 import java.net.URI
 import java.nio.file.FileSystemNotFoundException

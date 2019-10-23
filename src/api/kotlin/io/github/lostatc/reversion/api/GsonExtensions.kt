@@ -17,7 +17,7 @@
  * along with Reversion.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package io.github.lostatc.reversion.serialization
+package io.github.lostatc.reversion.api
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken

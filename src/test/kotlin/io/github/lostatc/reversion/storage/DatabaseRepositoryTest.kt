@@ -19,11 +19,11 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Checksum
-import io.github.lostatc.reversion.api.FileTreeBuilder
-import io.github.lostatc.reversion.api.RepairAction
-import io.github.lostatc.reversion.api.VerifyAction
-import io.github.lostatc.reversion.api.resolve
+import io.github.lostatc.reversion.api.io.Checksum
+import io.github.lostatc.reversion.api.io.FileTreeBuilder
+import io.github.lostatc.reversion.api.io.resolve
+import io.github.lostatc.reversion.api.storage.RepairAction
+import io.github.lostatc.reversion.api.storage.VerifyAction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

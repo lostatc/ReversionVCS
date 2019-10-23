@@ -19,11 +19,11 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.Config
-import io.github.lostatc.reversion.api.FileTreeBuilder
-import io.github.lostatc.reversion.api.PermissionSet
-import io.github.lostatc.reversion.api.StorageProvider
-import io.github.lostatc.reversion.api.resolve
+import io.github.lostatc.reversion.api.Configurator
+import io.github.lostatc.reversion.api.io.FileTreeBuilder
+import io.github.lostatc.reversion.api.io.resolve
+import io.github.lostatc.reversion.api.storage.PermissionSet
+import io.github.lostatc.reversion.api.storage.StorageProvider
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
@@ -52,7 +52,7 @@ private fun ByteBuffer.decodeAsString(charset: Charset = Charset.defaultCharset(
 interface FuseFileSystemTest {
     val provider: StorageProvider
 
-    val config: Config
+    val configurator: Configurator
 
     var workPath: Path
 
@@ -75,7 +75,7 @@ interface FuseFileSystemTest {
             file("d", content = "mango")
         }
 
-        val workDirectory = WorkDirectory.init(workPath, provider, config)
+        val workDirectory = WorkDirectory.init(workPath, provider, configurator)
 
         workDirectory.commit(listOf(workPath.resolve("d")))
         workDirectory.commit(listOf(workPath.resolve("a"), workPath.resolve("b"), workPath.resolve("c", "a")))
