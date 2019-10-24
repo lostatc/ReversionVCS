@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXRadioButton?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.VBox?>
+<fx:root xmlns:fx="http://javafx.com/fxml/1" type="VBox" xmlns="http://javafx.com/javafx/11.0.1" spacing="15.0">
+    <fx:define>
+        <ToggleGroup fx:id="chunkerGroup"/>
+    </fx:define>
+    <JFXRadioButton fx:id="performanceToggle" text="Optimize for performance (use file-level deduplication)"
+                    toggleGroup="$chunkerGroup" wrapText="true"/>
+    <JFXRadioButton fx:id="storageToggle" text="Optimize for saving storage space (use block-level deduplication)"
+                    toggleGroup="$chunkerGroup" wrapText="true"/>
+</fx:root>

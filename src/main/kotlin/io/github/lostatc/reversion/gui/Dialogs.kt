@@ -210,12 +210,12 @@ fun approvalDialog(title: String, text: String): DialogHandle<Boolean> {
  * Creates a new dialog that prompts the user with a [Form].
  *
  * @param [title] The title of the dialog.
- * @param [text] The message body of the dialog.
+ * @param [text] The message body of the dialog, or `null` to omit the message body.
  * @param [form] The [Form] to prompt the user with.
  *
  * @return A deferred value which yields the result of the form.
  */
-fun <T> formDialog(title: String, text: String, form: Form<T>): DialogHandle<FormResult<T>> {
+fun <T> formDialog(title: String, text: String?, form: Form<T>): DialogHandle<FormResult<T>> {
     val deferred = CompletableDeferred<FormResult<T>>()
     val dialog = JFXDialog().apply {
 
@@ -225,8 +225,10 @@ fun <T> formDialog(title: String, text: String, form: Form<T>): DialogHandle<For
             heading.add(Label(title))
 
             body.add(
-                VBox(Label(text), form.node).apply {
-                    spacing = 15.0
+                if (text != null) {
+                    VBox(Label(text), form.node).apply { spacing = 15.0 }
+                } else {
+                    form.node
                 }
             )
 

@@ -289,7 +289,7 @@ class WorkDirectoryManagerController {
         // Asynchronously load the registered working directories and handle errors by prompting the user.
         model.launch {
             for (path in WatchDaemon.registered.toSet()) {
-                launch { openWorkDirectory(path) }
+                launch { openWorkDirectory(path)?.let { model.addWorkDirectory(it) } }
             }
         }
 
@@ -384,7 +384,7 @@ class WorkDirectoryManagerController {
                 } else {
                     // Create a new working directory and register it. Prompt the user to configure it.
                     val configForm = DEFAULT_PROVIDER.configure()
-                    val result = formDialog("Configure the directory", "", configForm).prompt(root)
+                    val result = formDialog("Configure the directory", null, configForm).prompt(root)
 
                     val configurator = result.onInvalid {
                         it.message?.let { message -> sendNotification(message) }
