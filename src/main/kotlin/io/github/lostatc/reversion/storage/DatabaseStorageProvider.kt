@@ -21,11 +21,29 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Configurator
 import io.github.lostatc.reversion.api.Form
+import io.github.lostatc.reversion.api.io.Chunker
+import io.github.lostatc.reversion.api.io.FixedSizeChunker
+import io.github.lostatc.reversion.api.io.RollingHashChunker
+import io.github.lostatc.reversion.api.io.ZpaqState
 import io.github.lostatc.reversion.api.storage.OpenAttempt
 import io.github.lostatc.reversion.api.storage.Repository
 import io.github.lostatc.reversion.api.storage.StorageProvider
+import io.github.lostatc.reversion.gui.controls.ConfiguratorForm
 import java.nio.file.Path
 
+/**
+ * The [Chunker] to use to optimize for performance.
+ */
+val PERFORMANCE_CHUNKER: Chunker = FixedSizeChunker(Long.MAX_VALUE)
+
+/**
+ * The [Chunker] to use to optimize for saving storage space.
+ */
+val STORAGE_CHUNKER: Chunker = RollingHashChunker(ZpaqState(22))
+
+/**
+ * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
+ */
 /**
  * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
  */
@@ -37,9 +55,7 @@ class DatabaseStorageProvider : StorageProvider {
         without this program.
     """.trimIndent()
 
-    override fun configure(): Form<Configurator> {
-        TODO("not implemented")
-    }
+    override fun configure(): Form<Configurator> = ConfiguratorForm()
 
     override fun openRepository(path: Path): OpenAttempt<Repository> =
         DatabaseRepository.open(path)
