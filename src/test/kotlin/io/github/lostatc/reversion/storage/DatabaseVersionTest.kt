@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Configurator
+import io.github.lostatc.reversion.api.io.FixedSizeChunker
 import io.github.lostatc.reversion.api.storage.Timeline
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
@@ -51,7 +52,7 @@ class BlockDeduplicatedDatabaseVersionTest : VersionTest {
         val repoPath = tempPath.resolve("repository")
         val repository = DatabaseStorageProvider().run {
             val configurator = Configurator {
-                it[DatabaseRepository.blockSizeProperty] = 2
+                it[DatabaseRepository.chunkerProperty] = FixedSizeChunker(2)
             }
             createRepository(repoPath, configurator)
         }

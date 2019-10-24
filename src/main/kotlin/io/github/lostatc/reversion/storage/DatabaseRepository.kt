@@ -27,7 +27,10 @@ import io.github.lostatc.reversion.api.Configurator
 import io.github.lostatc.reversion.api.JsonConfig
 import io.github.lostatc.reversion.api.io.Blob
 import io.github.lostatc.reversion.api.io.Checksum
+import io.github.lostatc.reversion.api.io.Chunker
 import io.github.lostatc.reversion.api.io.FixedSizeChunker
+import io.github.lostatc.reversion.api.io.RollingHashChunker
+import io.github.lostatc.reversion.api.io.ZpaqState
 import io.github.lostatc.reversion.api.io.write
 import io.github.lostatc.reversion.api.storage.CleanupPolicy
 import io.github.lostatc.reversion.api.storage.IncompatibleRepositoryException
@@ -50,6 +53,7 @@ import io.github.lostatc.reversion.schema.TimelineEntity
 import io.github.lostatc.reversion.schema.TimelineTable
 import io.github.lostatc.reversion.schema.VersionEntity
 import io.github.lostatc.reversion.schema.VersionTable
+import io.github.lostatc.reversion.serialization.RuntimeTypeAdapterFactory
 import org.apache.commons.io.FileUtils
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
@@ -183,9 +187,9 @@ private object DatabaseFactory {
 data class DatabaseRepository(override val path: Path, override val config: Config) : Repository {
 
     /**
-     * The block size used by this repository.
+     * The [Chunker] used by this repository.
      */
-    val blockSize: Long by blockSizeProperty
+    val chunker: Chunker by chunkerProperty
 
     /**
      * The number of minutes to wait between database backups.
@@ -320,7 +324,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
      */
     private fun findBlob(file: Path, checksum: Checksum): Blob? {
         val blobs = try {
-            Blob.chunkFile(file, FixedSizeChunker(blockSize))
+            Blob.chunkFile(file, chunker)
         } catch (e: IOException) {
             return null
         }
@@ -559,12 +563,12 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
         private val relativeConfigPath: Path = Paths.get("config.json")
 
         /**
-         * The property which stores the block size.
+         * A property for the [Chunker] used by this repository.
          */
-        val blockSizeProperty: ConfigProperty<Long> = ConfigProperty.of("blockSize", Long.MAX_VALUE)
+        val chunkerProperty: ConfigProperty<Chunker> = ConfigProperty.of("chunker", FixedSizeChunker(Long.MAX_VALUE))
 
         /**
-         * The property which stores the backup interval.
+         * A property for the number of minutes to wait between database backups.
          */
         val backupIntervalProperty: ConfigProperty<Int> = ConfigProperty.of("backupInterval", 15)
 
@@ -573,6 +577,18 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          */
         private val gson: Gson = GsonBuilder()
             .setPrettyPrinting()
+            .excludeFieldsWithoutExposeAnnotation()
+            .registerTypeAdapterFactory(
+                RuntimeTypeAdapterFactory(Chunker::class).apply {
+                    registerSubtype(FixedSizeChunker::class)
+                    registerSubtype(RollingHashChunker::class)
+                }
+            )
+            .registerTypeAdapterFactory(
+                RuntimeTypeAdapterFactory(RollingHashChunker.HashState::class).apply {
+                    registerSubtype(ZpaqState::class)
+                }
+            )
             .create()
 
         /**
