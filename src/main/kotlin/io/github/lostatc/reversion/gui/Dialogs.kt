@@ -23,7 +23,8 @@ import com.jfoenix.controls.JFXButton
 import com.jfoenix.controls.JFXDialog
 import com.jfoenix.controls.JFXDialogLayout
 import com.jfoenix.controls.JFXSpinner
-import io.github.lostatc.reversion.gui.controls.DateTimePicker
+import io.github.lostatc.reversion.api.Form
+import io.github.lostatc.reversion.api.FormResult
 import javafx.event.EventHandler
 import javafx.scene.control.Label
 import javafx.scene.layout.StackPane
@@ -31,7 +32,6 @@ import javafx.scene.layout.VBox
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
-import java.time.Instant
 
 /**
  * A handler used to show a dialog and return a value based on a user selection.
@@ -207,33 +207,25 @@ fun approvalDialog(title: String, text: String): DialogHandle<Boolean> {
 }
 
 /**
- * Creates a new dialog that prompts the user to choose a date and time.
+ * Creates a new dialog that prompts the user with a [Form].
  *
  * @param [title] The title of the dialog.
  * @param [text] The message body of the dialog.
- * @param [default] The default date and time that is selected in the dialog.
+ * @param [form] The [Form] to prompt the user with.
  *
- * @return A deferred value which yields the selected time or `null` if none was selected.
+ * @return A deferred value which yields the result of the form.
  */
-fun dateTimeDialog(
-    title: String,
-    text: String,
-    default: Instant? = null
-): DialogHandle<Instant?> {
-    val deferred = CompletableDeferred<Instant?>()
+fun <T> formDialog(title: String, text: String, form: Form<T>): DialogHandle<FormResult<T>> {
+    val deferred = CompletableDeferred<FormResult<T>>()
     val dialog = JFXDialog().apply {
 
-        setOnDialogClosed { deferred.complete(null) }
+        setOnDialogClosed { deferred.complete(FormResult.Incomplete()) }
 
         content = JFXDialogLayout().apply {
-            val dateTimePicker = DateTimePicker().apply {
-                instant = default
-            }
-
             heading.add(Label(title))
 
             body.add(
-                VBox(Label(text), dateTimePicker).apply {
+                VBox(Label(text), form.node).apply {
                     spacing = 15.0
                 }
             )
@@ -243,7 +235,7 @@ fun dateTimeDialog(
                     this.text = "Cancel"
                     this.styleClass.addAll("button-text", "button-regular")
                     this.onAction = EventHandler {
-                        deferred.complete(null)
+                        deferred.complete(FormResult.Incomplete())
                         close()
                     }
                 },
@@ -251,7 +243,7 @@ fun dateTimeDialog(
                     this.text = "OK"
                     this.styleClass.addAll("button-text", "button-confirm")
                     this.onAction = EventHandler {
-                        deferred.complete(dateTimePicker.instant)
+                        deferred.complete(form.result)
                         close()
                     }
                 }

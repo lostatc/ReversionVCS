@@ -53,7 +53,7 @@ val FormResult<IgnoreMatcher>.description: String
     get() = when (this) {
         is FormResult.Valid -> value.description
         is FormResult.Invalid -> message
-        is FormResult.Empty -> ""
+        is FormResult.Incomplete -> ""
     }
 
 interface IgnoreMatcherForm : Form<IgnoreMatcher>
@@ -88,7 +88,7 @@ class PrefixIgnoreMatcherForm(private val base: ReadOnlyProperty<Path>) : Ignore
             // Pass a relative path so that it will work if the directory is moved/synced elsewhere.
             val path = Paths.get(pathField.text)
             when {
-                pathField.text.isBlank() -> FormResult.Empty()
+                pathField.text.isBlank() -> FormResult.Incomplete()
                 path.startsWith(base.value) -> FormResult.Valid(PrefixIgnoreMatcher(base.value.relativize(path)))
                 !path.isAbsolute -> FormResult.Valid(PrefixIgnoreMatcher(path))
                 else -> FormResult.Invalid("You can only ignore paths in this directory.")
@@ -146,7 +146,7 @@ class GlobIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     fun initialize() {
         _resultProperty.createBinding(patternField.textProperty()) {
             if (patternField.text.isBlank()) {
-                FormResult.Empty()
+                FormResult.Incomplete()
             } else {
                 FormResult.Valid(GlobIgnoreMatcher(patternField.text))
             }
@@ -181,7 +181,7 @@ class RegexIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     fun initialize() {
         _resultProperty.createBinding(patternField.textProperty()) {
             if (patternField.text.isBlank()) {
-                FormResult.Empty()
+                FormResult.Incomplete()
             } else {
                 FormResult.Valid(RegexIgnoreMatcher(patternField.text))
             }
@@ -217,7 +217,7 @@ class SizeIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
         _resultProperty.createBinding(sizeField.textProperty()) {
             val parsed = parseBytes(sizeField.text)
             when {
-                sizeField.text.isBlank() -> FormResult.Empty()
+                sizeField.text.isBlank() -> FormResult.Incomplete()
                 parsed == null -> FormResult.Invalid("Enter a valid file size.")
                 else -> FormResult.Valid(SizeIgnoreMatcher(parsed))
             }
@@ -251,7 +251,7 @@ class ExtensionIgnoreMatcherForm : IgnoreMatcherForm, VBox() {
     fun initialize() {
         _resultProperty.createBinding(extensionField.textProperty()) {
             if (extensionField.text.isBlank()) {
-                FormResult.Empty()
+                FormResult.Incomplete()
             } else {
                 FormResult.Valid(ExtensionIgnoreMatcher(extensionField.text))
             }
