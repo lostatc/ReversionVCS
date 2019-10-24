@@ -21,7 +21,6 @@ package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.io.Blob
 import io.github.lostatc.reversion.api.io.Checksum
-import io.github.lostatc.reversion.api.io.FixedSizeChunker
 import io.github.lostatc.reversion.api.storage.PermissionSet
 import io.github.lostatc.reversion.api.storage.Snapshot
 import io.github.lostatc.reversion.schema.BlobEntity
@@ -151,7 +150,7 @@ data class DatabaseSnapshot(val entity: SnapshotEntity, override val repository:
             }
 
             // Create a list of blobs from the file.
-            val blobs = Blob.chunkFile(absolutePath, FixedSizeChunker(repository.blockSize))
+            val blobs = Blob.chunkFile(absolutePath, repository.chunker)
 
             // Add the blobs to the file system. Because this is wrapped in a transaction, records in the database won't be
             // updated until all the blobs have been added. This is to prevent corruption in case the operation is

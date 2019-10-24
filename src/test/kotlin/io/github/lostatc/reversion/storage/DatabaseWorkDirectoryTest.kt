@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.storage
 
 import io.github.lostatc.reversion.api.Configurator
+import io.github.lostatc.reversion.api.io.FixedSizeChunker
 import org.junit.jupiter.api.TestInstance
 import java.nio.file.Path
 
@@ -39,7 +40,7 @@ class BlockDeduplicatedDatabaseWorkDirectoryTest : WorkDirectoryTest {
     override val provider = DatabaseStorageProvider()
 
     override val configurator: Configurator = Configurator {
-        it[DatabaseRepository.blockSizeProperty] = 2
+        it[DatabaseRepository.chunkerProperty] = FixedSizeChunker(2)
     }
 
     override lateinit var workPath: Path
