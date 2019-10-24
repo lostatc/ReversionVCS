@@ -53,8 +53,7 @@ private val timeUnits: Map<String, TemporalUnit> = linkedMapOf(
 val FormResult<CleanupPolicy>.description: String
     get() = when (this) {
         is FormResult.Valid -> value.description
-        is FormResult.Invalid -> message
-        is FormResult.Incomplete -> ""
+        is FormResult.Invalid -> message ?: ""
     }
 
 /**
@@ -84,7 +83,7 @@ class VersionPolicyForm : PolicyForm, HBox() {
         _resultProperty.createBinding(versionsField.textProperty()) {
             val versions = versionsField.text.toIntOrNull()
             when {
-                versionsField.text.isBlank() -> FormResult.Incomplete()
+                versionsField.text.isBlank() -> FormResult.Invalid()
                 versions == null -> FormResult.Invalid("The input must be a number.")
                 else -> FormResult.Valid(CleanupPolicy.ofVersions(versions))
             }
@@ -125,7 +124,7 @@ class TimePolicyForm : PolicyForm, HBox() {
             val unit = timeUnits[timeComboBox.selectionModel.selectedItem]
 
             when {
-                timeField.text.isBlank() -> FormResult.Incomplete()
+                timeField.text.isBlank() -> FormResult.Invalid()
                 amount == null -> FormResult.Invalid("The input must be a number.")
                 unit == null -> FormResult.Invalid("You must select a valid unit.")
                 else -> FormResult.Valid(CleanupPolicy.ofDuration(amount, unit))
@@ -171,7 +170,7 @@ class StaggeredPolicyForm : PolicyForm, HBox() {
             val unit = timeUnits[timeComboBox.selectionModel.selectedItem]
 
             when {
-                versionsField.text.isBlank() -> FormResult.Incomplete()
+                versionsField.text.isBlank() -> FormResult.Invalid()
                 versions == null -> FormResult.Invalid("The input must be a number.")
                 unit == null -> FormResult.Invalid("You must select a valid unit.")
                 else -> FormResult.Valid(CleanupPolicy.ofStaggered(versions, unit))
