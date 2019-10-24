@@ -34,6 +34,7 @@ import io.github.lostatc.reversion.gui.approvalDialog
 import io.github.lostatc.reversion.gui.confirmationDialog
 import io.github.lostatc.reversion.gui.controls.Card
 import io.github.lostatc.reversion.gui.controls.CategoryIgnoreMatcherForm
+import io.github.lostatc.reversion.gui.controls.DateTimeForm
 import io.github.lostatc.reversion.gui.controls.Definition
 import io.github.lostatc.reversion.gui.controls.ExtensionIgnoreMatcherForm
 import io.github.lostatc.reversion.gui.controls.GlobIgnoreMatcherForm
@@ -47,7 +48,7 @@ import io.github.lostatc.reversion.gui.controls.StaggeredPolicyForm
 import io.github.lostatc.reversion.gui.controls.TimePolicyForm
 import io.github.lostatc.reversion.gui.controls.VersionPolicyForm
 import io.github.lostatc.reversion.gui.controls.description
-import io.github.lostatc.reversion.gui.dateTimeDialog
+import io.github.lostatc.reversion.gui.formDialog
 import io.github.lostatc.reversion.gui.format
 import io.github.lostatc.reversion.gui.infoDialog
 import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
@@ -367,7 +368,7 @@ class WorkDirectoryManagerController {
         val policy = when (val result = policyForm.result) {
             is FormResult.Valid -> result.value
             is FormResult.Invalid -> return
-            is FormResult.Empty -> return
+            is FormResult.Incomplete -> return
         }
         model.selected?.cleanupPolicies?.add(policy) ?: return
         policyForm.clear()
@@ -393,7 +394,7 @@ class WorkDirectoryManagerController {
         val ignoreMatcher = when (val result = ignoreForm.result) {
             is FormResult.Valid -> result.value
             is FormResult.Invalid -> return
-            is FormResult.Empty -> return
+            is FormResult.Incomplete -> return
         }
         model.selected?.ignoreMatchers?.add(ignoreMatcher) ?: return
         ignoreForm.clear()
@@ -514,14 +515,16 @@ class WorkDirectoryManagerController {
     @FXML
     fun mountSnapshot() {
         model.launch {
-            val instant = dateTimeDialog(
+            val result = formDialog(
                 "Choose a time and date",
                 "Choose the time and date that you want to see files from.",
-                Instant.now()
+                DateTimeForm(Instant.now())
             ).prompt(root)
 
-            if (instant != null) {
-                model.mountSnapshot(instant)
+            when (result) {
+                is FormResult.Valid -> model.mountSnapshot(result.value)
+                is FormResult.Invalid -> sendNotification(result.message)
+                is FormResult.Incomplete -> sendNotification("You need to enter a date and time.")
             }
         }
     }

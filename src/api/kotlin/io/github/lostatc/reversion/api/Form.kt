@@ -32,14 +32,14 @@ sealed class FormResult<T> {
     data class Valid<T>(val value: T) : FormResult<T>()
 
     /**
-     * The form is invalid or incomplete and produced the given error [message].
+     * The form has invalid input and produced the given error [message].
      */
     data class Invalid<T>(val message: String) : FormResult<T>()
 
     /**
-     * The form has no input.
+     * The form is incomplete.
      */
-    class Empty<T> : FormResult<T>()
+    class Incomplete<T> : FormResult<T>()
 }
 
 /**
