@@ -20,6 +20,7 @@
 package io.github.lostatc.reversion.gui.models
 
 import io.github.lostatc.reversion.DEFAULT_PROVIDER
+import io.github.lostatc.reversion.api.Configurator
 import io.github.lostatc.reversion.api.getValue
 import io.github.lostatc.reversion.api.setValue
 import io.github.lostatc.reversion.api.storage.CleanupPolicy
@@ -30,6 +31,7 @@ import io.github.lostatc.reversion.gui.StateWrapper
 import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
 import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.gui.wrap
+import io.github.lostatc.reversion.schema.VersionTable.path
 import io.github.lostatc.reversion.storage.IgnoreMatcher
 import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.beans.property.Property
@@ -221,20 +223,22 @@ class WorkDirectoryModel(
 
     companion object {
         /**
-         * Returns a new [WorkDirectoryModel] for the working directory with the given [path].
-         *
-         * If there is not working directory at [path], a new one is created.
-         *
-         * @param [path] The path of the working directory.
+         * Create a [WorkDirectoryModel] by opening an existing working directory.
          */
-        suspend fun fromPath(path: Path): OpenAttempt<WorkDirectoryModel> = withContext(Dispatchers.IO) {
-            if (WorkDirectory.isWorkDirectory(path)) {
-                WorkDirectory.open(path).wrap { WorkDirectoryModel(it) }
-            } else {
-                WorkDirectory.init(path, DEFAULT_PROVIDER).run {
-                    timeline.cleanupPolicies = defaultPolicies
-                    OpenAttempt.Success(WorkDirectoryModel(this))
-                }
+        suspend fun open(path: Path): OpenAttempt<WorkDirectoryModel> = withContext(Dispatchers.IO) {
+            WorkDirectory.open(path).wrap { WorkDirectoryModel(it) }
+        }
+
+        /**
+         * Create a [WorkDirectoryModel] by creating a new working directory.
+         */
+        suspend fun create(
+            path: Path,
+            configurator: Configurator = Configurator.Default
+        ): WorkDirectoryModel = withContext(Dispatchers.IO) {
+            WorkDirectory.init(path, DEFAULT_PROVIDER, configurator).run {
+                timeline.cleanupPolicies = defaultPolicies
+                WorkDirectoryModel(this)
             }
         }
     }

@@ -219,7 +219,7 @@ fun <T> formDialog(title: String, text: String, form: Form<T>): DialogHandle<For
     val deferred = CompletableDeferred<FormResult<T>>()
     val dialog = JFXDialog().apply {
 
-        setOnDialogClosed { deferred.complete(FormResult.Incomplete()) }
+        setOnDialogClosed { deferred.complete(FormResult.Invalid()) }
 
         content = JFXDialogLayout().apply {
             heading.add(Label(title))
@@ -235,7 +235,7 @@ fun <T> formDialog(title: String, text: String, form: Form<T>): DialogHandle<For
                     this.text = "Cancel"
                     this.styleClass.addAll("button-text", "button-regular")
                     this.onAction = EventHandler {
-                        deferred.complete(FormResult.Incomplete())
+                        deferred.complete(FormResult.Invalid())
                         close()
                     }
                 },

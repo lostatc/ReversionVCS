@@ -65,7 +65,9 @@ class DateTimeForm(private val initialValue: Instant) : Form<Instant>, HBox() {
 
         _resultProperty.createBinding(datePicker.valueProperty(), timePicker.valueProperty()) {
             when {
-                datePicker.value == null || timePicker.value == null -> FormResult.Incomplete()
+                datePicker.value == null || timePicker.value == null -> {
+                    FormResult.Invalid("You must enter a date and time.")
+                }
                 else -> {
                     val dateTime = LocalDateTime.of(datePicker.value, timePicker.value)
                     FormResult.Valid(dateTime.toInstant(ZoneId.systemDefault().rules.getOffset(dateTime)))

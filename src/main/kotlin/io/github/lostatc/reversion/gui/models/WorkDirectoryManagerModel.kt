@@ -70,41 +70,19 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     val workDirectories: ObservableList<WorkDirectoryModel> = FXCollections.unmodifiableObservableList(_workDirectories)
 
     /**
-     * Loads the user's [workDirectories] asynchronously.
+     * Adds the given working directory [model] to [workDirectories].
      *
-     * @param [handler] A function which is passed the path of a working directory and returns a model representing it,
-     * or `null` if that model should be skipped.
+     * This also registers the directory with the [WatchDaemon] so that it is loaded when the program starts.
      */
-    fun loadWorkDirectories(handler: suspend (Path) -> WorkDirectoryModel?) {
-        launch {
-            selected = null
-            for (path in WatchDaemon.registered.toSet()) {
-                launch { handler(path)?.let { _workDirectories.add(it) } }
-            }
-        }
-    }
-
-    /**
-     * Adds the work directory with the given [path] asynchronously.
-     *
-     * @param [handler] A function which is passed the path of a working directory and returns a model representing it,
-     * or `null` if that model should be skipped.
-     */
-    fun addWorkDirectory(path: Path, handler: suspend (Path) -> WorkDirectoryModel?) {
-        launch {
-            if (WatchDaemon.registered.contains(path)) {
-                sendNotification("This directory is already being tracked.")
-            } else {
-                handler(path)?.let {
-                    _workDirectories.add(it)
-                    WatchDaemon.registered.add(path)
-                }
-            }
-        }
+    suspend fun addWorkDirectory(model: WorkDirectoryModel) {
+        _workDirectories.add(model)
+        WatchDaemon.registered.add(model.path)
     }
 
     /**
      * Deletes the selected working directory.
+     *
+     * This also unregisters the directory with the [WatchDaemon] so that it is not loaded when the program starts.
      */
     fun deleteWorkDirectory() {
         val selected = selected ?: return

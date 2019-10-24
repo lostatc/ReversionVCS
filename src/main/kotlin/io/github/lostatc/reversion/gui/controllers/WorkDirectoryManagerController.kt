@@ -23,11 +23,13 @@ import com.jfoenix.controls.JFXComboBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTabPane
 import com.jfoenix.controls.JFXToggleButton
+import io.github.lostatc.reversion.DEFAULT_PROVIDER
 import io.github.lostatc.reversion.api.FormResult
 import io.github.lostatc.reversion.api.createBinding
 import io.github.lostatc.reversion.api.storage.RepairAction
 import io.github.lostatc.reversion.api.toDisplayProperty
 import io.github.lostatc.reversion.api.toMappedProperty
+import io.github.lostatc.reversion.daemon.WatchDaemon
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.MappingCellFactory
 import io.github.lostatc.reversion.gui.approvalDialog
@@ -57,6 +59,7 @@ import io.github.lostatc.reversion.gui.models.WorkDirectoryModel
 import io.github.lostatc.reversion.gui.processingDialog
 import io.github.lostatc.reversion.gui.sendNotification
 import io.github.lostatc.reversion.storage.IgnoreMatcher
+import io.github.lostatc.reversion.storage.WorkDirectory
 import javafx.fxml.FXML
 import javafx.scene.Group
 import javafx.scene.control.Label
@@ -283,8 +286,12 @@ class WorkDirectoryManagerController {
             }
         }
 
-        // Load working directories and handle errors by prompting the user.
-        model.loadWorkDirectories(::workDirectoryHandler)
+        // Asynchronously load the registered working directories and handle errors by prompting the user.
+        model.launch {
+            for (path in WatchDaemon.registered.toSet()) {
+                launch { openWorkDirectory(path) }
+            }
+        }
 
         // Make the working directory information pane initially invisible.
         workDirectoryTabPane.setContentsVisible(false)
@@ -332,82 +339,62 @@ class WorkDirectoryManagerController {
     }
 
     /**
-     * Get a [WorkDirectoryModel] for the given [path], handling any errors opening the repository.
+     * Attempt to open the working directory at [path] and prompt the user if repairs need to be made.
+     *
+     * @return A model representing the working directory, or `null` if it could not be opened.
      */
-    private suspend fun workDirectoryHandler(path: Path): WorkDirectoryModel? =
-        WorkDirectoryModel.fromPath(path).onFail { failure ->
+    private suspend fun openWorkDirectory(path: Path): WorkDirectoryModel? =
+        WorkDirectoryModel.open(path).onFail { failure ->
+            // Attempt to repair the repository.
             if (failure.actions.all { repair(it) }) {
-                WorkDirectoryModel.fromPath(path).onFail {
+                // All the repair actions succeeded.
+                WorkDirectoryModel.open(path).onFail {
                     sendNotification("Even though the repository was successfully repaired, it could not be opened.")
                     return null
                 }
             } else {
+                // At least one repair action failed.
                 sendNotification("Attempts to repair the repository either failed or were cancelled.")
                 return null
             }
         }
 
     /**
-     * Open a file browser and add the selected directory as a new working directory.
+     * Open a file browser and add the selected directory as a working directory.
+     *
+     * If the directory is already an initialized working directory, it is opened and registered. If not, it is created
+     * and registered.
      */
     @FXML
     fun addWorkDirectory() {
+        // Prompt the user to select a directory.
         val directory = DirectoryChooser().run {
             title = "Select directory"
             showDialog(root.scene.window)?.toPath() ?: return
         }
-        model.addWorkDirectory(directory, ::workDirectoryHandler)
-    }
 
-    /**
-     * Add a new cleanup policy for the selected working directory with the values provided in the cleanup policy form.
-     */
-    @FXML
-    fun addCleanupPolicy() {
-        val policyForm = policyTypeComboBox.selectionModel.selectedItem
-        val policy = when (val result = policyForm.result) {
-            is FormResult.Valid -> result.value
-            is FormResult.Invalid -> return
-            is FormResult.Incomplete -> return
+        model.launch {
+            // Check if the working directory has already been registered.
+            if (WatchDaemon.registered.contains(directory)) {
+                sendNotification("This directory is already being tracked.")
+            } else {
+                if (WorkDirectory.isWorkDirectory(directory)) {
+                    // Open an existing working directory and register it.
+                    openWorkDirectory(directory)?.apply { model.addWorkDirectory(this) } ?: return@launch
+                } else {
+                    // Create a new working directory and register it. Prompt the user to configure it.
+                    val configForm = DEFAULT_PROVIDER.configure()
+                    val result = formDialog("Configure the directory", "", configForm).prompt(root)
+
+                    val configurator = result.onInvalid {
+                        it.message?.let { message -> sendNotification(message) }
+                        return@launch
+                    }
+
+                    WorkDirectoryModel.create(directory, configurator).apply { model.addWorkDirectory(this) }
+                }
+            }
         }
-        model.selected?.cleanupPolicies?.add(policy) ?: return
-        policyForm.clear()
-    }
-
-    /**
-     * Remove the currently selected cleanup policy.
-     */
-    @FXML
-    fun removeCleanupPolicy() {
-        val selectedIndex = cleanupPolicyList.selectionModel.selectedIndex
-        if (selectedIndex < 0) return
-
-        model.selected?.cleanupPolicies?.removeAt(selectedIndex)
-    }
-
-    /**
-     * Add the selected [IgnoreMatcher] specified by the selected [IgnoreMatcherForm].
-     */
-    @FXML
-    fun addIgnoreMatcher() {
-        val ignoreForm = ignoreTypeComboBox.selectionModel.selectedItem
-        val ignoreMatcher = when (val result = ignoreForm.result) {
-            is FormResult.Valid -> result.value
-            is FormResult.Invalid -> return
-            is FormResult.Incomplete -> return
-        }
-        model.selected?.ignoreMatchers?.add(ignoreMatcher) ?: return
-        ignoreForm.clear()
-    }
-
-    /**
-     * Remove the selected [IgnoreMatcher].
-     */
-    @FXML
-    fun removeIgnoreMatcher() {
-        val selectedIndex = ignoreMatcherList.selectionModel.selectedIndex
-        if (selectedIndex < 0) return
-        model.selected?.ignoreMatchers?.removeAt(selectedIndex)
     }
 
     /**
@@ -430,6 +417,49 @@ class WorkDirectoryManagerController {
     @FXML
     fun hideWorkDirectory() {
         model.hideWorkDirectory()
+    }
+
+    /**
+     * Add a new cleanup policy for the selected working directory with the values provided in the cleanup policy form.
+     */
+    @FXML
+    fun addCleanupPolicy() {
+        val policyForm = policyTypeComboBox.selectionModel.selectedItem
+        val policy = policyForm.result.onInvalid { return }
+        model.selected?.cleanupPolicies?.add(policy) ?: return
+        policyForm.clear()
+    }
+
+    /**
+     * Remove the currently selected cleanup policy.
+     */
+    @FXML
+    fun removeCleanupPolicy() {
+        val selectedIndex = cleanupPolicyList.selectionModel.selectedIndex
+        if (selectedIndex < 0) return
+
+        model.selected?.cleanupPolicies?.removeAt(selectedIndex)
+    }
+
+    /**
+     * Add the selected [IgnoreMatcher] specified by the selected [IgnoreMatcherForm].
+     */
+    @FXML
+    fun addIgnoreMatcher() {
+        val ignoreForm = ignoreTypeComboBox.selectionModel.selectedItem
+        val ignoreMatcher = ignoreForm.result.onInvalid { return }
+        model.selected?.ignoreMatchers?.add(ignoreMatcher) ?: return
+        ignoreForm.clear()
+    }
+
+    /**
+     * Remove the selected [IgnoreMatcher].
+     */
+    @FXML
+    fun removeIgnoreMatcher() {
+        val selectedIndex = ignoreMatcherList.selectionModel.selectedIndex
+        if (selectedIndex < 0) return
+        model.selected?.ignoreMatchers?.removeAt(selectedIndex)
     }
 
     /**
@@ -523,8 +553,7 @@ class WorkDirectoryManagerController {
 
             when (result) {
                 is FormResult.Valid -> model.mountSnapshot(result.value)
-                is FormResult.Invalid -> sendNotification(result.message)
-                is FormResult.Incomplete -> sendNotification("You need to enter a date and time.")
+                is FormResult.Invalid -> result.message?.let { sendNotification(it) }
             }
         }
     }

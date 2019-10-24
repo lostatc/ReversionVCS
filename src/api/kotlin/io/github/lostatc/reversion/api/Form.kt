@@ -32,14 +32,14 @@ sealed class FormResult<T> {
     data class Valid<T>(val value: T) : FormResult<T>()
 
     /**
-     * The form has invalid input and produced the given error [message].
+     * The form has invalid input and the given error [message], if not `null`, should be displayed.
      */
-    data class Invalid<T>(val message: String) : FormResult<T>()
+    data class Invalid<T>(val message: String? = null) : FormResult<T>()
 
-    /**
-     * The form is incomplete.
-     */
-    class Incomplete<T> : FormResult<T>()
+    inline fun onInvalid(block: (Invalid<T>) -> T): T = when (this) {
+        is Valid -> value
+        is Invalid -> block(this)
+    }
 }
 
 /**
