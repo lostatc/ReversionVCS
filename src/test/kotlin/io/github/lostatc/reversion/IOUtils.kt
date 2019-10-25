@@ -20,7 +20,6 @@
 package io.github.lostatc.reversion
 
 import io.github.lostatc.reversion.api.io.Blob
-import io.github.lostatc.reversion.api.io.FixedSizeChunker
 import io.github.lostatc.reversion.api.io.readBytes
 import io.github.lostatc.reversion.api.io.resolve
 import io.github.lostatc.reversion.api.io.toByteArray
@@ -30,16 +29,6 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Random
-
-/**
- * The size of randomly generated test files in bytes.
- */
-const val TEST_FILE_SIZE: Int = 4096
-
-/**
- * The size of chunks to use when testing [FixedSizeChunker].
- */
-const val TEST_CHUNK_SIZE: Long = 256L
 
 /**
  * Reads the bytes of this buffer into a string.

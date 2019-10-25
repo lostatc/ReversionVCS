@@ -29,8 +29,7 @@ import io.github.lostatc.reversion.api.io.Blob
 import io.github.lostatc.reversion.api.io.Checksum
 import io.github.lostatc.reversion.api.io.Chunker
 import io.github.lostatc.reversion.api.io.FixedSizeChunker
-import io.github.lostatc.reversion.api.io.RollingHashChunker
-import io.github.lostatc.reversion.api.io.ZpaqState
+import io.github.lostatc.reversion.api.io.ZpaqChunker
 import io.github.lostatc.reversion.api.io.write
 import io.github.lostatc.reversion.api.storage.CleanupPolicy
 import io.github.lostatc.reversion.api.storage.IncompatibleRepositoryException
@@ -577,16 +576,10 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
          */
         private val gson: Gson = GsonBuilder()
             .setPrettyPrinting()
-            .excludeFieldsWithoutExposeAnnotation()
             .registerTypeAdapterFactory(
                 RuntimeTypeAdapterFactory(Chunker::class).apply {
                     registerSubtype(FixedSizeChunker::class)
-                    registerSubtype(RollingHashChunker::class)
-                }
-            )
-            .registerTypeAdapterFactory(
-                RuntimeTypeAdapterFactory(RollingHashChunker.HashState::class).apply {
-                    registerSubtype(ZpaqState::class)
+                    registerSubtype(ZpaqChunker::class)
                 }
             )
             .create()

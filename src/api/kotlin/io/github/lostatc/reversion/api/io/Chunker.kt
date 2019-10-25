@@ -19,7 +19,6 @@
 
 package io.github.lostatc.reversion.api.io
 
-import com.google.gson.annotations.Expose
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 
@@ -48,7 +47,7 @@ interface Chunker {
 /**
  * A [Chunker] which chunks data into fixed-size chunks of the given [chunkSize].
  */
-class FixedSizeChunker(@Expose val chunkSize: Long) : Chunker {
+class FixedSizeChunker(val chunkSize: Long) : Chunker {
     override fun chunk(source: SeekableByteChannel): Sequence<Chunker.Chunk> = source.use { channel ->
         val size = channel.size()
         (0..size step chunkSize)
@@ -60,14 +59,8 @@ class FixedSizeChunker(@Expose val chunkSize: Long) : Chunker {
 
 /**
  * A [Chunker] which uses a rolling hash to find chunk boundaries.
- *
- * @param [state] An object which determines when a chunk boundary has been reached.
- * @param [bufferSize] The size of the internal buffer to use when reading data from the channel.
  */
-class RollingHashChunker(
-    @Expose private val state: HashState,
-    @Expose private val bufferSize: Int = BUFFER_SIZE
-) : Chunker {
+abstract class RollingHashChunker : Chunker {
     interface HashState {
         /**
          * Search for a chunk boundary within the given buffer.
@@ -87,12 +80,16 @@ class RollingHashChunker(
         fun reset()
     }
 
+    /**
+     * Create a new [HashState].
+     */
+    protected abstract fun newState(): HashState
+
     override fun chunk(source: SeekableByteChannel): Sequence<Chunker.Chunk> = sequence {
-        val buffer = ByteBuffer.allocateDirect(bufferSize)
+        val state = newState()
+        val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
         var lastPosition = 0L
         var size = 0L
-
-        state.reset()
 
         while (true) {
             val bytesRead = source.read(buffer)
@@ -121,20 +118,27 @@ class RollingHashChunker(
 }
 
 /**
- * A [RollingHashChunker.HashState] implementing the ZPAQ algorithm for content-defined chunking.
+ * A [Chunker] which implements the ZPAQ algorithm for content-defined chunking.
  *
- * @param [bits] The number of bits that define a chunk boundary, such that an average chunk is 2^[hashBits] bytes long.
+ * @param [bits] The number of bits that define a chunk boundary, such that an average chunk is 2^[bits] bytes long.
+ */
+class ZpaqChunker(private val bits: Int) : RollingHashChunker() {
+    override fun newState(): HashState = ZpaqState(bits)
+}
+
+/**
+ * A [RollingHashChunker.HashState] implementing the ZPAQ algorithm for content-defined chunking.
  *
  * @author Dominic Marcuse (https://github.com/dmarcuse)
  */
 @UseExperimental(ExperimentalUnsignedTypes::class)
-class ZpaqState(@Expose private val bits: Int) : RollingHashChunker.HashState {
+private class ZpaqState(bits: Int) : RollingHashChunker.HashState {
 
     init {
         require(bits <= 32) { "The number of bits must be <= 32." }
     }
 
-    private val hashBits = 32 - bits
+    private val bits = 32 - bits
 
     /**
      * The previous byte.
@@ -144,7 +148,7 @@ class ZpaqState(@Expose private val bits: Int) : RollingHashChunker.HashState {
     /**
      * The hash state.
      */
-    private var o1 = UByteArray(256)
+    private val o1 = UByteArray(256)
 
     /**
      * The hash value.
@@ -164,7 +168,7 @@ class ZpaqState(@Expose private val bits: Int) : RollingHashChunker.HashState {
         o1[c1.toInt()] = byte
         c1 = byte
 
-        return h < (1u shl hashBits)
+        return h < (1u shl bits)
     }
 
     override fun findBoundary(data: ByteBuffer): Boolean {
