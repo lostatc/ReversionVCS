@@ -93,4 +93,5 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Jar> {
     archiveBaseName.set("reversion")
+    from(sourceSets["api"].output, sourceSets["main"].output)
 }
