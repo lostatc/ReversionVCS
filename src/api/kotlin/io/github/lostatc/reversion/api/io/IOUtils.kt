@@ -22,8 +22,6 @@ package io.github.lostatc.reversion.api.io
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.WritableByteChannel
-import java.nio.charset.Charset
-import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -32,10 +30,7 @@ import java.nio.file.Path
  * @param [channel] The channel to wrap.
  * @param [limit] The maximum number of bytes which can be read from the channel.
  */
-class BoundedByteChannel(
-    private val channel: ReadableByteChannel,
-    val limit: Long
-) : ReadableByteChannel by channel {
+class BoundedByteChannel(private val channel: ReadableByteChannel, val limit: Long) : ReadableByteChannel by channel {
     private var position = 0
 
     private val remaining
@@ -161,7 +156,7 @@ fun Path.resolve(firstSegment: String, vararg segments: String): Path =
  * Reads all the bytes from this channel into a [ByteBuffer].
  */
 fun ReadableByteChannel.readBytes(): ByteBuffer {
-    var buffer = ByteBuffer.allocateDirect(4096)
+    var buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
     while (read(buffer) != -1) {
         if (!buffer.hasRemaining()) {
             buffer = ByteBuffer.allocateDirect(buffer.capacity() * 2).put(buffer.flip())
@@ -174,71 +169,7 @@ fun ReadableByteChannel.readBytes(): ByteBuffer {
  * Returns a [ByteArray] containing the bytes in this buffer.
  */
 fun ByteBuffer.toByteArray(): ByteArray {
-    val array = ByteArray(limit())
+    val array = ByteArray(remaining())
     get(array)
     return array
-}
-
-/**
- * Reads the bytes of this buffer into a string.
- */
-fun ByteBuffer.readString(): String = flip().toByteArray().toString(Charset.defaultCharset())
-
-/**
- * Reads the bytes in this blob into a string.
- */
-fun Blob.readString(): String = openChannel().use {
-    it.readBytes().readString()
-}
-
-/**
- * Creates a [Blob] containing the given [text].
- */
-fun Blob.Companion.fromString(text: String): Blob = fromBytes(ByteBuffer.wrap(text.toByteArray()))
-
-/**
- * A builder for creating a file tree for testing.
- */
-data class FileTreeBuilder(val parent: Path) {
-
-    /**
-     * Construct a new instance with the given path and children.
-     */
-    constructor(parent: Path, init: FileTreeBuilder.() -> Unit) : this(parent) {
-        Files.createDirectories(parent)
-        init()
-    }
-
-    /**
-     * Create a new file with the given path and contents.
-     *
-     * @param [firstSegment] The first segment of the path relative to [parent].
-     * @param [segments] The remaining segments of the path relative to [parent].
-     * @param [content] The contents of the file.
-     */
-    fun file(firstSegment: String, vararg segments: String, content: String = ""): FileTreeBuilder {
-        val path = parent.resolve(firstSegment, *segments)
-        Files.createFile(path)
-        Files.writeString(path, content)
-        return FileTreeBuilder(path)
-    }
-
-    /**
-     * Create a new directory with the given path and children.
-     *
-     * @param [firstSegment] The first segment of the path relative to [parent].
-     * @param [segments] The remaining segments of the path relative to [parent].
-     * @param [init] A scoped function in which files and directories can be created as children of this directory.
-     */
-    fun directory(
-        firstSegment: String,
-        vararg segments: String,
-        init: FileTreeBuilder.() -> Unit = { }
-    ): FileTreeBuilder {
-        val path = parent.resolve(firstSegment, *segments)
-        Files.createDirectory(path)
-        val context = FileTreeBuilder(path)
-        context.init()
-        return context
-    }
 }

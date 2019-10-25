@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.TEST_CHUNK_SIZE
 import io.github.lostatc.reversion.api.Configurator
 import io.github.lostatc.reversion.api.io.FixedSizeChunker
 import io.github.lostatc.reversion.api.storage.Timeline
@@ -32,6 +33,8 @@ class DatabaseVersionTest : VersionTest {
     override lateinit var workPath: Path
 
     override lateinit var timeline: Timeline
+
+    override lateinit var contents: Map<Path, ByteArray>
 
     @BeforeEach
     fun createTimeline(@TempDir tempPath: Path) {
@@ -47,12 +50,14 @@ class BlockDeduplicatedDatabaseVersionTest : VersionTest {
 
     override lateinit var timeline: Timeline
 
+    override lateinit var contents: Map<Path, ByteArray>
+
     @BeforeEach
     fun createTimeline(@TempDir tempPath: Path) {
         val repoPath = tempPath.resolve("repository")
         val repository = DatabaseStorageProvider().run {
             val configurator = Configurator {
-                it[DatabaseRepository.chunkerProperty] = FixedSizeChunker(2)
+                it[DatabaseRepository.chunkerProperty] = FixedSizeChunker(TEST_CHUNK_SIZE)
             }
             createRepository(repoPath, configurator)
         }
