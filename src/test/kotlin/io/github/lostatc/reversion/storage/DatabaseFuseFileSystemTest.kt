@@ -37,8 +37,6 @@ class DatabaseFuseFileSystemTest : FuseFileSystemTest {
 
     override lateinit var mountPath: Path
 
-    override lateinit var fileSystem: FuseFileSystem
-
     override lateinit var contents: Map<Path, ByteArray>
 }
 
@@ -54,8 +52,6 @@ class FixedSizeDatabaseFuseFileSystemTest : FuseFileSystemTest {
 
     override lateinit var mountPath: Path
 
-    override lateinit var fileSystem: FuseFileSystem
-
     override lateinit var contents: Map<Path, ByteArray>
 }
 
@@ -70,8 +66,6 @@ class ZpaqDatabaseFuseFileSystemTest : FuseFileSystemTest {
     override lateinit var workPath: Path
 
     override lateinit var mountPath: Path
-
-    override lateinit var fileSystem: FuseFileSystem
 
     override lateinit var contents: Map<Path, ByteArray>
 }

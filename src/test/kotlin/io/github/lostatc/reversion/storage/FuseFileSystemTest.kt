@@ -54,8 +54,6 @@ interface FuseFileSystemTest {
 
     var mountPath: Path
 
-    var fileSystem: FuseFileSystem
-
     /**
      * The contents of each test file.
      */
@@ -63,10 +61,13 @@ interface FuseFileSystemTest {
 
     @BeforeAll
     fun mountFileSystem(@TempDir tempPath: Path) {
-        workPath = tempPath.resolve("work")
-        mountPath = tempPath.resolve("mnt")
+        workPath = tempPath
 
-        Files.createDirectory(mountPath)
+        // This directory is created separately and will not be cleaned up. Attempting to do so before the file system
+        // has completely unmounted will throw a [FileSystemException]. Trying to delete this directory after unmounting
+        // the file system in [unmountFileSystem] sometimes fails for this reason.
+        mountPath = Files.createTempDirectory("reversion-")
+
         val builder = FileTreeBuilder(workPath) {
             file("a", size = TEST_FILE_SIZE)
             file("b", size = TEST_FILE_SIZE)
@@ -83,14 +84,12 @@ interface FuseFileSystemTest {
         workDirectory.commit(listOf(workPath.resolve("d")))
         workDirectory.commit(listOf(workPath.resolve("a"), workPath.resolve("b"), workPath.resolve("c", "a")))
 
-        fileSystem = FuseFileSystem(workDirectory.timeline.latestSnapshot!!).apply {
-            mount(mountPath)
-        }
+        SnapshotMounter.mount(workDirectory.timeline.latestSnapshot!!, mountPath)
     }
 
     @AfterAll
     fun unmountFileSystem() {
-        fileSystem.umount()
+        SnapshotMounter.unmount(mountPath)
     }
 
     @Test
