@@ -19,9 +19,11 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.TEST_CHUNK_BITS
 import io.github.lostatc.reversion.TEST_CHUNK_SIZE
 import io.github.lostatc.reversion.api.Configurator
 import io.github.lostatc.reversion.api.io.FixedSizeChunker
+import io.github.lostatc.reversion.api.io.ZpaqChunker
 import io.github.lostatc.reversion.api.storage.Timeline
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
@@ -45,7 +47,7 @@ class DatabaseVersionTest : VersionTest {
 }
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class BlockDeduplicatedDatabaseVersionTest : VersionTest {
+class FixedSizeDatabaseVersionTest : VersionTest {
     override lateinit var workPath: Path
 
     override lateinit var timeline: Timeline
@@ -58,6 +60,28 @@ class BlockDeduplicatedDatabaseVersionTest : VersionTest {
         val repository = DatabaseStorageProvider().run {
             val configurator = Configurator {
                 it[DatabaseRepository.chunkerProperty] = FixedSizeChunker(TEST_CHUNK_SIZE)
+            }
+            createRepository(repoPath, configurator)
+        }
+
+        timeline = repository.createTimeline()
+    }
+}
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class ZpaqDatabaseVersionTest : VersionTest {
+    override lateinit var workPath: Path
+
+    override lateinit var timeline: Timeline
+
+    override lateinit var contents: Map<Path, ByteArray>
+
+    @BeforeEach
+    fun createTimeline(@TempDir tempPath: Path) {
+        val repoPath = tempPath.resolve("repository")
+        val repository = DatabaseStorageProvider().run {
+            val configurator = Configurator {
+                it[DatabaseRepository.chunkerProperty] = ZpaqChunker(TEST_CHUNK_BITS)
             }
             createRepository(repoPath, configurator)
         }

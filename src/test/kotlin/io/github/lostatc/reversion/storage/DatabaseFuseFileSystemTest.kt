@@ -19,9 +19,11 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.TEST_CHUNK_BITS
 import io.github.lostatc.reversion.TEST_CHUNK_SIZE
 import io.github.lostatc.reversion.api.Configurator
 import io.github.lostatc.reversion.api.io.FixedSizeChunker
+import io.github.lostatc.reversion.api.io.ZpaqChunker
 import org.junit.jupiter.api.TestInstance
 import java.nio.file.Path
 
@@ -41,11 +43,28 @@ class DatabaseFuseFileSystemTest : FuseFileSystemTest {
 }
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class BlockDeduplicatedDatabaseFuseFileSystemTest : FuseFileSystemTest {
+class FixedSizeDatabaseFuseFileSystemTest : FuseFileSystemTest {
     override val provider: DatabaseStorageProvider = DatabaseStorageProvider()
 
     override val configurator: Configurator = Configurator {
         it[DatabaseRepository.chunkerProperty] = FixedSizeChunker(TEST_CHUNK_SIZE)
+    }
+
+    override lateinit var workPath: Path
+
+    override lateinit var mountPath: Path
+
+    override lateinit var fileSystem: FuseFileSystem
+
+    override lateinit var contents: Map<Path, ByteArray>
+}
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class ZpaqDatabaseFuseFileSystemTest : FuseFileSystemTest {
+    override val provider: DatabaseStorageProvider = DatabaseStorageProvider()
+
+    override val configurator: Configurator = Configurator {
+        it[DatabaseRepository.chunkerProperty] = ZpaqChunker(TEST_CHUNK_BITS)
     }
 
     override lateinit var workPath: Path

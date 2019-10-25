@@ -23,8 +23,7 @@ import io.github.lostatc.reversion.api.Configurator
 import io.github.lostatc.reversion.api.Form
 import io.github.lostatc.reversion.api.io.Chunker
 import io.github.lostatc.reversion.api.io.FixedSizeChunker
-import io.github.lostatc.reversion.api.io.RollingHashChunker
-import io.github.lostatc.reversion.api.io.ZpaqState
+import io.github.lostatc.reversion.api.io.ZpaqChunker
 import io.github.lostatc.reversion.api.storage.OpenAttempt
 import io.github.lostatc.reversion.api.storage.Repository
 import io.github.lostatc.reversion.api.storage.StorageProvider
@@ -39,7 +38,7 @@ val PERFORMANCE_CHUNKER: Chunker = FixedSizeChunker(Long.MAX_VALUE)
 /**
  * The [Chunker] to use to optimize for saving storage space.
  */
-val STORAGE_CHUNKER: Chunker = RollingHashChunker(ZpaqState(22))
+val STORAGE_CHUNKER: Chunker = ZpaqChunker(22)
 
 /**
  * A storage provider which stores data in de-duplicated blobs and metadata in a relational database.
