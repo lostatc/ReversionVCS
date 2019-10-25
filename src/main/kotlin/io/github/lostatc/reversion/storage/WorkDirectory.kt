@@ -292,7 +292,6 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
     fun delete() {
         repository.delete()
         FileUtils.deleteDirectory(hiddenPath.toFile())
-        instanceCache.remove(path)
     }
 
     /**
@@ -342,13 +341,6 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         private val relativeRepoPath: Path = relativeHiddenPath.resolve("repository")
 
         /**
-         * A cache of [WorkDirectory] instances.
-         *
-         * This allows previously-created [WorkDirectory] instances to be re-used.
-         */
-        private val instanceCache: MutableMap<Path, WorkDirectory> = mutableMapOf()
-
-        /**
          * An object used for serializing data as JSON.
          */
         private val gson: Gson = GsonBuilder()
@@ -379,21 +371,6 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         fun isWorkDirectory(path: Path): Boolean = Files.isDirectory(path.resolve(relativeHiddenPath))
 
         /**
-         * Opens the working directory at [path] and returns it.
-         *
-         * @param [path] The path of the working directory.
-         *
-         * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
-         * associated with this working directory.
-         * @throws [InvalidRepositoryException] There is an installed provider compatible with the repository associated
-         * with this working directory but the repository cannot be read.
-         * @throws [NotAWorkDirException] The working directory has not been initialized.
-         */
-        fun open(path: Path): OpenAttempt<WorkDirectory> = OpenAttempt.Success(
-            instanceCache.getOrPut(path) { openNew(path).onFail { return@open it } }
-        )
-
-        /**
          * Opens the working directory associated with the file at the given [path].
          *
          * The working directory associated with [path] is the working directory that [path] is a descendant of.
@@ -418,7 +395,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
         }
 
         /**
-         * Opens the working directory at [path] whether or not it already exists.
+         * Opens the working directory at [path] and returns it.
          *
          * @throws [IncompatibleRepositoryException] There is no installed provider compatible with the repository
          * associated with this working directory.
@@ -426,7 +403,7 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
          * with this working directory but the repository cannot be read.
          * @throws [NotAWorkDirException] The working directory has not been initialized.
          */
-        private fun openNew(path: Path): OpenAttempt<WorkDirectory> {
+        fun open(path: Path): OpenAttempt<WorkDirectory> {
             val infoFile = path.resolve(relativeInfoPath)
             val repositoryPath = path.resolve(relativeRepoPath)
 

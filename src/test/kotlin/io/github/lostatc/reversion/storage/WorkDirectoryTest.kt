@@ -81,12 +81,11 @@ interface WorkDirectoryTest {
 
     @Test
     fun `open a work directory from a descendant`() {
-        assertEquals(
-            workDirectory,
-            WorkDirectory.openFromDescendant(workPath.resolve("c", "a")).onFail {
-                fail("Work directory could not be opened successfully.")
-            }
-        )
+        val descendantWorkDirectory = WorkDirectory.openFromDescendant(workPath.resolve("c", "a")).onFail {
+            fail("Work directory could not be opened successfully.")
+        }
+
+        assertEquals(workDirectory.path, descendantWorkDirectory.path)
     }
 
     @Test

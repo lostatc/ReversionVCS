@@ -137,22 +137,24 @@ private object DatabaseFactory {
      *
      * @throws [SQLException] The database could not be connected to or is corrupt.
      */
-    fun connect(path: Path): Database = databases.getOrPut(path) {
-        val connection = Database.connect(
-            "jdbc:sqlite:${path.toUri().path}",
-            driver = "org.sqlite.JDBC",
-            setupConnection = { configure(it) }
-        )
+    fun connect(path: Path): Database {
+        val db = databases.getOrPut(path) {
+            Database.connect(
+                "jdbc:sqlite:${path.toUri().path}",
+                driver = "org.sqlite.JDBC",
+                setupConnection = { configure(it) }
+            )
+        }
 
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
 
-        if (!checkIntegrity(connection)) {
+        logger.info("Connected to database at '$path'.")
+
+        if (!checkIntegrity(db)) {
             throw SQLException("The database is corrupt.")
         }
 
-        logger.info("Connected to database at '$path'.")
-
-        connection
+        return db
     }
 
     /**
