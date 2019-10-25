@@ -19,10 +19,12 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.FileTreeBuilder
+import io.github.lostatc.reversion.TEST_FILE_SIZE
 import io.github.lostatc.reversion.api.Configurator
-import io.github.lostatc.reversion.api.io.FileTreeBuilder
 import io.github.lostatc.reversion.api.io.resolve
 import io.github.lostatc.reversion.api.storage.StorageProvider
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.fail
@@ -43,20 +45,32 @@ interface WorkDirectoryTest {
 
     var workDirectory: WorkDirectory
 
+    /**
+     * The contents of each test file.
+     */
+    var contents: Map<Path, ByteArray>
+
     @BeforeEach
     fun createFiles(@TempDir tempPath: Path) {
         workPath = tempPath.resolve("work")
 
-        FileTreeBuilder(workPath) {
-            file("a", content = "apple")
-            file("b", content = "banana")
+        val builder = FileTreeBuilder(workPath) {
+            file("a", size = TEST_FILE_SIZE)
+            file("b", size = TEST_FILE_SIZE)
             directory("c") {
-                file("a", content = "orange")
+                file("a", size = TEST_FILE_SIZE)
             }
         }
 
+        contents = builder.contents
+
         workDirectory = WorkDirectory.init(workPath, provider, configurator)
     }
+
+    /**
+     * Asserts that the given [file] has the expected [contents].
+     */
+    fun assertExpectedContents(file: Path) = assertArrayEquals(contents[file], Files.readAllBytes(file))
 
     @Test
     fun `initializing an initialized directory throws`() {
@@ -191,7 +205,7 @@ interface WorkDirectoryTest {
         Files.writeString(workPath.resolve("a"), "new contents")
         workDirectory.update(listOf(workPath.resolve("a")), overwrite = true)
 
-        assertEquals("apple", Files.readString(workPath.resolve("a")))
+        assertExpectedContents(workPath.resolve("a"))
     }
 
     @Test
@@ -202,9 +216,9 @@ interface WorkDirectoryTest {
         Files.delete(workPath.resolve("c", "a"))
         workDirectory.update(listOf(workPath))
 
-        assertEquals("apple", Files.readString(workPath.resolve("a")))
-        assertEquals("banana", Files.readString(workPath.resolve("b")))
-        assertEquals("orange", Files.readString(workPath.resolve("c", "a")))
+        assertExpectedContents(workPath.resolve("a"))
+        assertExpectedContents(workPath.resolve("b"))
+        assertExpectedContents(workPath.resolve("c", "a"))
     }
 
     @Test
@@ -214,7 +228,7 @@ interface WorkDirectoryTest {
         workDirectory.commit(listOf(workPath.resolve("a")))
         workDirectory.update(listOf(workPath.resolve("a")), revision = snapshot?.revision)
 
-        assertEquals("apple", Files.readString(workPath.resolve("a")))
+        assertExpectedContents(workPath.resolve("a"))
     }
 
     @Test

@@ -19,8 +19,8 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.FileTreeBuilder
 import io.github.lostatc.reversion.api.io.Checksum
-import io.github.lostatc.reversion.api.io.FileTreeBuilder
 import io.github.lostatc.reversion.api.io.resolve
 import io.github.lostatc.reversion.api.storage.RepairAction
 import io.github.lostatc.reversion.api.storage.VerifyAction
@@ -78,10 +78,10 @@ class DatabaseRepositoryTest : RepositoryTest {
         workPath = tempPath.resolve("work")
 
         FileTreeBuilder(workPath) {
-            file("a", content = "apple")
-            file("b", content = "banana")
+            file("a", size = 4096)
+            file("b", size = 4096)
             directory("c") {
-                file("a", content = "orange")
+                file("a", size = 4096)
             }
         }
     }

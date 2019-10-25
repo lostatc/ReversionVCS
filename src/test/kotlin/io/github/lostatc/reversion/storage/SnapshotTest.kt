@@ -19,7 +19,7 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.io.FileTreeBuilder
+import io.github.lostatc.reversion.FileTreeBuilder
 import io.github.lostatc.reversion.api.storage.Timeline
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

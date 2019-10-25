@@ -23,7 +23,9 @@ import io.github.lostatc.reversion.api.io.BoundedByteChannel
 import io.github.lostatc.reversion.api.io.BufferByteChannel
 import io.github.lostatc.reversion.api.io.SequenceByteChannel
 import io.github.lostatc.reversion.api.io.readBytes
-import io.github.lostatc.reversion.api.io.readString
+import io.github.lostatc.reversion.randomBytes
+import io.github.lostatc.reversion.toByteArray
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -31,19 +33,20 @@ import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 
 class BoundedByteChannelTest {
-    fun createChannel(): ReadableByteChannel =
-        BufferByteChannel(ByteBuffer.wrap("abcdefghijk".toByteArray()))
+    val contents: ByteArray = randomBytes(4096)
+
+    fun createChannel(): ReadableByteChannel = BufferByteChannel(ByteBuffer.wrap(contents).asReadOnlyBuffer())
 
     @Test
     fun `channel does not read past limit`() {
-        val boundedChannel = BoundedByteChannel(createChannel(), 5)
-        assertEquals("abcde", boundedChannel.readBytes().readString())
+        val boundedChannel = BoundedByteChannel(createChannel(), 200)
+        assertArrayEquals(contents.take(200).toByteArray(), boundedChannel.toByteArray())
     }
 
     @Test
     fun `limit is past end of bytes`() {
-        val boundedChannel = BoundedByteChannel(createChannel(), 20)
-        assertEquals("abcdefghijk", boundedChannel.readBytes().readString())
+        val boundedChannel = BoundedByteChannel(createChannel(), 5000)
+        assertArrayEquals(contents, boundedChannel.toByteArray())
     }
 
     @Test
@@ -54,8 +57,9 @@ class BoundedByteChannelTest {
 }
 
 class SequenceByteChannelTest {
-    fun createChannel(): ReadableByteChannel =
-        BufferByteChannel(ByteBuffer.wrap("abcd".toByteArray()))
+    val contents: ByteArray = randomBytes(1024)
+
+    fun createChannel(): ReadableByteChannel = BufferByteChannel(ByteBuffer.wrap(contents).asReadOnlyBuffer())
 
     @Test
     fun `bytes from multiple channels are read`() {
@@ -66,7 +70,7 @@ class SequenceByteChannelTest {
         )
         val sequenceChannel = SequenceByteChannel(channels)
 
-        assertEquals("abcdabcdabcd", sequenceChannel.readBytes().readString())
+        assertArrayEquals(contents + contents + contents, sequenceChannel.toByteArray())
     }
 
     @Test

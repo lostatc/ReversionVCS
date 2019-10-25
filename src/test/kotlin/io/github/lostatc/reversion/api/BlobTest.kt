@@ -22,8 +22,8 @@ package io.github.lostatc.reversion.api
 import io.github.lostatc.reversion.api.io.Blob
 import io.github.lostatc.reversion.api.io.Checksum
 import io.github.lostatc.reversion.api.io.FixedSizeChunker
-import io.github.lostatc.reversion.api.io.fromString
-import io.github.lostatc.reversion.api.io.readString
+import io.github.lostatc.reversion.fromString
+import io.github.lostatc.reversion.readString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir

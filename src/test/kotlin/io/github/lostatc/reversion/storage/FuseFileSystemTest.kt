@@ -19,12 +19,15 @@
 
 package io.github.lostatc.reversion.storage
 
+import io.github.lostatc.reversion.FileTreeBuilder
+import io.github.lostatc.reversion.TEST_FILE_SIZE
 import io.github.lostatc.reversion.api.Configurator
-import io.github.lostatc.reversion.api.io.FileTreeBuilder
 import io.github.lostatc.reversion.api.io.resolve
+import io.github.lostatc.reversion.api.io.toByteArray
 import io.github.lostatc.reversion.api.storage.PermissionSet
 import io.github.lostatc.reversion.api.storage.StorageProvider
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -32,21 +35,14 @@ import org.junit.jupiter.api.condition.EnabledOnOs
 import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.io.TempDir
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.streams.asSequence
 
 /**
- * Decode the bytes in this buffer as a string.
- *
- * The bytes from the [position][ByteBuffer.position] to the [limit][ByteBuffer.limit] are decoded.
+ * The position to seek to in files to test reading/writing in the middle of the file.
  */
-private fun ByteBuffer.decodeAsString(charset: Charset = Charset.defaultCharset()): String {
-    val array = ByteArray(limit())
-    get(array)
-    return array.toString(charset)
-}
+private const val OFFSET: Int = TEST_FILE_SIZE / 2
 
 @EnabledOnOs(OS.LINUX)
 interface FuseFileSystemTest {
@@ -60,20 +56,27 @@ interface FuseFileSystemTest {
 
     var fileSystem: FuseFileSystem
 
+    /**
+     * The contents of each test file.
+     */
+    var contents: Map<Path, ByteArray>
+
     @BeforeAll
     fun mountFileSystem(@TempDir tempPath: Path) {
         workPath = tempPath.resolve("work")
         mountPath = tempPath.resolve("mnt")
 
         Files.createDirectory(mountPath)
-        FileTreeBuilder(workPath) {
-            file("a", content = "apple")
-            file("b", content = "banana")
+        val builder = FileTreeBuilder(workPath) {
+            file("a", size = TEST_FILE_SIZE)
+            file("b", size = TEST_FILE_SIZE)
             directory("c") {
-                file("a", content = "orange")
+                file("a", size = TEST_FILE_SIZE)
             }
-            file("d", content = "mango")
+            file("d", size = TEST_FILE_SIZE)
         }
+
+        contents = builder.contents
 
         val workDirectory = WorkDirectory.init(workPath, provider, configurator)
 
@@ -140,57 +143,78 @@ interface FuseFileSystemTest {
 
     @Test
     fun `read whole file from latest snapshot`() {
-        assertEquals("apple", Files.readString(mountPath.resolve("a")))
+        assertArrayEquals(
+            contents[workPath.resolve("a")],
+            Files.readAllBytes(mountPath.resolve("a"))
+        )
     }
 
     @Test
     fun `read whole file from previous snapshot`() {
-        assertEquals("mango", Files.readString(mountPath.resolve("d")))
+        assertArrayEquals(
+            contents[workPath.resolve("d")],
+            Files.readAllBytes(mountPath.resolve("d"))
+        )
     }
 
     @Test
     fun `read file from offset`() {
-        val buffer = ByteBuffer.allocate(256)
+        val buffer = ByteBuffer.allocate(TEST_FILE_SIZE)
         Files.newByteChannel(mountPath.resolve("b")).use {
-            it.position(3)
+            it.position(OFFSET.toLong())
             it.read(buffer)
             buffer.flip()
         }
 
-        assertEquals("ana", buffer.decodeAsString())
+        assertArrayEquals(
+            contents[workPath.resolve("b")]?.drop(OFFSET)?.toByteArray(),
+            buffer.toByteArray()
+        )
     }
 
     @Test
     fun `read file, rewind and read less`() {
-        val buffer = ByteBuffer.allocate(256).limit(4)
+        val buffer = ByteBuffer.allocate(TEST_FILE_SIZE).limit(OFFSET)
         Files.newByteChannel(mountPath.resolve("b")).use {
             it.read(buffer)
             buffer.rewind()
 
-            assertEquals("bana", buffer.decodeAsString())
+            assertArrayEquals(
+                contents[workPath.resolve("b")]?.take(OFFSET)?.toByteArray(),
+                buffer.toByteArray()
+            )
 
-            buffer.limit(3)
+            buffer.limit(OFFSET - 1)
             it.read(buffer)
             buffer.rewind()
 
-            assertEquals("ban", buffer.decodeAsString())
+            assertArrayEquals(
+                contents[workPath.resolve("b")]?.take(OFFSET - 1)?.toByteArray(),
+                buffer.toByteArray()
+            )
         }
     }
 
     @Test
     fun `read file, rewind and read more`() {
-        val buffer = ByteBuffer.allocate(256).limit(4)
+        val buffer = ByteBuffer.allocate(TEST_FILE_SIZE).limit(OFFSET)
         Files.newByteChannel(mountPath.resolve("b")).use {
             it.read(buffer)
             buffer.rewind()
 
-            assertEquals("bana", buffer.decodeAsString())
+            assertArrayEquals(
+                contents[workPath.resolve("b")]?.take(OFFSET)?.toByteArray(),
+                buffer.toByteArray()
+            )
 
-            buffer.limit(5)
+            buffer.limit(OFFSET + 1)
             it.read(buffer)
             buffer.rewind()
 
-            assertEquals("banan", buffer.decodeAsString())
+            assertArrayEquals(
+                contents[workPath.resolve("b")]?.take(OFFSET + 1)?.toByteArray(),
+                buffer.toByteArray()
+            )
         }
     }
 }

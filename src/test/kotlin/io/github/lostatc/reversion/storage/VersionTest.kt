@@ -19,10 +19,12 @@
 
 package io.github.lostatc.reversion.storage
 
-import io.github.lostatc.reversion.api.io.FileTreeBuilder
-import io.github.lostatc.reversion.api.io.readString
+import io.github.lostatc.reversion.FileTreeBuilder
+import io.github.lostatc.reversion.TEST_FILE_SIZE
 import io.github.lostatc.reversion.api.storage.PermissionSet
 import io.github.lostatc.reversion.api.storage.Timeline
+import io.github.lostatc.reversion.toByteArray
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -33,22 +35,30 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+
 interface VersionTest {
     val timeline: Timeline
 
     var workPath: Path
 
+    /**
+     * The contents of each test file.
+     */
+    var contents: Map<Path, ByteArray>
+
     @BeforeEach
     fun createFiles(@TempDir tempPath: Path) {
         workPath = tempPath.resolve("work")
 
-        FileTreeBuilder(workPath) {
-            file("a", content = "apple")
-            file("b", content = "banana")
+        val builder = FileTreeBuilder(workPath) {
+            file("a", size = TEST_FILE_SIZE)
+            file("b", size = TEST_FILE_SIZE)
             directory("c") {
-                file("a", content = "orange")
+                file("a", size = TEST_FILE_SIZE)
             }
         }
+
+        contents = builder.contents
     }
 
     @Test
@@ -69,7 +79,7 @@ interface VersionTest {
         val version = snapshot.versions.getValue(Paths.get("a"))
 
         assertEquals(version.checksum, version.data.checksum)
-        assertEquals("apple", version.data.readString())
+        assertArrayEquals(contents[workPath.resolve("a")], version.data.toByteArray())
     }
 
     @Test
@@ -107,7 +117,7 @@ interface VersionTest {
         val targetPath = workPath.resolve("b")
 
         assertEquals(false, version.checkout(targetPath, overwrite = false))
-        assertEquals("banana", Files.readString(targetPath))
+        assertArrayEquals(contents[targetPath], Files.readAllBytes(targetPath))
     }
 
     @Test
@@ -117,6 +127,6 @@ interface VersionTest {
         val targetPath = workPath.resolve("b")
 
         assertEquals(true, version.checkout(targetPath, overwrite = true))
-        assertEquals("apple", Files.readString(targetPath))
+        assertArrayEquals(contents[workPath.resolve("a")], Files.readAllBytes(targetPath))
     }
 }
