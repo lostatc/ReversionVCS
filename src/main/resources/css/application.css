@@ -26,6 +26,14 @@
     -jfx-focus-color: -accent-color;
 }
 
+.jfx-combo-box .combo-box-popup .list-view .list-cell:selected {
+    -fx-background-color: -accent-color;
+}
+
+.jfx-combo-box .combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: -accent-color;
+}
+
 .jfx-text-field {
     -jfx-unfocus-color: -grey-600;
     -jfx-focus-color: -accent-color;
