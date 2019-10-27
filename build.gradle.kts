@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "1.3.50"
     application
-    id("org.openjfx.javafxplugin") version "0.0.7"
     id("com.github.johnrengelman.shadow") version "5.0.0"
 }
 
@@ -34,6 +33,8 @@ repositories {
     jcenter()
 }
 
+val jfxPlatforms = listOf("linux", "mac", "win")
+
 dependencies {
     // Kotlin standard library
     implementation(kotlin("stdlib-jdk8"))
@@ -62,6 +63,14 @@ dependencies {
     implementation(group = "org.kordamp.ikonli", name = "ikonli-javafx", version = "11.3.4")
     implementation(group = "org.kordamp.ikonli", name = "ikonli-material-pack", version = "11.3.4")
 
+    // JavaFX
+    for (platform in jfxPlatforms) {
+        implementation(group = "org.openjfx", name = "javafx-base", version = "12.0.1", classifier = platform)
+        implementation(group = "org.openjfx", name = "javafx-controls", version = "12.0.1", classifier = platform)
+        implementation(group = "org.openjfx", name = "javafx-graphics", version = "12.0.1", classifier = platform)
+        implementation(group = "org.openjfx", name = "javafx-fxml", version = "12.0.1", classifier = platform)
+    }
+
     // FUSE file system
     implementation(group = "com.github.serceman", name = "jnr-fuse", version = "0.5.3")
 
@@ -75,11 +84,6 @@ dependencies {
 application {
     applicationName = "Reversion"
     mainClassName = "io.github.lostatc.reversion.MainKt"
-}
-
-javafx {
-    version = "12.0.1"
-    modules("javafx.fxml", "javafx.controls")
 }
 
 tasks.withType<Test> {
