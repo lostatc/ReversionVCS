@@ -28,6 +28,7 @@ import javafx.application.Application
 import javafx.application.Platform
 import javafx.stage.Stage
 import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
 
 /**
  * A unique ID for this application used for preventing multiple processes from being spawned.
@@ -54,6 +55,13 @@ fun main(args: Array<String>) {
         // The message content doesn't matter.
         JUnique.sendMessage(APP_ID, "")
         return
+    }
+
+    // Log uncaught exceptions.
+    Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
+        val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.MainKt")
+        logger.error(throwable.message, throwable)
+        System.err.println(throwable)
     }
 
     // Fix a graphical glitch (JDK-8089308).

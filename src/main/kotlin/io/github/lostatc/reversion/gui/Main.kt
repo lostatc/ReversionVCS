@@ -32,7 +32,6 @@ import javafx.scene.image.Image
 import javafx.scene.layout.Pane
 import javafx.stage.Stage
 import javafx.util.Duration
-import org.slf4j.LoggerFactory
 
 /**
  * A snack bar which displays notifications across the program.
@@ -51,13 +50,6 @@ fun sendNotification(message: String) {
  */
 class Reversion : Application() {
     override fun start(primaryStage: Stage) {
-        // Log uncaught exceptions.
-        Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
-            val logger = LoggerFactory.getLogger("io.github.lostatc.reversion.gui")
-            logger.error(throwable.message, throwable)
-            System.err.println(throwable)
-        }
-
         val rootLoader = FXMLLoader(this::class.java.getResource("/fxml/views/MainScene.fxml"))
         val rootNode = rootLoader.load<Pane>()
         val rootControl = rootLoader.getController<MainSceneController>()
