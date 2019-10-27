@@ -19,6 +19,7 @@
 
 package io.github.lostatc.reversion.daemon
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import io.github.lostatc.reversion.DATA_DIR
 import io.github.lostatc.reversion.api.fromJson
@@ -36,11 +37,21 @@ import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 import kotlin.text.Typography.registered
+
+/**
+ * Deserializes an object from [file] or returns [default] if [file] doesn't exist.
+ */
+private inline fun <reified T> Gson.fromFileOrDefault(file: Path, default: T): T = try {
+    Files.newBufferedReader(file).use { fromJson(it) }
+} catch (e: NoSuchFileException) {
+    default
+}
 
 /**
  * A daemon which runs jobs for working directories in the background.
@@ -157,8 +168,8 @@ object WatchDaemon : CoroutineScope by CoroutineScope(Dispatchers.Default) {
      */
     suspend fun start() {
         withContext(Dispatchers.IO) {
-            registered.addAll(Files.newBufferedReader(registeredFile).use { gson.fromJson<Set<Path>>(it) })
-            tracked.addAll(Files.newBufferedReader(trackedFile).use { gson.fromJson<Set<Path>>(it) })
+            registered.addAll(gson.fromFileOrDefault(registeredFile, emptySet()))
+            tracked.addAll(gson.fromFileOrDefault(trackedFile, emptySet()))
         }
     }
 

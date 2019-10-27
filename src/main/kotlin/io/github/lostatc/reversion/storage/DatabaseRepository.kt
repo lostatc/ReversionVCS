@@ -377,7 +377,7 @@ data class DatabaseRepository(override val path: Path, override val config: Conf
                 // Because this blob is corrupt, all versions containing it are corrupt.
                 corruptVersions.addAll(versions)
 
-                // IteratInte over the path of each version the corrupt blob is in.
+                // Iterate over the path of each version the corrupt blob is in.
                 for (relativePath in versionPaths) {
                     val absolutePath = workDirectory.resolve(relativePath)
 
