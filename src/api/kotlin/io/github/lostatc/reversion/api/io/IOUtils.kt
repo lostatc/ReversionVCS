@@ -20,6 +20,8 @@
 package io.github.lostatc.reversion.api.io
 
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.channels.FileLock
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.WritableByteChannel
 import java.nio.file.Path
@@ -173,3 +175,8 @@ fun ByteBuffer.toByteArray(): ByteArray {
     get(array)
     return array
 }
+
+/**
+ * Acquire a shared lock on the entire file.
+ */
+fun FileChannel.sharedLock(): FileLock = lock(0L, Long.MAX_VALUE, true)

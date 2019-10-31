@@ -23,8 +23,8 @@ import org.apache.commons.codec.DecoderException
 import org.apache.commons.codec.binary.Hex
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import java.nio.channels.ReadableByteChannel
-import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 
@@ -100,10 +100,9 @@ class Checksum(private val bytes: ByteArray) {
          *
          * @throws [IOException] An I/O error occurred.
          */
-        fun fromFile(path: Path): Checksum = Files.newByteChannel(path).use {
-            fromChannel(
-                it
-            )
+        fun fromFile(path: Path): Checksum = FileChannel.open(path).use {
+            it.sharedLock()
+            fromChannel(it)
         }
     }
 }

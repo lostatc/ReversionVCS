@@ -21,11 +21,11 @@ package io.github.lostatc.reversion.api.io
 
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import java.nio.channels.ReadableByteChannel
-import java.nio.file.Files
 import java.nio.file.OpenOption
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
+import java.nio.file.StandardOpenOption.WRITE
 import java.util.Objects
 
 
@@ -69,7 +69,7 @@ interface Blob {
          * @throws [IOException] An I/O error occurred.
          */
         fun fromFile(path: Path): Blob = object : AbstractBlob() {
-            override fun openChannel() = Files.newByteChannel(path)
+            override fun openChannel() = FileChannel.open(path).apply { sharedLock() }
         }
 
         /**
@@ -89,15 +89,23 @@ interface Blob {
          *
          * @throws [IOException] An I/O error occurred.
          */
-        fun chunkFile(file: Path, chunker: Chunker): Sequence<Blob> =
-            chunker.chunk(Files.newByteChannel(file)).map { chunk ->
+        fun chunkFile(file: Path, chunker: Chunker): Sequence<Blob> {
+            val chunks = FileChannel.open(file).use {
+                it.sharedLock()
+                chunker.chunk(it)
+            }
+
+            return chunks.map { chunk ->
                 object : AbstractBlob() {
-                    override fun openChannel(): ReadableByteChannel = Files.newByteChannel(file).let {
+                    override fun openChannel(): ReadableByteChannel = FileChannel.open(file).let {
+                        it.lock(chunk.position, chunk.size, true)
+
                         it.position(chunk.position)
                         BoundedByteChannel(it, chunk.size)
                     }
                 }
             }
+        }
 
         /**
          * Creates a [Blob] containing the concatenated data from all the given [blobs].
@@ -121,7 +129,8 @@ interface Blob {
  * @param [options] The options to use to open the [file].
  */
 fun Blob.write(file: Path, vararg options: OpenOption) {
-    Files.newByteChannel(file, *options, StandardOpenOption.WRITE).use { dest ->
+    FileChannel.open(file, *options, WRITE).use { dest ->
+        dest.lock()
         openChannel().use { source -> copyChannel(source, dest) }
     }
 }

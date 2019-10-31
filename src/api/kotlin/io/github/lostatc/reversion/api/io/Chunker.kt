@@ -38,7 +38,7 @@ interface Chunker {
     /**
      * Reads data from [source] and finds chunk boundaries.
      *
-     * This function closes [source] once the end of the returned sequence is reached.
+     * It is the responsibility of the caller to close [source].
      */
     fun chunk(source: SeekableByteChannel): Sequence<Chunk>
 }
@@ -48,9 +48,9 @@ interface Chunker {
  * A [Chunker] which chunks data into fixed-size chunks of the given [chunkSize].
  */
 class FixedSizeChunker(val chunkSize: Long) : Chunker {
-    override fun chunk(source: SeekableByteChannel): Sequence<Chunker.Chunk> = source.use { channel ->
-        val size = channel.size()
-        (0..size step chunkSize)
+    override fun chunk(source: SeekableByteChannel): Sequence<Chunker.Chunk> {
+        val size = source.size()
+        return (0..size step chunkSize)
             .map { Chunker.Chunk(position = it, size = minOf(chunkSize, size - it)) }
             .asSequence()
     }
