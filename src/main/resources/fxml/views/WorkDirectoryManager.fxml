@@ -17,7 +17,7 @@
             <String fx:value="pane-box"/>
         </styleClass>
         <HelpPane
-            helpText="To start tracking changes to your files, you need to specify a directory to track changes in. Whenever a file in that directory changes, a new version of it will be saved automatically. You can stop new versions from being automatically created by toggling the 'track changes' button. You can always create new versions manually."
+            helpText="To start saving versions of your files, you need to specify a directory that you want to save versions of files in. If you enable 'track changes', new versions will be saved automatically whenever files in that directory are edited. You can turn this feature on or off at any time. You can always save new versions of files manually in the 'Versions' tab."
             position="BOTTOM_LEFT" styleClass="fab-light">
             <StackPane alignment="BOTTOM_CENTER" minWidth="200.0" prefWidth="400.0">
                 <JFXListView fx:id="workDirectoryList" depth="2" styleClass="card-list-view">
@@ -108,7 +108,7 @@
                 </Tab>
                 <Tab text="Cleanup Rules">
                     <HelpPane
-                        helpText="To conserve disk space, the program can automatically delete old versions of files based on rules that you set. Adding rules allows you to decide how many versions to keep and how long to keep them for. A file is only deleted if there are no rules specifying that it should be kept."
+                        helpText="When tracking changes is enabled, the program will automatically delete old versions of files according to rules that you set. This screen shows a list of all your active cleanup rules. Adding and removing rules allows you to decide how many versions to keep and how long to keep them for. A version is never deleted unless every rule agrees that it should not be kept."
                         position="BOTTOM_LEFT" styleClass="icon-button-light">
                         <padding>
                             <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
