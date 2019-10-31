@@ -25,6 +25,9 @@ import io.github.lostatc.reversion.DATA_DIR
 import io.github.lostatc.reversion.api.fromJson
 import io.github.lostatc.reversion.api.storage.Repository
 import io.github.lostatc.reversion.api.storage.RepositoryException
+import io.github.lostatc.reversion.gui.models.StorageModel.storageActor
+import io.github.lostatc.reversion.gui.models.WorkDirectoryState
+import io.github.lostatc.reversion.gui.wrap
 import io.github.lostatc.reversion.serialization.PathTypeAdapter
 import io.github.lostatc.reversion.storage.WorkDirectory
 import kotlinx.coroutines.CoroutineScope
@@ -191,27 +194,31 @@ object WatchDaemon : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     /**
      * Watches the given working [directory] for changes and commits them.
      */
-    private fun watch(directory: Path) {
-        val workDirectory = try {
+    private suspend fun watch(directory: Path) {
+        val workDir = try {
             WorkDirectory.open(directory).onFail { throw RepositoryException("Repository failed to open with $it") }
         } catch (e: RepositoryException) {
             return
         }
 
+        val state = storageActor.wrap(WorkDirectoryState(workDir))
+
         // We only exclude the default ignored paths because reading the ignore pattern file on each watch event
         // would be expensive.
         FileSystemWatcher(
-            workDirectory.path,
+            workDir.path,
             recursive = true,
             coalesce = true,
-            includeMatcher = PathMatcher { !workDirectory.defaultIgnoreMatcher.matches(it) }
+            includeMatcher = PathMatcher { !workDir.defaultIgnoreMatcher.matches(it) }
         ).use {
             for (event in it.events) {
                 if (event.type == ENTRY_CREATE || event.type == ENTRY_MODIFY) {
                     val relativePath = directory.relativize(event.path)
                     try {
-                        workDirectory.commit(listOf(event.path))
-                        workDirectory.timeline.clean(listOf(relativePath))
+                        state.executeAsync {
+                            workDirectory.commit(listOf(event.path))
+                            workDirectory.timeline.clean(listOf(relativePath))
+                        }.await()
                     } catch (e: IOException) {
                         logger.error(e.message, e)
                     }
