@@ -405,7 +405,7 @@ class WorkDirectoryManagerController {
         model.launch {
             val deleteApproval = approvalDialog(
                 title = "Delete version history",
-                text = "Are you sure you want to permanently delete all past versions in this directory? This will not affect the current versions of your files."
+                text = "Are you sure you want to permanently delete all past versions in this directory and stop tracking changes? This will not affect the current versions of your files."
             ).prompt(root)
 
             if (deleteApproval) {
