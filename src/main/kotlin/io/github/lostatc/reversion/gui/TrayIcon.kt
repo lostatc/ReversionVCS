@@ -28,12 +28,13 @@ import java.awt.PopupMenu
 import java.awt.SystemTray
 import java.awt.Toolkit
 import java.awt.TrayIcon
+import kotlin.system.exitProcess
 
 /**
  * The icon for the application.
  */
 private val applicationIcon: Image by lazy {
-    Toolkit.getDefaultToolkit().getImage(getResourceUri("/icon.svg").toURL())
+    Toolkit.getDefaultToolkit().getImage(getResourceUri("/icon.png").toURL())
 }
 
 /**
@@ -48,7 +49,7 @@ private val trayIcon: TrayIcon by lazy {
         )
         add(
             MenuItem("Quit").apply {
-                addActionListener { Platform.exit() }
+                addActionListener { exitProcess(0) }
             }
         )
     }
