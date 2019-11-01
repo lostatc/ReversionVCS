@@ -52,6 +52,18 @@ import kotlin.streams.toList
 class NotAWorkDirException(message: String) : Exception(message)
 
 /**
+ * The name of the file without the file extensino.
+ */
+private val Path.baseName: String
+    get() = fileName.toString().substringBeforeLast('.')
+
+/**
+ * The file's file extension.
+ */
+private val Path.extension: String
+    get() = fileName.toString().substringAfterLast('.', "")
+
+/**
  * Filters out paths with are descendants of another path in the iterable.
  */
 private fun Iterable<Path>.flattenPaths(): List<Path> =
@@ -277,7 +289,9 @@ data class WorkDirectory(val path: Path, val timeline: Timeline) {
      */
     fun openInApplication(version: Version) {
         val tempDirectory = Files.createTempDirectory("reversion-")
-        val targetPath = tempDirectory.resolve(version.path.fileName)
+        val targetPath = with(version) {
+            tempDirectory.resolve("${path.baseName} (${snapshot.name ?: snapshot.defaultName}).${path.extension}")
+        }
         version.checkout(targetPath)
         Desktop.getDesktop().open(targetPath.toFile())
     }
