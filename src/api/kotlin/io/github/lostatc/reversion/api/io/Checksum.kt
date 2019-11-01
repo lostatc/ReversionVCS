@@ -81,6 +81,8 @@ class Checksum(private val bytes: ByteArray) {
 
         /**
          * Calculates a SHA-256 [Checksum] of the data from the given [channel].
+         *
+         * It is the responsibility of the caller to close the [channel].
          */
         fun fromChannel(channel: ReadableByteChannel): Checksum {
             val digest = MessageDigest.getInstance(algorithm)
