@@ -25,7 +25,6 @@ import io.github.lostatc.reversion.api.setValue
 import io.github.lostatc.reversion.daemon.WatchDaemon
 import io.github.lostatc.reversion.gui.controllers.WorkDirectoryManagerController
 import io.github.lostatc.reversion.gui.sendNotification
-import io.github.lostatc.reversion.gui.ui
 import io.github.lostatc.reversion.storage.SnapshotMounter
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleObjectProperty
@@ -87,12 +86,11 @@ class WorkDirectoryManagerModel : CoroutineScope by MainScope() {
     fun deleteWorkDirectory() {
         val selected = selected ?: return
 
-        selected.executeAsync {
-            workDirectory.delete()
-        } ui {
+        launch {
             _workDirectories.remove(selected)
-            this.selected = null
             WatchDaemon.registered.remove(selected.path)
+            WatchDaemon.tracked.remove(selected.path)
+            selected.execute { workDirectory.delete() }
         }
     }
 

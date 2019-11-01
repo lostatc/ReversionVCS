@@ -81,7 +81,7 @@
                                                styleClass="icon-button-light">
                                 <tooltip>
                                     <Tooltip
-                                        text="Remove this directory from the list without deleting any versions."/>
+                                        text="Remove this directory from the list without deleting any versions. Changes will still be tracked if tracking changes is enabled."/>
                                 </tooltip>
                             </LabeledIconButton>
                             <LabeledIconButton icon="gmi-build" label="Repair" onAction="#promptVerify"
