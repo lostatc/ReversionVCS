@@ -12,13 +12,19 @@
     <VBox>
         <JFXToolbar>
             <top>
-                <HBox alignment="CENTER" minHeight="50.0" nodeOrientation="RIGHT_TO_LEFT" BorderPane.alignment="CENTER">
+                <HBox alignment="CENTER" minHeight="40.0" spacing="10.0" nodeOrientation="RIGHT_TO_LEFT"
+                      BorderPane.alignment="CENTER">
                     <padding>
                         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
                     </padding>
                     <IconButton icon="gmi-folder-open" onAction="#browsePath" styleClass="icon-button-light">
                         <tooltip>
                             <Tooltip text="Browse for a file to manage versions of."/>
+                        </tooltip>
+                    </IconButton>
+                    <IconButton icon="gmi-refresh" onAction="#setPath" styleClass="icon-button-light">
+                        <tooltip>
+                            <Tooltip text="Refresh the list of versions."/>
                         </tooltip>
                     </IconButton>
                     <JFXTextField fx:id="pathField" nodeOrientation="LEFT_TO_RIGHT" onAction="#setPath"
@@ -33,7 +39,7 @@
         </JFXToolbar>
         <HBox prefHeight="100.0" prefWidth="640.0" styleClass="pane-box" VBox.vgrow="ALWAYS">
             <HelpPane position="BOTTOM_LEFT" styleClass="fab-light"
-                      helpText="Select a file to see all past versions of it. You can also create new versions of that file manually. Old versions can be restored, which reverts the file back to that version while also saving the current version. Versions can also be opened in their default application without restoring them.">
+                      helpText="Select a file to see all past versions of it. Once you've selected a file, you can create new versions of that file manually. Old versions can be restored, which reverts the file back to that version. You can also open a version in its default application without restoring it, although changes to that version will not be saved.">
                 <StackPane alignment="BOTTOM_CENTER" minWidth="200.0" prefWidth="400.0">
                     <JFXListView fx:id="versionList" depth="2" styleClass="card-list-view">
                         <placeholder>

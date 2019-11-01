@@ -175,6 +175,7 @@ class VersionManagerController {
      */
     @FXML
     fun setPath() {
+        if (pathField.text.isNullOrBlank()) return
         val file = Paths.get(pathField.text)
         model.setFile(file)
     }
