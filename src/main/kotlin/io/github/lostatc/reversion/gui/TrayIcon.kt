@@ -34,7 +34,7 @@ import kotlin.system.exitProcess
  * The icon for the application.
  */
 private val applicationIcon: Image by lazy {
-    Toolkit.getDefaultToolkit().getImage(getResourceUri("/icon.png").toURL())
+    Toolkit.getDefaultToolkit().createImage(getResourceUri("/icon.png").toURL())
 }
 
 /**
