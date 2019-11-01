@@ -54,7 +54,9 @@ private val trayIcon: TrayIcon by lazy {
         )
     }
 
-    TrayIcon(applicationIcon, "Reversion", menu)
+    TrayIcon(applicationIcon, "Reversion", menu).apply {
+        isImageAutoSize = true
+    }
 }
 
 /**
