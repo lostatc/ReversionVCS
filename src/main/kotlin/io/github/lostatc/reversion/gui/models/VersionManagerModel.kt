@@ -72,6 +72,12 @@ class VersionManagerModel : CoroutineScope by MainScope() {
     private var selectedFile: MutableStateWrapper<TaskType, FileState>? by selectedFileProperty
 
     /**
+     * The path of the currently selected file.
+     */
+    val selectedPath: Path?
+        get() = selectedFile?.state?.path
+
+    /**
      * A property for [selectedVersion].
      */
     val selectedVersionProperty: Property<VersionModel?> = SimpleObjectProperty(null)

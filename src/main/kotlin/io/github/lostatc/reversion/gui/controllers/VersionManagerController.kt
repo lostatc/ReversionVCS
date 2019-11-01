@@ -23,6 +23,7 @@ import com.jfoenix.controls.JFXCheckBox
 import com.jfoenix.controls.JFXListView
 import com.jfoenix.controls.JFXTextArea
 import com.jfoenix.controls.JFXTextField
+import io.github.lostatc.reversion.HOME_DIRECTORY
 import io.github.lostatc.reversion.gui.MappedObservableList
 import io.github.lostatc.reversion.gui.controls.Card
 import io.github.lostatc.reversion.gui.format
@@ -185,6 +186,7 @@ class VersionManagerController {
     fun browsePath() {
         val file = FileChooser().run {
             title = "Select file"
+            initialDirectory = model.selectedPath?.parent?.toFile() ?: HOME_DIRECTORY.toFile()
             showOpenDialog(pathField.scene.window)?.toPath() ?: return
         }
 
