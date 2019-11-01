@@ -92,7 +92,8 @@ interface Blob {
         fun chunkFile(file: Path, chunker: Chunker): Sequence<Blob> {
             val chunks = FileChannel.open(file).use {
                 it.sharedLock()
-                chunker.chunk(it)
+                // Collect the sequence into a list so that we have all the chunks before closing the channel.
+                chunker.chunk(it).toList().asSequence()
             }
 
             return chunks.map { chunk ->
