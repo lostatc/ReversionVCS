@@ -32,7 +32,10 @@ import io.github.lostatc.reversion.serialization.PathTypeAdapter
 import io.github.lostatc.reversion.storage.WorkDirectory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -86,6 +89,11 @@ object WatchDaemon : CoroutineScope by CoroutineScope(Dispatchers.Default) {
      * A map of paths of working directories to file watch jobs.
      */
     private val watchJobs = mutableMapOf<Path, Job>()
+
+    /**
+     * The amount of time in milliseconds to wait before committing a modified file.
+     */
+    private const val WATCH_DELAY: Long = 5000
 
     /**
      * The paths of working directories which have been added in the UI.
@@ -194,6 +202,7 @@ object WatchDaemon : CoroutineScope by CoroutineScope(Dispatchers.Default) {
     /**
      * Watches the given working [directory] for changes and commits them.
      */
+    @UseExperimental(FlowPreview::class)
     private suspend fun watch(directory: Path) {
         val workDir = try {
             WorkDirectory.open(directory).onFail { throw RepositoryException("Repository failed to open with $it") }
@@ -205,22 +214,28 @@ object WatchDaemon : CoroutineScope by CoroutineScope(Dispatchers.Default) {
 
         // We only exclude the default ignored paths because reading the ignore pattern file on each watch event
         // would be expensive.
-        FileSystemWatcher(
+        val watcher = FileSystemWatcher(
             workDir.path,
             recursive = true,
             coalesce = true,
             includeMatcher = PathMatcher { !workDir.defaultIgnoreMatcher.matches(it) }
-        ).use {
-            for (event in it.events) {
-                if (event.type == ENTRY_CREATE || event.type == ENTRY_MODIFY) {
-                    val relativePath = directory.relativize(event.path)
-                    try {
-                        state.executeAsync {
-                            workDirectory.commit(listOf(event.path))
-                            workDirectory.timeline.clean(listOf(relativePath))
-                        }.await()
-                    } catch (e: IOException) {
-                        logger.error(e.message, e)
+        )
+
+        // Commit each file after a delay. This ensures that the file which made the changes is done writing to the file
+        // before the daemon tries to read it.
+        watcher.use {
+            coroutineScope {
+                delayed(WATCH_DELAY, it.events).collect { event ->
+                    if (event.type == ENTRY_CREATE || event.type == ENTRY_MODIFY) {
+                        val relativePath = directory.relativize(event.path)
+                        try {
+                            state.executeAsync {
+                                workDirectory.commit(listOf(event.path))
+                                workDirectory.timeline.clean(listOf(relativePath))
+                            }.await()
+                        } catch (e: IOException) {
+                            logger.error(e.message, e)
+                        }
                     }
                 }
             }

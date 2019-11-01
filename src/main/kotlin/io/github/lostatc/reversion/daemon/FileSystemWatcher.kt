@@ -19,6 +19,13 @@
 
 package io.github.lostatc.reversion.daemon
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -30,6 +37,34 @@ import java.nio.file.StandardWatchEventKinds.OVERFLOW
 import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
+
+/**
+ * Returns a [Flow] which emits each element in [elements] after a [delayMillis]-millisecond delay.
+ *
+ * If [coalesce] is `true`, identical elements which are read from [elements] will be combined before being emitted by
+ * the flow. For this option to be used, elements of type [T] must be immutable.
+ */
+@UseExperimental(FlowPreview::class)
+fun <T> CoroutineScope.delayed(delayMillis: Long, elements: Sequence<T>, coalesce: Boolean = true): Flow<T> {
+    val delayJobs = mutableMapOf<T, Job>()
+
+    return flow {
+        for (element in elements) {
+            if (coalesce) {
+                delayJobs[element]?.cancel()
+            }
+
+            val job = launch {
+                delay(delayMillis)
+                emit(element)
+            }
+
+            if (coalesce) {
+                delayJobs[element] = job
+            }
+        }
+    }
+}
 
 /**
  * An event which has occurred in the file system.
@@ -98,7 +133,11 @@ data class FileSystemWatcher(
             }
 
             val directory: Path = pathsByKey[key] ?: continue
-            val events = if (coalesce) key.pollEvents().toSet() else key.pollEvents()
+            val events = if (coalesce) {
+                key.pollEvents().distinctBy { it.kind() to it.context() }
+            } else {
+                key.pollEvents()
+            }
 
             for (event in events) {
                 @Suppress("UNCHECKED_CAST")
