@@ -53,7 +53,7 @@ val SeekableByteChannel.remaining: Long
  *
  * This class allows for efficiently accessing data which has previously been read from a [ReadableByteChannel] without
  * having to re-open the stream and re-read data. It caches data which has already been read in the file system and
- * allows for seeking on that data. New data is lazily read from the given [ReadableByteChannel] as it is needed.
+ * allows for seeking on that data. New data is lazily read from [inputChannel] as it is needed.
  */
 private class SeekableDataSource(private val inputChannel: ReadableByteChannel) : Closeable {
     /**
@@ -114,6 +114,7 @@ private class SeekableDataSource(private val inputChannel: ReadableByteChannel) 
     }
 
     override fun close() {
+        inputChannel.close()
         cacheWriter.close()
         cacheReader.close()
         Files.deleteIfExists(cacheFile)
