@@ -1,8 +1,10 @@
+import org.beryx.runtime.RuntimeTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.3.50"
     application
+    id("org.beryx.runtime") version "1.8.0"
     id("com.github.johnrengelman.shadow") version "5.0.0"
 }
 
@@ -84,6 +86,28 @@ dependencies {
 application {
     applicationName = "Reversion"
     mainClassName = "io.github.lostatc.reversion.MainKt"
+}
+
+runtime {
+    addOptions("--strip-debug", "--compress", "2", "--no-header-files", "--no-man-pages")
+    imageZip.set(file("$buildDir/image-zip/Reversion-$version.zip"))
+
+    targetPlatform("windows", System.getenv("JDK_WIN_HOME"))
+    targetPlatform("mac", System.getenv("JDK_MAC_HOME"))
+    targetPlatform("linux", System.getenv("JDK_LINUX_HOME"))
+}
+
+// Add launcher scripts to the images.
+tasks.getByName<RuntimeTask>("runtime") {
+    doLast {
+        imageDirAsFile.listFiles()?.forEach { imageDir ->
+            copy {
+                from("src/main/resources/bin/Reversion.vbs")
+                from("src/main/resources/bin/Reversion")
+                into(imageDir)
+            }
+        }
+    }
 }
 
 tasks.withType<Test> {
