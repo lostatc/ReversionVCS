@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+DIRECTORY="$(dirname "${BASH_SOURCE[0]}")"
+exec "$DIRECTORY/bin/Reversion"
