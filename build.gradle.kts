@@ -10,7 +10,7 @@ plugins {
 
 group = "io.github.lostatc"
 
-version = "0.2.2"
+version = "0.2.3"
 
 sourceSets {
     val api by creating
