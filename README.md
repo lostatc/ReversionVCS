@@ -2,9 +2,9 @@
 
 Real-time cross-platform file versioning
 
-![Reversion screenshot](***REMOVED***)
+![Reversion screenshot](docs/screenshot-1.png)
 
-![Reversion screenshot](***REMOVED***)
+![Reversion screenshot](docs/screenshot-2.png)
 
 ## Description
 
