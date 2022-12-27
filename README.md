@@ -1,3 +1,7 @@
+⚠ **UNMAINTAINED**
+
+This project is no longer maintained, and I'm not planning on revisiting it.
+
 # Reversion
 
 Real-time cross-platform file versioning
